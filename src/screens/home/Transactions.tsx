@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,13 +9,38 @@ import {
   TextInput,
   Modal,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fileIcon, userIcon, downArrowIcon } from '../../assets/icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useTransaction } from '../../hooks/useTransaction';
 
 type TabType = 'Toutes' | 'Brouillon' | 'Validée' | 'A recevoir';
+
+interface Transaction {
+  id: number;
+  type: 'expense' | 'income';
+  transaction_date: string;
+  amount: string;
+  customer_id: number;
+  account_id: number;
+  category_id: number;
+  description: string;
+  reference: string;
+  attachment_path: string | null;
+  created_at: string;
+  updated_at: string;
+  account: {
+    id: number;
+    holder_name: string;
+  };
+  category: {
+    id: number;
+    name: string;
+  };
+}
 
 const CLIENT_OPTIONS = [
   'Test client 1',
@@ -23,7 +48,8 @@ const CLIENT_OPTIONS = [
   'Test client 3',
 ];
 
-const Factures: React.FC = ({ navigation }: any) => {
+const Transactions: React.FC = ({ navigation }: any) => {
+  const { getTransactions } = useTransaction();
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<TabType>('Toutes');
   const [isSearchActive, setIsSearchActive] = useState(false);
@@ -41,35 +67,61 @@ const Factures: React.FC = ({ navigation }: any) => {
   const [showAuDatePicker, setShowAuDatePicker] = useState(false);
   const [tempAuDate, setTempAuDate] = useState(new Date(2026, 0, 29));
   const [isAlreadySent, setIsAlreadySent] = useState(true);
+  
+  // Transactions state
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const invoices = [
-    {
-      id: 1,
-      client: 'a barb',
-      number: 'FA-202601-0002',
-      amount: '0,00',
-      currency: 'MAD',
-      date: '21/01/2026',
-      status: 'Brouillon',
-      statusColor: '#333333',
-    },
-    {
-      id: 2,
-      client: 'a barb',
-      number: 'FA-202601-0001',
-      amount: '24,00',
-      currency: 'MAD',
-      date: '02/01/2026',
-      status: 'Payée',
-      statusColor: '#3cebba',
-    },
-  ];
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
+
+  const fetchTransactions = async () => {
+    try {
+      setLoading(true);
+      const result = await getTransactions();
+      if (result.success && result.transactions) {
+        setTransactions(result.transactions);
+      }
+    } catch (err) {
+      console.error('Error fetching transactions:', err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchTransactions();
+  };
 
   const formatDate = (date: Date) => {
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
     return `${day}/${month}/${year}`;
+  };
+
+  const formatTransactionDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const formatAmount = (amount: string) => {
+    return parseFloat(amount).toFixed(2).replace('.', ',');
+  };
+
+  const getTransactionStatus = (transaction: Transaction) => {
+    return transaction.type === 'expense' ? 'Dépense' : 'Revenu';
+  };
+
+  const getStatusColor = (transaction: Transaction) => {
+    return transaction.type === 'expense' ? '#333333' : '#3cebba';
   };
 
   const handleAddInvoice = () => {
@@ -134,7 +186,7 @@ const Factures: React.FC = ({ navigation }: any) => {
               style={styles.avatar}
               resizeMode="contain" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Factures</Text>
+          <Text style={styles.headerTitle}>Transactions</Text>
           <View style={styles.headerIcons}>
             {/* filter icon */}
             <TouchableOpacity style={styles.iconButton} onPress={() => setShowFilterModal(true)}>
@@ -227,39 +279,63 @@ const Factures: React.FC = ({ navigation }: any) => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        // refreshControl={
+        //   <View style={{ paddingTop: 20 }}>
+        //     {refreshing && <ActivityIndicator size="small" color="#0B5FA5" />}
+        //   </View>
+        // }
+        onScroll={(e) => {
+          const offsetY = e.nativeEvent.contentOffset.y;
+          if (offsetY < -50 && !refreshing) {
+            onRefresh();
+          }
+        }}
+        scrollEventThrottle={16}
       >
-        {activeTab === 'Toutes' && invoices.map((invoice) => (
-          <TouchableOpacity
-            key={invoice.id}
-            style={styles.invoiceCard}
-            onPress={() => handleInvoicePress(invoice)}
-          >
-            <View style={styles.invoiceLeft}>
-              <Text style={styles.clientName}>{invoice.client}</Text>
-              <Text style={styles.invoiceNumber}>{invoice.number}</Text>
-              <View
-                style={[
-                  styles.statusBadge,
-                  { backgroundColor: invoice.statusColor },
-                ]}
-              >
-                <Text style={styles.statusText}>{invoice.status}</Text>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#0B5FA5" />
+            <Text style={styles.loadingText}>Chargement...</Text>
+          </View>
+        ) : transactions.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>Aucune transaction trouvée</Text>
+            <Text style={styles.emptySubText}>Ajoutez votre première transaction</Text>
+          </View>
+        ) : (
+          transactions.map((transaction) => (
+            <TouchableOpacity
+              key={transaction.id}
+              style={styles.invoiceCard}
+              onPress={() => handleInvoicePress(transaction)}
+            >
+              <View style={styles.invoiceLeft}>
+                <Text style={styles.clientName}>{transaction.category.name}</Text>
+                <Text style={styles.invoiceNumber}>{transaction.reference || 'N/A'}</Text>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    { backgroundColor: getStatusColor(transaction) },
+                  ]}
+                >
+                  <Text style={styles.statusText}>{getTransactionStatus(transaction)}</Text>
+                </View>
               </View>
-            </View>
-            <View style={styles.invoiceRight}>
-              <Text style={styles.amount}>
-                {invoice.amount} {invoice.currency}
-              </Text>
-              <Text style={styles.date}>{invoice.date}</Text>
-            </View>
-          </TouchableOpacity>
-        ))}
+              <View style={styles.invoiceRight}>
+                <Text style={styles.amount}>
+                  {formatAmount(transaction.amount)} MAD
+                </Text>
+                <Text style={styles.date}>{formatTransactionDate(transaction.transaction_date)}</Text>
+              </View>
+            </TouchableOpacity>
+          ))
+        )}
       </ScrollView>
 
       {/* FAB Button */}
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => navigation.navigate('Add Invoice')}
+        onPress={() => navigation.navigate('Add Transaction')}
       >
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
@@ -1040,6 +1116,33 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E5E5',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#666666',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333333',
+    marginBottom: 8,
+  },
+  emptySubText: {
+    fontSize: 14,
+    color: '#999999',
+  },
 });
 
-export default Factures;
+export default Transactions;

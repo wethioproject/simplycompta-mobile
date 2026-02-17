@@ -43,8 +43,8 @@ const HomeTabs: React.FC = () => {
         }}
       />
       <Tab.Screen
-        name="Factures"
-        component={Factures}
+        name="Transaction"
+        component={Transactions}
         options={{
           tabBarIcon: ({ color, size }) => (
             <Image source={fileIcon} style={{ width: 24, height: 24, tintColor: color }} resizeMode="contain" />

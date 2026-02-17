@@ -87,7 +87,7 @@ const AppNavigator = () => {
         <Stack.Screen name="Expenses" component={Expenses} options={{ headerShown: false }} />
         <Stack.Screen name="Edit Expense" component={EditExpense} options={{ headerShown: false }} />
         <Stack.Screen name="Edit Payments" component={EditPayments} options={{ headerShown: false }} />
-        <Stack.Screen name="Add Invoice" component={AddInvoice} options={{ headerShown: false }} />
+        <Stack.Screen name="Add Transaction" component={AddTransaction} options={{ headerShown: false }} />
         <Stack.Screen name="Add Article" component={AddArticle} options={{ headerShown: false }} />
         <Stack.Screen name="Add Bank Statement" component={AddBankStatement} options={{ headerShown: false }} />
         <Stack.Screen name="Add Delivery Note" component={AddDeliveryNote} options={{ headerShown: false }} />
