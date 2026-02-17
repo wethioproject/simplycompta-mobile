@@ -45,6 +45,7 @@ import AddRegulation from '../screens/regulation/AddRegulation';
 import AddClient from '../screens/client/AddClient';
 import Notifications from '../screens/notification/Notifications';
 import NotificationDetail from '../screens/notification/NotificationDetail';
+import QuoteDetail from '../screens/home/QuoteDetail';
 
 const Stack = createStackNavigator();
 
@@ -77,6 +78,7 @@ const AppNavigator = () => {
         <Stack.Screen name="Bank Accounts" component={BankAccounts} options={{ headerShown: false }} />
         <Stack.Screen name="Edit Bank Account" component={EditBankAccount} options={{ headerShown: false }} />
         <Stack.Screen name="Invoice Detail" component={InvoiceDetail} options={{ headerShown: false }} />
+        <Stack.Screen name="Quote Detail" component={QuoteDetail} options={{ headerShown: false }} />
         <Stack.Screen name="Client Detail" component={ClientDetail} options={{ headerShown: false }} />
         <Stack.Screen name="Account Statement" component={AccountStatement} options={{ headerShown: false }} />
         <Stack.Screen name="Documents" component={Documents} options={{ headerShown: false }} />
