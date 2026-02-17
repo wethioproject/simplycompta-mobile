@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
+import { useSelector } from 'react-redux';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fileIcon, userIcon } from '../../assets/icons';
 
 const MyAccount: React.FC = ({ navigation }: any) => {
-  const [firstName, setFirstName] = useState('hish');
-  const [lastName, setLastName] = useState('hish');
-  const [fonction, setFonction] = useState('');
-  const [phone, setPhone] = useState('06111213141');
-  const [email, setEmail] = useState('hish0451@gmail.com');
-
+  const user = useSelector((state: any) => state.user.customer);
+  const [firstName, setFirstName] = useState(user.name || '');
+  const [lastName, setLastName] = useState(user.name || '');
+  const [fonction, setFonction] = useState(user.shipping_city || '');
+  const [phone, setPhone] = useState(user.contact || '');
+  const [email, setEmail] = useState(user.email || '');
   const handleSave = () => {
     console.log('Form saved');
   };
@@ -46,6 +47,7 @@ const MyAccount: React.FC = ({ navigation }: any) => {
             value={lastName}
             onChangeText={setLastName}
             placeholderTextColor="#999999"
+            editable={false}
           />
         </View>
 
@@ -59,6 +61,7 @@ const MyAccount: React.FC = ({ navigation }: any) => {
             value={firstName}
             onChangeText={setFirstName}
             placeholderTextColor="#999999"
+            editable={false}
           />
         </View>
 
@@ -70,6 +73,7 @@ const MyAccount: React.FC = ({ navigation }: any) => {
             value={fonction}
             onChangeText={setFonction}
             placeholderTextColor="#999999"
+            editable={false}
           />
         </View>
 
@@ -86,6 +90,7 @@ const MyAccount: React.FC = ({ navigation }: any) => {
               onChangeText={setPhone}
               keyboardType="phone-pad"
               placeholderTextColor="#999999"
+              editable={false}
             />
           </View>
         </View>
@@ -104,6 +109,7 @@ const MyAccount: React.FC = ({ navigation }: any) => {
               keyboardType="email-address"
               autoCapitalize="none"
               placeholderTextColor="#999999"
+              editable={false}
             />
           </View>
         </View>
@@ -113,7 +119,7 @@ const MyAccount: React.FC = ({ navigation }: any) => {
       </ScrollView>
 
       {/* Fixed Save Button */}
-      <TouchableOpacity style={styles.fixedSaveButton} onPress={handleSave}>
+      <TouchableOpacity style={styles.fixedSaveButton} disabled={true} onPress={handleSave}>
         <Text style={styles.saveButtonText}>Enregistrer</Text>
       </TouchableOpacity>
     </SafeAreaView>
@@ -247,13 +253,13 @@ const styles = StyleSheet.create({
     height: 20,
   },
   fixedSaveButton: {
-    backgroundColor: '#0B5FA5',
+    backgroundColor: '#0b60a54f',
     marginHorizontal: 16,
     marginVertical: 40,
     paddingVertical: 12,
     borderRadius: 6,
     alignItems: 'center',
-    shadowColor: '#0B5FA5',
+    shadowColor: '#0b60a54f',
     shadowOffset: {
       width: 0,
       height: 4,
