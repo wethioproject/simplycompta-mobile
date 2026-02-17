@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,13 +9,24 @@ import {
   Modal,
   TextInput,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fileIcon, userIcon, downArrowIcon } from '../../assets/icons';
+import { useBankStatement } from '../../hooks/useBankStatement';
 
 type TabType = 'Tous' | 'Brouillon' | 'Validé' | 'Accepté' | 'Refusé' | 'Facturé' | 'Expiré';
+
+interface BankStatement {
+  id: number;
+  customer_id: number;
+  file_path: string;
+  month_year: string;
+  created_at: string;
+  updated_at: string;
+}
 
 const CLIENT_OPTIONS = [
   'Test client 1',
@@ -24,6 +35,7 @@ const CLIENT_OPTIONS = [
 ];
 
 const Devis: React.FC = ({ navigation }: any) => {
+  const { getBankStatements } = useBankStatement();
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<TabType>('Tous');
   const [isSearchActive, setIsSearchActive] = useState(false);
@@ -42,30 +54,55 @@ const Devis: React.FC = ({ navigation }: any) => {
   const [tempAuDate, setTempAuDate] = useState(new Date(2026, 0, 29));
   const [isAlreadySent, setIsAlreadySent] = useState(true);
 
-  const quotes = [
-    {
-      id: 1,
-      client: 'a barb',
-      number: 'FA-202601-0002',
-      amount: '0,00',
-      currency: 'MAD',
-      date: '21/01/2026',
-      status: 'Brouillon',
-      statusColor: '#333333',
-    },
-    {
-      id: 2,
-      client: 'a barb',
-      number: 'FA-202601-0001',
-      amount: '24,00',
-      currency: 'MAD',
-      date: '02/01/2026',
-      status: 'Payée',
-      statusColor: '#3cebba',
-    },
-  ];
+  // Bank Statements state
+  const [bankStatements, setBankStatements] = useState<BankStatement[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  const formatDate = (date: Date) => {
+  useEffect(() => {
+    fetchBankStatements();
+  }, []);
+
+  const fetchBankStatements = async () => {
+    try {
+      setLoading(true);
+      const result = await getBankStatements();
+      console.log('bank statements', result);
+      if (result.success && result.bankStatements) {
+        setBankStatements(result.bankStatements);
+      }
+    } catch (err) {
+      console.error('Error fetching bank statements:', err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchBankStatements();
+  };
+
+  const formatMonthYear = (monthYear: string) => {
+    // Convert "02-2026" to "Février 2026"
+    const [month, year] = monthYear.split('-');
+    const months = [
+      'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
+    ];
+    return `${months[parseInt(month) - 1]} ${year}`;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const formatDateFilter = (date: Date) => {
     const day = String(date.getDate()).padStart(2, '0');
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const year = date.getFullYear();
@@ -134,7 +171,7 @@ const Devis: React.FC = ({ navigation }: any) => {
               style={styles.avatar}
               resizeMode="contain" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Devis</Text>
+          <Text style={styles.headerTitle}>Relevé Bancaire</Text>
           <View style={styles.headerIcons}>
             {/* filter icon */}
             <TouchableOpacity style={styles.iconButton} onPress={() => setShowFilterModal(true)}>
@@ -272,42 +309,63 @@ const Devis: React.FC = ({ navigation }: any) => {
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Invoices List */}
+      {/* Bank Statements List */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        // refreshControl={
+        //   <View style={{ paddingTop: 20 }}>
+        //     {refreshing && <ActivityIndicator size="small" color="#0B5FA5" />}
+        //   </View>
+        // }
+        onScroll={(e) => {
+          const offsetY = e.nativeEvent.contentOffset.y;
+          if (offsetY < -50 && !refreshing) {
+            onRefresh();
+          }
+        }}
+        scrollEventThrottle={16}
       >
-        {/* {activeTab === 'Tous' && invoices.map((invoice) => (
-          <TouchableOpacity 
-            key={invoice.id} 
-            style={styles.invoiceCard}
-            onPress={() => handleInvoicePress(invoice)}
-          >
-            <View style={styles.invoiceLeft}>
-              <Text style={styles.clientName}>{invoice.client}</Text>
-              <Text style={styles.invoiceNumber}>{invoice.number}</Text>
-              <View
-                style={[
-                  styles.statusBadge,
-                  { backgroundColor: invoice.statusColor },
-                ]}
-              >
-                <Text style={styles.statusText}>{invoice.status}</Text>
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#0B5FA5" />
+            <Text style={styles.loadingText}>Chargement...</Text>
+          </View>
+        ) : bankStatements.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>Aucun relevé bancaire trouvé</Text>
+            <Text style={styles.emptySubText}>Ajoutez votre premier relevé</Text>
+          </View>
+        ) : (
+          bankStatements.map((statement) => (
+            <TouchableOpacity
+              key={statement.id}
+              style={styles.invoiceCard}
+              onPress={() => handleQuotePress(statement)}
+            >
+              <View style={styles.invoiceLeft}>
+                <Text style={styles.clientName}>Relevé Bancaire</Text>
+                <Text style={styles.invoiceNumber}>{formatMonthYear(statement.month_year)}</Text>
+                <View style={styles.statusBadge}>
+                  <Image
+                    source={fileIcon}
+                    style={[styles.fileIconSmall, { tintColor: '#FFFFFF' }]}
+                    resizeMode="contain"
+                  />
+                  <Text style={styles.statusText}>PDF</Text>
+                </View>
               </View>
-            </View>
-            <View style={styles.invoiceRight}>
-              <Text style={styles.amount}>
-                {invoice.amount} {invoice.currency}
-              </Text>
-              <Text style={styles.date}>{invoice.date}</Text>
-            </View>
-          </TouchableOpacity>
-        ))} */}
+              <View style={styles.invoiceRight}>
+                <Text style={styles.date}>{formatDate(statement.created_at)}</Text>
+              </View>
+            </TouchableOpacity>
+          ))
+        )}
       </ScrollView>
 
       {/* FAB Button */}
-      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('Add Quote')}>
+      <TouchableOpacity style={styles.fab} onPress={() => navigation.navigate('Add Bank Statement')}>
         <Text style={styles.fabIcon}>+</Text>
       </TouchableOpacity>
 
@@ -384,7 +442,7 @@ const Devis: React.FC = ({ navigation }: any) => {
                     }}
                   >
                     <Image source={fileIcon} style={styles.calendarIcon} resizeMode="contain" />
-                    <Text style={styles.dateText}>{formatDate(duDate)}</Text>
+                    <Text style={styles.dateText}>{formatDateFilter(duDate)}</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -405,7 +463,7 @@ const Devis: React.FC = ({ navigation }: any) => {
                     }}
                   >
                     <Image source={fileIcon} style={styles.calendarIcon} resizeMode="contain" />
-                    <Text style={styles.dateText}>{formatDate(auDate)}</Text>
+                    <Text style={styles.dateText}>{formatDateFilter(auDate)}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -747,10 +805,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     alignSelf: 'flex-start',
+    backgroundColor: '#0B5FA5',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 1,
+    gap: 6,
+  },
+  fileIconSmall: {
+    width: 12,
+    height: 12,
   },
   statusText: {
     fontSize: 12,
@@ -1092,6 +1158,33 @@ const styles = StyleSheet.create({
     color: '#333333',
     borderWidth: 1,
     borderColor: '#E5E5E5',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#666666',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333333',
+    marginBottom: 8,
+  },
+  emptySubText: {
+    fontSize: 14,
+    color: '#999999',
   },
 });
 

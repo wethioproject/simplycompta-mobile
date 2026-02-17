@@ -35,9 +35,9 @@ import Payments from '../screens/home/Payments';
 import Expenses from '../screens/home/Expenses';
 import EditExpense from '../screens/home/EditExpense';
 import EditPayments from '../screens/home/EditPayments';
-import AddInvoice from '../screens/invoices/AddInvoice';
-import AddArticle from '../screens/invoices/AddArticle';
-import AddQuote from '../screens/quotes/AddQuote';
+import AddTransaction from '../screens/transaction/AddTransaction';
+import AddArticle from '../screens/transaction/AddArticle';
+import AddBankStatement from '../screens/bankStatement/AddBankStatement';
 import AddDeliveryNote from '../screens/deliverynote/AddDeliveryNote';
 import AddCredit from '../screens/credit/AddCredit';
 import AddProduct from '../screens/product/AddProduct';
@@ -89,7 +89,7 @@ const AppNavigator = () => {
         <Stack.Screen name="Edit Payments" component={EditPayments} options={{ headerShown: false }} />
         <Stack.Screen name="Add Invoice" component={AddInvoice} options={{ headerShown: false }} />
         <Stack.Screen name="Add Article" component={AddArticle} options={{ headerShown: false }} />
-        <Stack.Screen name="Add Quote" component={AddQuote} options={{ headerShown: false }} />
+        <Stack.Screen name="Add Bank Statement" component={AddBankStatement} options={{ headerShown: false }} />
         <Stack.Screen name="Add Delivery Note" component={AddDeliveryNote} options={{ headerShown: false }} />
         <Stack.Screen name="Add Credit" component={AddCredit} options={{ headerShown: false }} />
         <Stack.Screen name="Add Product" component={AddProduct} options={{ headerShown: false }} />

@@ -4,8 +4,8 @@ import { Text, Platform, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fileIcon } from '../assets/icons';
 import Home from '../screens/home/Home';
-import Factures from '../screens/home/Factures';
-import Devis from '../screens/home/Devis';
+import Transactions from '../screens/home/Transactions';
+import BankStatement from '../screens/home/BankStatement';
 import Clients from '../screens/home/Clients';
 import Plus from '../screens/home/Plus';
 
@@ -52,8 +52,8 @@ const HomeTabs: React.FC = () => {
         }}
       />
       <Tab.Screen
-        name="Devis"
-        component={Devis}
+        name="Bank"
+        component={BankStatement}
         options={{
           tabBarIcon: ({ color, size }) => (
             <Image source={fileIcon} style={{ width: 24, height: 24, tintColor: color }} resizeMode="contain" />
