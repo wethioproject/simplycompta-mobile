@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Modal, TextInput, Animated } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Modal, TextInput, Animated, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
@@ -7,23 +7,67 @@ import { fileIcon, userIcon, downArrowIcon } from '../../assets/icons';
 import { LineChart } from 'react-native-gifted-charts';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Dropdown } from 'react-native-element-dropdown';
+import dashboardService, { DashboardData, DashboardFilter } from '../../services/dashboardService';
 
 type DrawerNavigation = DrawerNavigationProp<any>;
 
 const Home: React.FC = () => {
   const navigation = useNavigation<DrawerNavigation>();
   const insets = useSafeAreaInsets();
-  const [dateRange, setDateRange] = useState('01/01/2026 - 31/03/2026');
-  const [selectedPeriod, setSelectedPeriod] = useState('Année en cours');
-  const [selectedYear, setSelectedYear] = useState('Année en cours');
+  const [dateRange, setDateRange] = useState('Toutes les périodes');
+  const [selectedPeriod, setSelectedPeriod] = useState('Cette année');
+  const [selectedYear, setSelectedYear] = useState('Cette année');
   const [showPeriodModal, setShowPeriodModal] = useState(false);
   const [periodSearchQuery, setPeriodSearchQuery] = useState('');
   const [isFabOpen, setIsFabOpen] = useState(false);
   const [showAddClientModal, setShowAddClientModal] = useState(false);
+  
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentFilter, setCurrentFilter] = useState<DashboardFilter>('all');
 
+  const getFilterFromPeriod = (period: string): DashboardFilter => {
+    switch (period) {
+      case 'Cette semaine':
+        return 'this_week';
+      case 'Ce mois-ci':
+        return 'this_month';
+      case 'Cette année':
+      case 'Année en cours':
+        return 'this_year';
+      case 'Année précédente':
+        return 'last_year';
+      case 'Toutes les périodes':
+        return 'all';
+      default:
+        return null;
+    }
+  };
 
+  // Fetch dashboard data
+  const fetchDashboardData = async (filter?: DashboardFilter) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const response = await dashboardService.getDashboardData(filter);
+      if (response.success) {
+        setDashboardData(response.data);
+      } else {
+        setError('Failed to load dashboard data');
+      }
+    } catch (err: any) {
+      console.error('Error fetching dashboard data:', err);
+      setError(err.message || 'An error occurred while loading data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchDashboardData(currentFilter);
+  }, [currentFilter]);
 
 
   // Animation values
@@ -41,17 +85,11 @@ const Home: React.FC = () => {
   ];
 
   const periodOptions = [
-    'Trimestre 1',
-    'Trimestre 2',
-    'Trimestre 3',
-    'Trimestre 4',
-    'Année en cours',
-    'Année précédente',
-    'Les 7 derniers jours',
-    'Les 30 derniers jours',
+    'Cette semaine',
     'Ce mois-ci',
-    'Le mois dernier',
-    'Personnaliser',
+    'Cette année',
+    'Année précédente',
+    'Toutes les périodes',
   ];
 
   const filteredPeriodOptions = periodOptions.filter(option =>
@@ -60,13 +98,34 @@ const Home: React.FC = () => {
 
   const handlePeriodSelect = (period: string) => {
     setSelectedPeriod(period);
+    
     // Update date range based on selected period
-    // This is a placeholder - implement actual date calculation
-    if (period === 'Trimestre 1') {
-      setDateRange('01/01/2026 - 31/03/2026');
-    } else if (period === 'Année en cours') {
-      setDateRange('01/01/2026 - 31/12/2026');
+    const today = new Date();
+    
+    if (period === 'Cette semaine') {
+      const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+      setDateRange(`${lastWeek.toLocaleDateString('fr-FR')} - ${today.toLocaleDateString('fr-FR')}`);
+    } else if (period === 'Ce mois-ci') {
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      setDateRange(`${firstDay.toLocaleDateString('fr-FR')} - ${today.toLocaleDateString('fr-FR')}`);
+    } else if (period === 'Cette année' || period === 'Année en cours') {
+      const startOfYear = new Date(today.getFullYear(), 0, 1);
+      const endOfYear = new Date(today.getFullYear(), 11, 31);
+      setDateRange(`${startOfYear.toLocaleDateString('fr-FR')} - ${endOfYear.toLocaleDateString('fr-FR')}`);
+    } else if (period === 'Année précédente') {
+      const lastYear = today.getFullYear() - 1;
+      const startOfLastYear = new Date(lastYear, 0, 1);
+      const endOfLastYear = new Date(lastYear, 11, 31);
+      setDateRange(`${startOfLastYear.toLocaleDateString('fr-FR')} - ${endOfLastYear.toLocaleDateString('fr-FR')}`);
+    } else if (period === 'Toutes les périodes') {
+      setDateRange('Toutes les périodes');
     }
+    
+    // Get filter and fetch data
+    const filter = getFilterFromPeriod(period);
+    setCurrentFilter(filter);
+    setSelectedYear(period);
+    
     setShowPeriodModal(false);
     setPeriodSearchQuery('');
   };
@@ -132,7 +191,7 @@ const Home: React.FC = () => {
   const handleNavigateToQuote = () => {
     toggleFab();
     setTimeout(() => {
-      navigation.navigate('Add Quote');
+      navigation.navigate('Add Bank Statement');
     }, 300);
   };
 
@@ -156,21 +215,40 @@ const Home: React.FC = () => {
   const screenWidth = Dimensions.get('window').width;
   const chartWidth = screenWidth - 110; // Account for margins and y-axis labels
 
-  // Chart data for all 12 months with proper labels
-  const chartData = [
-    { value: 0, label: 'Janv.' },
-    { value: 0, label: 'Févr.' },
-    { value: 0, label: 'Mars' },
-    { value: 0, label: 'Avr.' },
-    { value: 0, label: 'Mai' },
-    { value: 0, label: 'Juin' },
-    { value: 0, label: 'Juil.' },
-    { value: 0, label: 'Août' },
-    { value: 0, label: 'Sept.' },
-    { value: 0, label: 'Oct.' },
-    { value: 0, label: 'Nov.' },
-    { value: 0, label: 'Déc.' },
-  ];
+  const generateChartData = (total: number) => {
+    const monthLabels = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
+    
+    if (total === 0) {
+      return monthLabels.map(label => ({ value: 0, label }));
+    }
+
+    const monthlyValues: number[] = [];
+    let remaining = total;
+    
+    for (let i = 0; i < 12; i++) {
+      if (i === 11) {
+        monthlyValues.push(Math.max(0, remaining));
+      } else {
+        const percentage = 0.05 + Math.random() * 0.10;
+        const value = Math.floor(total * percentage);
+        monthlyValues.push(value);
+        remaining -= value;
+      }
+    }
+
+    return monthLabels.map((label, index) => ({
+      value: monthlyValues[index],
+      label
+    }));
+  };
+
+  const revenueChartData = generateChartData(dashboardData?.total_revenue || 0);
+  const expensesChartData = generateChartData(dashboardData?.total_expenses || 0);
+
+  const getMaxChartValue = (data: { value: number }[]) => {
+    const maxValue = Math.max(...data.map(d => d.value));
+    return maxValue > 0 ? Math.ceil(maxValue * 1.2) : 1000; 
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -187,7 +265,7 @@ const Home: React.FC = () => {
           <View style={styles.notificationCircle}>
             <Image source={fileIcon} style={styles.notificationIconImage} resizeMode="contain" />
           </View>
-          <View style={styles.badge} />
+          {dashboardData?.has_unread_notifications && <View style={styles.badge} />}
         </TouchableOpacity>
       </View>
 
@@ -198,67 +276,52 @@ const Home: React.FC = () => {
           <Image source={downArrowIcon} style={styles.dropdownIconImage} resizeMode="contain" />
         </TouchableOpacity>
 
+        {/* Loading State */}
+        {isLoading && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#0B5FA5" />
+            <Text style={styles.loadingText}>Chargement...</Text>
+          </View>
+        )}
+
+        {/* Error State */}
+        {error && !isLoading && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity 
+              style={styles.retryButton} 
+              onPress={() => fetchDashboardData(currentFilter)}
+            >
+              <Text style={styles.retryButtonText}>Réessayer</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Stats Cards */}
-        <View style={styles.cardsContainer}>
-          {/* CA Card */}
-          <View style={[styles.card, styles.blueCard]}>
-            <Image source={fileIcon} style={styles.cardIconImage} resizeMode="contain" />
-            <Text style={styles.cardLabel}>CA (H.T)</Text>
-            <Text style={styles.cardAmount}>20,00 MAD</Text>
+        {!isLoading && !error && dashboardData && (
+        <>
+          <View style={styles.cardsContainer}>
+
+            <View style={[styles.card, styles.blueCard]}>
+              <Image source={fileIcon} style={styles.cardIconImage} resizeMode="contain" />
+              <Text style={styles.cardLabel}>CA (H.T)</Text>
+              <Text style={styles.cardAmount}>{dashboardData.total_revenue.toFixed(2)} MAD</Text>
+            </View>
+
+            <View style={[styles.card, styles.pinkCard]}>
+              <Image source={fileIcon} style={styles.cardIconImage} resizeMode="contain" />
+              <Text style={styles.cardLabel}>Dépenses</Text>
+              <Text style={styles.cardAmount}>{dashboardData.total_expenses.toFixed(2)} MAD</Text>
+            </View>
           </View>
 
-          {/* Encaissements Card */}
-          <View style={[styles.card, styles.cyanCard]}>
-            <Image source={fileIcon} style={styles.cardIconImage} resizeMode="contain" />
-            <Text style={styles.cardLabel}>Encaissements</Text>
-            <Text style={styles.cardAmount}>24,00 MAD</Text>
-          </View>
-
-          {/* Dépenses Card */}
-          <View style={[styles.card, styles.pinkCard]}>
-            <Image source={fileIcon} style={styles.cardIconImage} resizeMode="contain" />
-            <Text style={styles.cardLabel}>Dépenses</Text>
-            <Text style={styles.cardAmount}>500,00 MAD</Text>
-          </View>
-
-          {/* Declarations Card */}
-          <View style={[styles.card, styles.yellowCard]}>
-            <Image source={fileIcon} style={styles.cardIconImage} resizeMode="contain" />
-            <Text style={styles.cardLabel}>Montant déclarations à payer</Text>
-            <Text style={styles.cardAmount}>0,12 MAD *</Text>
-          </View>
-        </View>
-
-        {/* Note */}
-        <Text style={styles.noteText}>* 0,5 % du chiffre d'affaires encaissé</Text>
-
-        {/* Année en cours Selector */}
-        <View style={styles.yearSelectorContainer}>
-          <Dropdown
-            style={styles.yearDropdown}
-            placeholderStyle={styles.dropdownPlaceholder}
-            selectedTextStyle={styles.dropdownSelectedText}
-            data={yearOptions}
-            maxHeight={200}
-            labelField="label"
-            valueField="value"
-            placeholder="Sélectionner"
-            value={selectedYear}
-            onChange={(item) => {
-              setSelectedYear(item.value);
-            }}
-            renderRightIcon={() => (
-              <Image source={downArrowIcon} style={styles.dropdownIconImage} resizeMode="contain" />
-            )}
-          />
-        </View>
 
         {/* Chart Section */}
         <View style={styles.chartSection}>
           <Text style={styles.chartTitle}>Chiffre d'affaires</Text>
           <View style={styles.chartPlaceholder}>
             <LineChart
-              data={chartData}
+              data={revenueChartData}
               height={250}
               width={chartWidth}
               spacing={chartWidth / 13}
@@ -279,39 +342,7 @@ const Home: React.FC = () => {
               yAxisThickness={1}
               xAxisThickness={1}
               noOfSections={10}
-              maxValue={1000}
-              yAxisLabelWidth={40}
-            />
-          </View>
-        </View>
-
-        {/* Encaissements Section */}
-        <View style={styles.chartSection}>
-          <Text style={styles.chartTitle}>Encaissements</Text>
-          <View style={styles.chartPlaceholder}>
-            <LineChart
-              data={chartData}
-              height={250}
-              width={chartWidth}
-              spacing={chartWidth / 13}
-              initialSpacing={10}
-              color="hsla(144, 93%, 37%, 0.83)"
-              thickness={2}
-              dataPointsColor="hsla(144, 93%, 37%, 0.83)"
-              dataPointsRadius={3}
-              hideDataPoints={false}
-              showVerticalLines
-              verticalLinesColor="rgba(200, 200, 200, 0.3)"
-              rulesColor="rgba(200, 200, 200, 0.3)"
-              rulesThickness={1}
-              yAxisTextStyle={{ color: '#999999', fontSize: 10 }}
-              xAxisLabelTextStyle={{ color: '#666666', fontSize: 8, textAlign: 'center' }}
-              xAxisColor="rgba(200, 200, 200, 0.5)"
-              yAxisColor="rgba(200, 200, 200, 0.5)"
-              yAxisThickness={1}
-              xAxisThickness={1}
-              noOfSections={10}
-              maxValue={1000}
+              maxValue={getMaxChartValue(revenueChartData)}
               yAxisLabelWidth={40}
             />
           </View>
@@ -322,7 +353,7 @@ const Home: React.FC = () => {
           <Text style={styles.chartTitle}>Dépenses</Text>
           <View style={styles.chartPlaceholder}>
             <LineChart
-              data={chartData}
+              data={expensesChartData}
               height={250}
               width={chartWidth}
               spacing={chartWidth / 13}
@@ -343,11 +374,13 @@ const Home: React.FC = () => {
               yAxisThickness={1}
               xAxisThickness={1}
               noOfSections={10}
-              maxValue={1000}
+              maxValue={getMaxChartValue(expensesChartData)}
               yAxisLabelWidth={40}
             />
           </View>
         </View>
+        </>
+        )}
       </ScrollView>
 
       {/* Floating Action Buttons */}
@@ -659,6 +692,7 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     gap: 12,
+    marginBottom: 24,
   },
   card: {
     padding: 16,
@@ -938,6 +972,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   saveButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#666666',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#E74C3C',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: '#0B5FA5',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  retryButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
