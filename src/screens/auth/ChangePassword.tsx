@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import { eyeIcon } from '../../assets/icons';
+import { useAuth } from '../../hooks/useAuth';
 
 const ChangePassword: React.FC = ({ navigation }: any) => {
+  const { resetPassword } = useAuth();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -11,8 +14,33 @@ const ChangePassword: React.FC = ({ navigation }: any) => {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const handleSave = () => {
-    console.log('Password changed');
+  const handleSave = async () => {
+    if (newPassword !== confirmPassword) {
+      console.log('Passwords do not match');
+        Toast.show({
+        type: 'error',
+        text1: 'Reset Password Failed',
+        text2: 'Passwords do not match',
+        position: 'top'
+      });
+      return;
+    }
+
+    const result = await resetPassword(currentPassword, newPassword, confirmPassword);
+    if (result.success) {
+      console.log('Password changed successfully');
+        Toast.show({
+        type: 'success',
+        text1: 'Reset Password Success',
+        text2: 'Password changed successfully',
+        position: 'top'
+      });
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } else {
+      console.log('Error changing password:', result.error);
+    }
   };
 
   return (

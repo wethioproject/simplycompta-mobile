@@ -69,6 +69,46 @@ class AuthService {
     }
   }
 
+  async resetPassword(current_password: string, new_password: string, new_password_confirmation: string): Promise<void> {
+    try {
+      const response = await api.post('/customer/reset-password', {
+        current_password,
+        new_password,
+        new_password_confirmation
+      })
+
+      return response.data;
+    } catch (error: any) {
+      console.error('Reset password error:', error.response?.data || error.message);
+      throw error;
+    }
+  }
+
+  async forgotPassword(email: string): Promise<any> {
+    try {
+      const response = await api.post('/customer/forgot-password', { email })
+      return response.data;
+    } catch (error: any) {
+      console.error('Forgot password error:', error.response?.data || error.message);
+      throw error;
+    }
+  }
+
+  async forgotPasswordOtp(email: string, otp: string, password: string, password_confirmation: string): Promise<void> {
+    try {
+      const response = await api.post('/customer/forgot-password-otp', {
+        email,
+        otp,
+        password,
+        password_confirmation
+      })
+      return response.data;
+    } catch (error: any) {
+      console.error('Forgot password OTP error:', error.response?.data || error.message);
+      throw error;
+    }
+  }
+
   /**
    * Logout user
    * Calls logout API and clears all stored data

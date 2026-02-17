@@ -17,14 +17,14 @@ export const useAuth = () => {
   const login = useCallback(async (credentials: LoginCredentials) => {
     try {
       dispatch(setLoading(true));
-      
+
       const response = await authService.login(credentials);
-      
+
       dispatch(loginSuccess({
         customer: response.customer,
         token: response.token,
       }));
-      
+
       return { success: true };
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Login failed. Please try again.';
@@ -32,6 +32,36 @@ export const useAuth = () => {
       return { success: false, error: errorMessage };
     }
   }, [dispatch]);
+
+  const resetPassword = useCallback(async (current_password: string, new_password: string, new_password_confirmation: string) => {
+    try {
+      await authService.resetPassword(current_password, new_password, new_password_confirmation);
+      return { success: true }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'password reset failed. please try again.'
+      return { success: false, error: errorMessage }
+    }
+  }, []);
+
+  const forgotPassword = useCallback(async (email: string) => {
+    try {
+      const res = await authService.forgotPassword(email);
+      return { success: true, message: res.message }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Forgot password request failed. Please try again.';
+      return { success: false, error: errorMessage };
+    }
+  }, [])
+
+  const forgotPasswordOtp = useCallback(async (email: string, otp: string, password: string, password_confirmation: string) => {
+    try {
+      await authService.forgotPasswordOtp(email, otp, password, password_confirmation);
+      return { success: true }
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Forgot password OTP verification failed. Please try again.';
+      return { success: false, error: errorMessage };
+    }
+  }, [])
 
   /**
    * Logout function
@@ -54,7 +84,7 @@ export const useAuth = () => {
     try {
       const token = await authService.getToken();
       const customer = await authService.getCustomer();
-      
+
       if (token && customer) {
         dispatch(loginSuccess({ customer, token }));
         return true;
@@ -75,7 +105,10 @@ export const useAuth = () => {
     error,
     // Actions
     login,
+    resetPassword,
     logout,
+    forgotPassword,
+    forgotPasswordOtp,
     checkAuth,
   };
 };
