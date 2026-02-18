@@ -1,577 +1,292 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Dimensions, Modal, TextInput, Animated, ActivityIndicator } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
-import { fileIcon, userIcon, downArrowIcon } from '../../assets/icons';
-import { LineChart } from 'react-native-gifted-charts';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Dropdown } from 'react-native-element-dropdown';
-import dashboardService, { DashboardData, DashboardFilter } from '../../services/dashboardService';
+import { 
+  Bell, 
+  Search, 
+  Home as HomeIcon, 
+  ChevronRight, 
+  Headphones,
+} from 'lucide-react-native';
+import { appLogoIcon } from '../../assets/icons';
+import LinearGradient from 'react-native-linear-gradient';
 
 type DrawerNavigation = DrawerNavigationProp<any>;
 
 const Home: React.FC = () => {
   const navigation = useNavigation<DrawerNavigation>();
-  const insets = useSafeAreaInsets();
-  const [dateRange, setDateRange] = useState('Toutes les périodes');
-  const [selectedPeriod, setSelectedPeriod] = useState('Cette année');
-  const [selectedYear, setSelectedYear] = useState('Cette année');
-  const [showPeriodModal, setShowPeriodModal] = useState(false);
-  const [periodSearchQuery, setPeriodSearchQuery] = useState('');
-  const [isFabOpen, setIsFabOpen] = useState(false);
-  const [showAddClientModal, setShowAddClientModal] = useState(false);
-  
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [currentFilter, setCurrentFilter] = useState<DashboardFilter>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const getFilterFromPeriod = (period: string): DashboardFilter => {
-    switch (period) {
-      case 'Cette semaine':
-        return 'this_week';
-      case 'Ce mois-ci':
-        return 'this_month';
-      case 'Cette année':
-      case 'Année en cours':
-        return 'this_year';
-      case 'Année précédente':
-        return 'last_year';
-      case 'Toutes les périodes':
-        return 'all';
-      default:
-        return null;
+  const handleNavigate = (page: string) => {
+    const routes: { [key: string]: string } = {
+      'profile': 'Profile',
+      'legal': 'Legal Documents',
+      'accounting': 'Accounting Documents',
+      'activity': 'Activity',
+      'bank': 'Bank Statements',
+      'notifications': 'Notifications',
+      'contact-comptable': 'Contact'
+    };
+    
+    const route = routes[page];
+    if (route) {
+      navigation.navigate(route);
     }
-  };
-
-  // Fetch dashboard data
-  const fetchDashboardData = async (filter?: DashboardFilter) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      const response = await dashboardService.getDashboardData(filter);
-      if (response.success) {
-        setDashboardData(response.data);
-      } else {
-        setError('Failed to load dashboard data');
-      }
-    } catch (err: any) {
-      console.error('Error fetching dashboard data:', err);
-      setError(err.message || 'An error occurred while loading data');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Fetch data on component mount
-  useEffect(() => {
-    fetchDashboardData(currentFilter);
-  }, [currentFilter]);
-
-
-  // Animation values
-  const fabRotation = useState(new Animated.Value(0))[0];
-  const fabButton1Scale = useState(new Animated.Value(0))[0];
-  const fabButton2Scale = useState(new Animated.Value(0))[0];
-  const fabButton3Scale = useState(new Animated.Value(0))[0];
-  const fabButton1Opacity = useState(new Animated.Value(0))[0];
-  const fabButton2Opacity = useState(new Animated.Value(0))[0];
-  const fabButton3Opacity = useState(new Animated.Value(0))[0];
-
-  const yearOptions = [
-    { label: 'Année en cours', value: 'Année en cours' },
-    { label: 'Année précédente', value: 'Année précédente' },
-  ];
-
-  const periodOptions = [
-    'Cette semaine',
-    'Ce mois-ci',
-    'Cette année',
-    'Année précédente',
-    'Toutes les périodes',
-  ];
-
-  const filteredPeriodOptions = periodOptions.filter(option =>
-    option.toLowerCase().includes(periodSearchQuery.toLowerCase())
-  );
-
-  const handlePeriodSelect = (period: string) => {
-    setSelectedPeriod(period);
-    
-    // Update date range based on selected period
-    const today = new Date();
-    
-    if (period === 'Cette semaine') {
-      const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-      setDateRange(`${lastWeek.toLocaleDateString('fr-FR')} - ${today.toLocaleDateString('fr-FR')}`);
-    } else if (period === 'Ce mois-ci') {
-      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-      setDateRange(`${firstDay.toLocaleDateString('fr-FR')} - ${today.toLocaleDateString('fr-FR')}`);
-    } else if (period === 'Cette année' || period === 'Année en cours') {
-      const startOfYear = new Date(today.getFullYear(), 0, 1);
-      const endOfYear = new Date(today.getFullYear(), 11, 31);
-      setDateRange(`${startOfYear.toLocaleDateString('fr-FR')} - ${endOfYear.toLocaleDateString('fr-FR')}`);
-    } else if (period === 'Année précédente') {
-      const lastYear = today.getFullYear() - 1;
-      const startOfLastYear = new Date(lastYear, 0, 1);
-      const endOfLastYear = new Date(lastYear, 11, 31);
-      setDateRange(`${startOfLastYear.toLocaleDateString('fr-FR')} - ${endOfLastYear.toLocaleDateString('fr-FR')}`);
-    } else if (period === 'Toutes les périodes') {
-      setDateRange('Toutes les périodes');
-    }
-    
-    // Get filter and fetch data
-    const filter = getFilterFromPeriod(period);
-    setCurrentFilter(filter);
-    setSelectedYear(period);
-    
-    setShowPeriodModal(false);
-    setPeriodSearchQuery('');
-  };
-
-  const toggleFab = () => {
-    const toValue = isFabOpen ? 0 : 1;
-    setIsFabOpen(!isFabOpen);
-
-    Animated.parallel([
-      Animated.timing(fabRotation, {
-        toValue,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.stagger(50, [
-        Animated.parallel([
-          Animated.spring(fabButton1Scale, {
-            toValue,
-            friction: 5,
-            useNativeDriver: true,
-          }),
-          Animated.timing(fabButton1Opacity, {
-            toValue,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.parallel([
-          Animated.spring(fabButton2Scale, {
-            toValue,
-            friction: 5,
-            useNativeDriver: true,
-          }),
-          Animated.timing(fabButton2Opacity, {
-            toValue,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-        ]),
-        Animated.parallel([
-          Animated.spring(fabButton3Scale, {
-            toValue,
-            friction: 5,
-            useNativeDriver: true,
-          }),
-          Animated.timing(fabButton3Opacity, {
-            toValue,
-            duration: 200,
-            useNativeDriver: true,
-          }),
-        ]),
-      ]),
-    ]).start();
-  };
-
-  const handleNavigateToInvoice = () => {
-    toggleFab();
-    setTimeout(() => {
-      navigation.navigate('Add Invoice');
-    }, 300);
-  };
-
-  const handleNavigateToQuote = () => {
-    toggleFab();
-    setTimeout(() => {
-      navigation.navigate('Add Bank Statement');
-    }, 300);
-  };
-
-  const handleOpenAddClient = () => {
-    // toggleFab();
-    // setTimeout(() => {
-    //   setShowAddClientModal(true);
-    // }, 300);
-    toggleFab();
-    setTimeout(() => {
-      navigation.navigate('Add Client');
-    }, 300);
-  };
-
-  const rotation = fabRotation.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '45deg'],
-  });
-
-  // Calculate responsive chart width
-  const screenWidth = Dimensions.get('window').width;
-  const chartWidth = screenWidth - 110; // Account for margins and y-axis labels
-
-  const generateChartData = (total: number) => {
-    const monthLabels = ['Janv.', 'Févr.', 'Mars', 'Avr.', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
-    
-    if (total === 0) {
-      return monthLabels.map(label => ({ value: 0, label }));
-    }
-
-    const monthlyValues: number[] = [];
-    let remaining = total;
-    
-    for (let i = 0; i < 12; i++) {
-      if (i === 11) {
-        monthlyValues.push(Math.max(0, remaining));
-      } else {
-        const percentage = 0.05 + Math.random() * 0.10;
-        const value = Math.floor(total * percentage);
-        monthlyValues.push(value);
-        remaining -= value;
-      }
-    }
-
-    return monthLabels.map((label, index) => ({
-      value: monthlyValues[index],
-      label
-    }));
-  };
-
-  const revenueChartData = generateChartData(dashboardData?.total_revenue || 0);
-  const expensesChartData = generateChartData(dashboardData?.total_expenses || 0);
-
-  const getMaxChartValue = (data: { value: number }[]) => {
-    const maxValue = Math.max(...data.map(d => d.value));
-    return maxValue > 0 ? Math.ceil(maxValue * 1.2) : 1000; 
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.profileIcon} onPress={() => navigation.openDrawer()}>
-          <View style={styles.profileCircle}>
-            <Image source={userIcon} style={styles.profileImage} resizeMode="contain" />
+        <View style={styles.logoContainer}>
+          <Image source={appLogoIcon} style={styles.logo} resizeMode="contain" />
+        </View>
+
+        <View style={styles.searchRow}>
+          <View style={styles.searchContainer}>
+            <Search
+              size={20}
+              color="#9CA3AF"
+              style={styles.searchIcon}
+            />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Rechercher..."
+              placeholderTextColor="#9CA3AF"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
           </View>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Tableau de bord</Text>
-        {/* <View style={styles.placeholder} /> */}
-        <TouchableOpacity style={styles.notificationIcon} onPress={() => navigation.navigate('Notifications')}>
-          <View style={styles.notificationCircle}>
-            <Image source={fileIcon} style={styles.notificationIconImage} resizeMode="contain" />
-          </View>
-          {dashboardData?.has_unread_notifications && <View style={styles.badge} />}
-        </TouchableOpacity>
+
+          <TouchableOpacity style={styles.notificationButton}>
+            <Bell size={24} color="#4B5563" />
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>3</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Date Range Selector */}
-        <TouchableOpacity style={styles.dateSelector} onPress={() => setShowPeriodModal(true)}>
-          <Text style={styles.dateText}>{dateRange}</Text>
-          <Image source={downArrowIcon} style={styles.dropdownIconImage} resizeMode="contain" />
-        </TouchableOpacity>
+      {/* Main Content */}
+      <ScrollView 
+        style={styles.mainContent} 
+        contentContainerStyle={styles.mainContentContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.gridContainer}>
+          {/* Mon Profil */}
+          <TouchableOpacity
+            style={styles.cardButton}
+            onPress={() => handleNavigate('profile')}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.card, styles.cardBlue]}>
+              <View style={styles.cardIconContainer}>
+                <View style={styles.cardIconWhiteBg}>
+                  <HomeIcon size={36} color="#1E5BAC" />
+                </View>
+              </View>
+              <Text style={styles.cardText}>Mon Profil</Text>
+            </View>
+          </TouchableOpacity>
 
-        {/* Loading State */}
-        {isLoading && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#0B5FA5" />
-            <Text style={styles.loadingText}>Chargement...</Text>
-          </View>
-        )}
-
-        {/* Error State */}
-        {error && !isLoading && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-            <TouchableOpacity 
-              style={styles.retryButton} 
-              onPress={() => fetchDashboardData(currentFilter)}
+          {/* Documents Juridiques */}
+          {/* <TouchableOpacity
+            style={styles.cardButton}
+            onPress={() => handleNavigate('legal')}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={['#22D3EE', '#0891B2']}
+              style={[styles.card, styles.gradientCard]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
             >
-              <Text style={styles.retryButtonText}>Réessayer</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Stats Cards */}
-        {!isLoading && !error && dashboardData && (
-        <>
-          <View style={styles.cardsContainer}>
-
-            <View style={[styles.card, styles.blueCard]}>
-              <Image source={fileIcon} style={styles.cardIconImage} resizeMode="contain" />
-              <Text style={styles.cardLabel}>CA (H.T)</Text>
-              <Text style={styles.cardAmount}>{dashboardData.total_revenue.toFixed(2)} MAD</Text>
+              <View style={styles.cardIconContainer}>
+                <HomeIcon size={40} color="#FFFFFF" />
+              </View>
+              <Text style={styles.cardText}>Documents Juridiques</Text>
+            </LinearGradient>
+          </TouchableOpacity> */}
+          <TouchableOpacity
+            style={styles.cardButton}
+            onPress={() => handleNavigate('legal')}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.card, {backgroundColor: '#0891B2'}]}>
+              <View style={styles.cardIconContainer}>
+                <View style={styles.cardIconBg}>
+                  <HomeIcon size={36} color="#FFFFFF" />
+                </View>
+              </View>
+              <Text style={styles.cardText}>Documents Juridiques</Text>
             </View>
+          </TouchableOpacity>
 
-            <View style={[styles.card, styles.pinkCard]}>
-              <Image source={fileIcon} style={styles.cardIconImage} resizeMode="contain" />
-              <Text style={styles.cardLabel}>Dépenses</Text>
-              <Text style={styles.cardAmount}>{dashboardData.total_expenses.toFixed(2)} MAD</Text>
+          {/* Documents Comptables */}
+          {/* <TouchableOpacity
+            style={styles.cardButton}
+            onPress={() => handleNavigate('accounting')}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={['#9333EA', '#6B21A8']}
+              style={[styles.card, styles.gradientCard]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <View style={styles.cardIconContainer}>
+                <HomeIcon size={40} color="#FFFFFF" />
+              </View>
+              <Text style={styles.cardText}>Documents Comptables</Text>
+            </LinearGradient>
+          </TouchableOpacity> */}
+          <TouchableOpacity
+            style={styles.cardButton}
+            onPress={() => handleNavigate('accounting')}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.card, {backgroundColor: '#6B21A8'}]}>
+              <View style={styles.cardIconContainer}>
+                <View style={styles.cardIconBg}>
+                  <HomeIcon size={36} color="#FFFFFF" />
+                </View>
+              </View>
+              <Text style={styles.cardText}>Documents Comptables</Text>
             </View>
-          </View>
+          </TouchableOpacity>
 
+          {/* Mon Activité */}
+          {/* <TouchableOpacity
+            style={styles.cardButton}
+            onPress={() => handleNavigate('activity')}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={['#FB923C', '#EA580C']}
+              style={[styles.card, styles.gradientCard]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <View style={styles.cardIconContainer}>
+                <HomeIcon size={40} color="#FFFFFF" />
+              </View>
+              <Text style={styles.cardText}>Mon Activité</Text>
+            </LinearGradient>
+          </TouchableOpacity> */}
+          <TouchableOpacity
+            style={styles.cardButton}
+            onPress={() => handleNavigate('activity')}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.card, {backgroundColor: '#EA580C'}]}>
+              <View style={styles.cardIconContainer}>
+                <View style={styles.cardIconBg}>
+                  <HomeIcon size={36} color="#FFFFFF" />
+                </View>
+              </View>
+              <Text style={styles.cardText}>Mon Activité</Text>
+            </View>
+          </TouchableOpacity>
 
-        {/* Chart Section */}
-        <View style={styles.chartSection}>
-          <Text style={styles.chartTitle}>Chiffre d'affaires</Text>
-          <View style={styles.chartPlaceholder}>
-            <LineChart
-              data={revenueChartData}
-              height={250}
-              width={chartWidth}
-              spacing={chartWidth / 13}
-              initialSpacing={10}
-              color="#4A90E2"
-              thickness={2}
-              dataPointsColor="#4A90E2"
-              dataPointsRadius={3}
-              hideDataPoints={false}
-              showVerticalLines
-              verticalLinesColor="rgba(200, 200, 200, 0.3)"
-              rulesColor="rgba(200, 200, 200, 0.3)"
-              rulesThickness={1}
-              yAxisTextStyle={{ color: '#999999', fontSize: 10 }}
-              xAxisLabelTextStyle={{ color: '#666666', fontSize: 8, textAlign: 'center' }}
-              xAxisColor="rgba(200, 200, 200, 0.5)"
-              yAxisColor="rgba(200, 200, 200, 0.5)"
-              yAxisThickness={1}
-              xAxisThickness={1}
-              noOfSections={10}
-              maxValue={getMaxChartValue(revenueChartData)}
-              yAxisLabelWidth={40}
-            />
-          </View>
+          {/* Mes Relevés Bancaires */}
+          {/* <TouchableOpacity
+            style={styles.cardButton}
+            onPress={() => handleNavigate('bank')}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={['#10B981', '#047857']}
+              style={[styles.card, styles.gradientCard]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <View style={styles.cardIconContainer}>
+                <HomeIcon size={40} color="#FFFFFF" />
+              </View>
+              <Text style={styles.cardText}>Mes Relevés Bancaires</Text>
+            </LinearGradient>
+          </TouchableOpacity> */}
+          <TouchableOpacity
+            style={styles.cardButton}
+            onPress={() => handleNavigate('bank')}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.card, {backgroundColor: '#047857'}]}>
+              <View style={styles.cardIconContainer}>
+                <View style={styles.cardIconBg}>
+                  <HomeIcon size={36} color="#FFFFFF" />
+                </View>
+              </View>
+              <Text style={styles.cardText}>Mes Relevés Bancaires</Text>
+            </View>
+          </TouchableOpacity>
+
+          {/* Mes Notifications */}
+          {/* <TouchableOpacity
+            style={styles.cardButton}
+            onPress={() => handleNavigate('notifications')}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={['#1E5BAC', '#14407A']}
+              style={[styles.card, styles.gradientCard]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <View style={styles.cardIconContainer}>
+                <Bell size={40} color="#FFFFFF" strokeWidth={2} />
+              </View>
+              <Text style={styles.cardText}>Mes Notifications</Text>
+              <View style={styles.cardBadge}>
+                <Text style={styles.cardBadgeText}>3</Text>
+              </View>
+            </LinearGradient>
+          </TouchableOpacity> */}
+          <TouchableOpacity
+            style={styles.cardButton}
+            onPress={() => handleNavigate('notifications')}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.card, {backgroundColor: '#14407A'}]}>
+              <View style={styles.cardIconContainer}>
+                <View style={styles.cardIconBg}>
+                  <HomeIcon size={36} color="#FFFFFF" />
+                </View>
+              </View>
+              <Text style={styles.cardText}>Mes Notifications</Text>
+            </View>
+          </TouchableOpacity>
         </View>
 
-        {/* Dépenses Section */}
-        <View style={styles.chartSection}>
-          <Text style={styles.chartTitle}>Dépenses</Text>
-          <View style={styles.chartPlaceholder}>
-            <LineChart
-              data={expensesChartData}
-              height={250}
-              width={chartWidth}
-              spacing={chartWidth / 13}
-              initialSpacing={10}
-              color="rgb(232, 20, 20)"
-              thickness={2}
-              dataPointsColor="rgb(232, 20, 20)"
-              dataPointsRadius={3}
-              hideDataPoints={false}
-              showVerticalLines
-              verticalLinesColor="rgba(200, 200, 200, 0.3)"
-              rulesColor="rgba(200, 200, 200, 0.3)"
-              rulesThickness={1}
-              yAxisTextStyle={{ color: '#999999', fontSize: 10 }}
-              xAxisLabelTextStyle={{ color: '#666666', fontSize: 8, textAlign: 'center' }}
-              xAxisColor="rgba(200, 200, 200, 0.5)"
-              yAxisColor="rgba(200, 200, 200, 0.5)"
-              yAxisThickness={1}
-              xAxisThickness={1}
-              noOfSections={10}
-              maxValue={getMaxChartValue(expensesChartData)}
-              yAxisLabelWidth={40}
-            />
+        {/* Contact Section */}
+        <View style={styles.contactSection}>
+          <View style={styles.contactHeader}>
+            <View style={styles.contactHeaderLeft}>
+              <View style={styles.contactIconCircle}>
+                <Headphones size={24} color="#10B981" />
+              </View>
+              <View style={styles.contactTextContainer}>
+                <Text style={styles.contactText}>
+                  Une question ou un document à{'\n'}transmettre à votre cabinet ?
+                </Text>
+              </View>
+            </View>
+            <ChevronRight size={20} color="#9CA3AF" />
           </View>
+
+          <TouchableOpacity
+            style={styles.contactButton}
+            onPress={() => handleNavigate('contact-comptable')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.contactButtonText}>Contacter mon comptable</Text>
+            <Text style={styles.contactButtonArrow}>→</Text>
+          </TouchableOpacity>
         </View>
-        </>
-        )}
       </ScrollView>
-
-      {/* Floating Action Buttons */}
-      <View style={styles.fabContainer}>
-        {/* Sub Action Buttons */}
-        <Animated.View
-          style={[
-            styles.subFab,
-            {
-              transform: [{ scale: fabButton3Scale }],
-              opacity: fabButton3Opacity,
-              bottom: 176,
-            },
-          ]}
-        >
-          <TouchableOpacity
-            style={[styles.subFabButton, styles.subFabButton3]}
-            onPress={handleNavigateToInvoice}
-            activeOpacity={0.8}
-          >
-            <Image source={fileIcon} style={styles.fabIconImage} resizeMode="contain" />
-          </TouchableOpacity>
-        </Animated.View>
-
-        <Animated.View
-          style={[
-            styles.subFab,
-            {
-              transform: [{ scale: fabButton2Scale }],
-              opacity: fabButton2Opacity,
-              bottom: 120,
-            },
-          ]}
-        >
-          <TouchableOpacity
-            style={[styles.subFabButton, styles.subFabButton2]}
-            onPress={handleNavigateToQuote}
-            activeOpacity={0.8}
-          >
-            <Image source={fileIcon} style={styles.fabIconImage} resizeMode="contain" />
-          </TouchableOpacity>
-        </Animated.View>
-
-        <Animated.View
-          style={[
-            styles.subFab,
-            {
-              transform: [{ scale: fabButton1Scale }],
-              opacity: fabButton1Opacity,
-              bottom: 64,
-            },
-          ]}
-        >
-          <TouchableOpacity
-            style={[styles.subFabButton, styles.subFabButton1]}
-            onPress={handleOpenAddClient}
-            activeOpacity={0.8}
-          >
-            <Image source={fileIcon} style={styles.fabIconImage} resizeMode="contain" />
-          </TouchableOpacity>
-        </Animated.View>
-
-        {/* Main FAB */}
-        <TouchableOpacity style={styles.fab} onPress={toggleFab} activeOpacity={0.8}>
-          <Animated.Text style={[styles.fabIcon, { transform: [{ rotate: rotation }] }]}>
-            +
-          </Animated.Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Period Selection Modal */}
-      <Modal
-        visible={showPeriodModal}
-        transparent={false}
-        animationType="slide"
-        onRequestClose={() => setShowPeriodModal(false)}
-      >
-        <View style={[styles.modalOverlayFullscreen, { paddingTop: insets.top }]}>
-          <View style={styles.modalContentFullscreen}>
-            <View style={styles.modalHeaderFullscreen}>
-              <TouchableOpacity
-                onPress={() => {
-                  setShowPeriodModal(false);
-                  setPeriodSearchQuery('');
-                }}
-                style={styles.modalBackButton}
-              >
-                <Text style={styles.modalBackArrow}>←</Text>
-              </TouchableOpacity>
-              <Text style={styles.modalTitleFullscreen}>Période</Text>
-            </View>
-
-            <View style={styles.searchContainer}>
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Chercher"
-                placeholderTextColor="#AAAAAA"
-                value={periodSearchQuery}
-                onChangeText={setPeriodSearchQuery}
-              />
-              {periodSearchQuery.length > 0 && (
-                <TouchableOpacity
-                  onPress={() => setPeriodSearchQuery('')}
-                  style={styles.clearButton}
-                >
-                  <Text style={styles.clearButtonText}>✕</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            <ScrollView style={styles.optionsList} showsVerticalScrollIndicator={false}>
-              {filteredPeriodOptions.map((option, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.optionItem}
-                  onPress={() => handlePeriodSelect(option)}
-                >
-                  <Text style={styles.optionText}>{option}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Add Client Modal */}
-      <Modal
-        visible={showAddClientModal}
-        transparent={false}
-        animationType="slide"
-        onRequestClose={() => setShowAddClientModal(false)}
-      >
-        <View style={[styles.modalOverlayFullscreen, { paddingTop: insets.top }]}>
-          <View style={styles.modalContentFullscreen}>
-            <View style={styles.modalHeaderFullscreen}>
-              <TouchableOpacity
-                onPress={() => setShowAddClientModal(false)}
-                style={styles.modalBackButton}
-              >
-                <Text style={styles.modalBackArrow}>←</Text>
-              </TouchableOpacity>
-              <Text style={styles.modalTitleFullscreen}>Ajouter client</Text>
-              <View style={styles.placeholder} />
-            </View>
-
-            <ScrollView style={styles.formContainer} showsVerticalScrollIndicator={false}>
-              <View style={styles.formSection}>
-                <Text style={styles.label}>Nom du client <Text style={styles.required}>*</Text></Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Entrer le nom"
-                  placeholderTextColor="#AAAAAA"
-                />
-              </View>
-
-              <View style={styles.formSection}>
-                <Text style={styles.label}>E-mail</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="client@example.com"
-                  placeholderTextColor="#AAAAAA"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              </View>
-
-              <View style={styles.formSection}>
-                <Text style={styles.label}>Téléphone</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="+212 6XX XXX XXX"
-                  placeholderTextColor="#AAAAAA"
-                  keyboardType="phone-pad"
-                />
-              </View>
-            </ScrollView>
-
-            <View style={styles.fixedButtonContainer}>
-              <TouchableOpacity
-                style={styles.saveButton}
-                onPress={() => {
-                  // Handle save client
-                  setShowAddClientModal(false);
-                }}
-              >
-                <Text style={styles.saveButtonText}>Enregistrer</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 };
@@ -579,437 +294,212 @@ const Home: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F3F4F6',
   },
   header: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  logo: {
+    height: 64,
+    width: 200,
+  },
+  searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    gap: 12,
   },
-  profileIcon: {
-    width: 40,
-  },
-  profileCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#E0E0E0',
-    justifyContent: 'center',
+  searchContainer: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
-  profileText: {
-    fontSize: 20,
+  searchIcon: {
+    marginRight: 8,
   },
-  profileImage: {
-    width: 24,
-    height: 24,
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#1F2937',
+    padding: 0,
   },
-  notificationIcon: {
-    width: 40,
+  notificationButton: {
     position: 'relative',
+    padding: 12,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
   },
-  notificationCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#E0E0E0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  notificationIconImage: {
+  notificationBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
     width: 20,
     height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  badge: {
-  position: 'absolute',
-  top: 2,
-  right: 2,
-  width: 10,
-  height: 10,
-  borderRadius: 5,
-  backgroundColor: '#FF3B30', 
-},
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333333',
-    flex: 1,
-    textAlign: 'center',
+  notificationBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
-  placeholder: {
-    width: 40,
-  },
-  scrollView: {
+  mainContent: {
     flex: 1,
   },
-  inputWithIcon: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-    borderRadius: 2,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  dateSelector: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    margin: 16,
+  mainContentContainer: {
     padding: 16,
-    borderRadius: 2,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingBottom: 24,
   },
-  dateText: {
-    fontSize: 16,
-    color: '#333333',
-  },
-  dropdownIcon: {
-    width: 16,
-    height: 16,
-  },
-  // dropdownIcon: {
-  //   fontSize: 16,
-  //   color: '#999999',
-  // },
-  dropdownIconImage: {
-    width: 16,
-    height: 16,
-  },
-  cardsContainer: {
-    paddingHorizontal: 16,
+  gridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: 12,
     marginBottom: 24,
+  },
+  cardButton: {
+    width: '48%',
+    marginBottom: 16,
+    //     borderWidth: 1,
+    // borderColor: "black",
   },
   card: {
-    padding: 16,
-    borderRadius: 8,
-    width: '48%',
-  },
-  blueCard: {
-    backgroundColor: '#D4E4F7',
-  },
-  cyanCard: {
-    backgroundColor: '#B8EAE5',
-  },
-  pinkCard: {
-    backgroundColor: '#FBDBE5',
-  },
-  yellowCard: {
-    backgroundColor: '#FFF0D4',
-  },
-  cardIcon: {
-    fontSize: 32,
-    marginBottom: 12,
-  },
-  cardIconImage: {
-    width: 32,
-    height: 32,
-    marginBottom: 12,
-  },
-  cardLabel: {
-    fontSize: 12,
-    color: '#666666',
-    marginBottom: 8,
-  },
-  cardAmount: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#333333',
-  },
-  noteText: {
-    fontSize: 12,
-    color: '#999999',
-    paddingHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 24,
-  },
-  yearSelector: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 16,
-    padding: 16,
-    borderRadius: 2,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-    marginBottom: 24,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  yearSelectorContainer: {
-    marginHorizontal: 16,
-    marginBottom: 24,
-  },
-  yearDropdown: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 2,
-    borderWidth: 1,
-    borderColor: '#E5E5E5',
-  },
-  dropdownPlaceholder: {
-    fontSize: 16,
-    color: '#AAAAAA',
-  },
-  dropdownSelectedText: {
-    fontSize: 16,
-    color: '#333333',
-  },
-  yearText: {
-    fontSize: 16,
-    color: '#333333',
-  },
-  chartSection: {
-    backgroundColor: '#FFFFFF',
-    marginHorizontal: 16,
-    marginBottom: 50,
-    paddingHorizontal: 0,
-    paddingVertical: 20,
-    borderRadius: 8,
-  },
-  chartTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333333',
-    marginBottom: 16,
-    paddingHorizontal: 20,
-    paddingTop: 0,
-  },
-  chartPlaceholder: {
-    height: 280,
+    borderRadius: 16,
+    padding: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    aspectRatio: 1,
     justifyContent: 'center',
-    alignItems: 'flex-start',
-    marginHorizontal: 20,
-    marginVertical: 16,
-    paddingHorizontal: 0,
-    paddingVertical: 20,
+    alignItems: 'center',
   },
-  fabContainer: {
-    position: 'absolute',
-    right: 24,
-    bottom: 20,
+  cardBlue: {
+    backgroundColor: '#1E5BAC',
   },
-  fab: {
+  gradientCard: {
+  },
+  cardIconContainer: {
+    marginBottom: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardIconWhiteBg: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     width: 64,
     height: 64,
-    borderRadius: 32,
-    backgroundColor: '#0B5FA5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardIconBg: {
+    // backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    width: 64,
+    height: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  cardBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: '#EF4444',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#0B5FA5',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
   },
-  fabIcon: {
-    fontSize: 32,
+  cardBadgeText: {
     color: '#FFFFFF',
-    fontWeight: '300',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
-  subFab: {
-    position: 'absolute',
-    right: 0,
+  contactSection: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+    marginBottom: 16,
   },
-  subFabButton: {
+  contactHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  contactHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  contactIconCircle: {
     width: 48,
     height: 48,
     borderRadius: 24,
+    backgroundColor: '#D1FAE5',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
   },
-  subFabButton1: {
-    backgroundColor: 'rgb(55, 75, 163)',
-  },
-  subFabButton2: {
-    backgroundColor: 'rgb(55, 75, 163)',
-  },
-  subFabButton3: {
-    backgroundColor: 'rgb(55, 75, 163)',
-  },
-  fabIconImage: {
-    width: 24,
-    height: 24,
-    tintColor: '#FFFFFF',
-  },
-  modalOverlayFullscreen: {
+  contactTextContainer: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
   },
-  modalContentFullscreen: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
+  contactText: {
+    fontSize: 14,
+    color: '#6B7280',
+    lineHeight: 18,
   },
-  modalHeaderFullscreen: {
+  contactButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
-  },
-  modalBackButton: {
-    marginRight: 16,
-  },
-  modalBackArrow: {
-    fontSize: 28,
-    color: '#0B5FA5',
-    fontWeight: '400',
-  },
-  modalTitleFullscreen: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333333',
-    flex: 1,
-    textAlign: 'center',
-    marginRight: 44,
-  },
-  searchContainer: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
-  },
-  searchInput: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: '#333333',
-  },
-  clearButton: {
-    position: 'absolute',
-    right: 30,
-    top: 24,
-  },
-  clearButtonText: {
-    fontSize: 20,
-    color: '#0B5FA5',
-    fontWeight: '600',
-  },
-  optionsList: {
-    flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
-  optionItem: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
-  },
-  optionText: {
-    fontSize: 16,
-    color: '#333333',
-  },
-  formContainer: {
-    flex: 1,
-    padding: 20,
-  },
-  formSection: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    color: '#333333',
-    marginBottom: 8,
-    fontWeight: '400',
-  },
-  required: {
-    color: '#E74C3C',
-  },
-  input: {
+    justifyContent: 'center',
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E5E5E5',
+    borderColor: '#1E5BAC',
     borderRadius: 8,
-    paddingHorizontal: 16,
     paddingVertical: 12,
-    fontSize: 16,
-    color: '#333333',
+    gap: 8,
   },
-  fixedButtonContainer: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
-  },
-  saveButton: {
-    backgroundColor: '#0B5FA5',
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  saveButtonText: {
-    color: '#FFFFFF',
+  contactButtonText: {
+    color: '#1E5BAC',
     fontSize: 16,
     fontWeight: '600',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 16,
-    color: '#666666',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 60,
-    paddingHorizontal: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#E74C3C',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  retryButton: {
-    backgroundColor: '#0B5FA5',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+  contactButtonArrow: {
+    color: '#1E5BAC',
+    fontSize: 18,
+    fontWeight: '400',
   },
 });
 

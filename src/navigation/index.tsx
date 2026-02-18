@@ -46,6 +46,11 @@ import AddClient from '../screens/client/AddClient';
 import Notifications from '../screens/notification/Notifications';
 import NotificationDetail from '../screens/notification/NotificationDetail';
 import QuoteDetail from '../screens/home/QuoteDetail';
+import HomeProfile from '../screens/home/Profile';
+import LegalDocuments from '../screens/home/Legal';
+import AccountingDocuments from '../screens/home/Accounting';
+import Activity from '../screens/home/Activity';
+import BankStatements from '../screens/home/BankStatements';
 
 const Stack = createStackNavigator();
 
@@ -99,6 +104,11 @@ const AppNavigator = () => {
         <Stack.Screen name="Add Client" component={AddClient} options={{ headerShown: false }} />
         <Stack.Screen name="Notifications" component={Notifications} options={{ headerShown: false }} />
         <Stack.Screen name="Notification Detail" component={NotificationDetail} options={{ headerShown: false }} />
+        <Stack.Screen name="Profile" component={HomeProfile} options={{ headerShown: false }} />
+        <Stack.Screen name="Legal Documents" component={LegalDocuments} options={{ headerShown: false }} />
+        <Stack.Screen name="Accounting Documents" component={AccountingDocuments} options={{ headerShown: false }} />
+        <Stack.Screen name="Activity" component={Activity} options={{ headerShown: false }} />
+        <Stack.Screen name="Bank Statements" component={BankStatements} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
     <Toast />
