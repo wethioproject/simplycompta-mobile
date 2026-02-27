@@ -50,6 +50,16 @@ class NotificationService {
             throw error;
         }
     }
+
+    async hasUnreadNotifications(): Promise<boolean> {
+        try {
+            const response = await api.get<{ success: boolean; data: { has_unread_notifications: boolean } }>('/customer/has-unread-notifications');
+            return response.data?.data?.has_unread_notifications ?? false;
+        } catch (error: any) {
+            console.error('Unread notifications error:', error.response?.data || error.message);
+            return false;
+        }
+    }
 }
 
 
