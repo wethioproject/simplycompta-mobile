@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,291 +6,552 @@ import {
   ScrollView,
   StyleSheet,
   Image,
+  Alert,
+  Modal,
+  Platform,
+  KeyboardAvoidingView,
+  TextInput,
+  ActivityIndicator,
+  Linking,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { fileIcon } from '../../assets/icons';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ArrowLeft, Edit2, Phone, Mail, MapPin, User, LayoutGrid, CreditCard, FileText, Trash2 } from 'lucide-react-native';
+import { appLogoIcon } from '../../assets/icons';
+import api from '../../api';
+import { Api_Endpoints } from '../../services/endpoints';
+
+const EditClientModal: React.FC<{
+  visible: boolean;
+  clientData: any;
+  onClose: () => void;
+  onUpdated: (updated: any) => void;
+}> = ({ visible, clientData, onClose, onUpdated }) => {
+  const insets = useSafeAreaInsets();
+  const [companyName, setCompanyName] = useState('');
+  const [clientName, setClientName] = useState('');
+  const [email, setEmail] = useState('');
+  const [telephone, setTelephone] = useState('');
+  const [postalCode, setPostalCode] = useState('');
+  const [city, setCity] = useState('');
+  const [commercialRegister, setCommercialRegister] = useState('');
+  const [ice, setIce] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (visible && clientData) {
+      setCompanyName(clientData.company_name ?? '');
+      setClientName(clientData.client_name ?? '');
+      setEmail(clientData.email ?? '');
+      setTelephone(clientData.telephone ?? '');
+      setPostalCode(clientData.postal_code ?? '');
+      setCity(clientData.city ?? '');
+      setCommercialRegister(clientData.commercial_register ?? '');
+      setIce(clientData.ice ?? '');
+    }
+  }, [visible, clientData]);
+
+  const handleUpdate = async () => {
+    if (!companyName) { Alert.alert('Requis', 'Veuillez saisir le nom de la société.'); return; }
+    setSaving(true);
+    try {
+      const res = await api.post(`${Api_Endpoints.createCustomerClient}/${clientData.id}`, {
+        _method: 'PUT',
+        company_name: companyName,
+        client_name: clientName,
+        email,
+        telephone,
+        postal_code: postalCode,
+        city,
+        commercial_register: commercialRegister,
+        ice,
+      });
+      const updated = res.data?.data ?? { ...clientData, company_name: companyName, client_name: clientName, email, telephone, postal_code: postalCode, city, commercial_register: commercialRegister, ice };
+      Alert.alert('Succès', 'Client mis à jour avec succès.');
+      onUpdated(updated);
+      onClose();
+    } catch (e: any) {
+      const msg = e?.response?.data?.message ?? 'Erreur lors de la mise à jour du client.';
+      Alert.alert('Erreur', msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+      <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
+        <View style={styles.modalHeader}>
+          <TouchableOpacity onPress={onClose} style={styles.modalBackBtn} activeOpacity={0.7}>
+            <ArrowLeft size={22} color="#1E5BAC" />
+          </TouchableOpacity>
+          <Text style={styles.modalTitle}>Modifier le client</Text>
+          <TouchableOpacity
+            style={[styles.modalConfirmBtn, saving && { opacity: 0.7 }]}
+            onPress={handleUpdate}
+            disabled={saving}
+            activeOpacity={0.85}
+          >
+            {saving
+              ? <ActivityIndicator size="small" color="#FFFFFF" />
+              : <Text style={styles.modalConfirmText}>Enregistrer</Text>}
+          </TouchableOpacity>
+        </View>
+
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+          <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.formCard}>
+              <View style={styles.fieldBlock}>
+                <Text style={styles.fieldLabel}>Nom de la société</Text>
+                <TextInput style={styles.fieldInput} value={companyName} onChangeText={setCompanyName} />
+              </View>
+              <View style={styles.fieldBlock}>
+                <Text style={styles.fieldLabel}>Nom et prénom du contact</Text>
+                <TextInput style={styles.fieldInput} value={clientName} onChangeText={setClientName} />
+              </View>
+              <View style={styles.fieldBlock}>
+                <Text style={styles.fieldLabel}>Email</Text>
+                <TextInput style={styles.fieldInput} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+              </View>
+              <View style={styles.fieldBlock}>
+                <Text style={styles.fieldLabel}>Téléphone</Text>
+                <TextInput style={styles.fieldInput} value={telephone} onChangeText={setTelephone} keyboardType="phone-pad" />
+              </View>
+              <View style={styles.fieldBlock}>
+                <Text style={styles.fieldLabel}>Code postal</Text>
+                <TextInput style={styles.fieldInput} value={postalCode} onChangeText={setPostalCode} keyboardType="numeric" />
+              </View>
+              <View style={styles.fieldBlock}>
+                <Text style={styles.fieldLabel}>Ville</Text>
+                <TextInput style={styles.fieldInput} value={city} onChangeText={setCity} />
+              </View>
+              <View style={styles.fieldBlock}>
+                <Text style={styles.fieldLabel}>Registre du commerce</Text>
+                <TextInput style={styles.fieldInput} value={commercialRegister} onChangeText={setCommercialRegister} />
+              </View>
+              <View style={styles.fieldBlock}>
+                <Text style={styles.fieldLabel}>ICE</Text>
+                <TextInput style={styles.fieldInput} value={ice} onChangeText={setIce} />
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.confirmBtn, saving && { opacity: 0.7 }]}
+              onPress={handleUpdate}
+              disabled={saving}
+              activeOpacity={0.85}
+            >
+              {saving
+                ? <ActivityIndicator color="#FFFFFF" />
+                : <Text style={styles.confirmBtnText}>Enregistrer les modifications</Text>}
+            </TouchableOpacity>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </View>
+    </Modal>
+  );
+};
 
 const ClientDetail: React.FC = ({ navigation, route }: any) => {
-  const { client } = route.params;
+  const { client: routeClient } = route.params ?? {};
+  const [clientData, setClientData] = useState<any>(null);
+  const [invoiceCount, setInvoiceCount] = useState<number>(0);
+  const [totalPriceHt, setTotalPriceHt] = useState<number>(0);
+  const [loadingDetail, setLoadingDetail] = useState(true);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
-  const handleRelevePress = () => {
-    navigation.navigate('Account Statement');
+  const fetchClient = async () => {
+    try {
+      setLoadingDetail(true);
+      const res = await api.get(`${Api_Endpoints.customerClient}/${routeClient.id}`);
+      if (res.data?.success) {
+        setClientData(res.data.data?.client ?? res.data.data);
+        setInvoiceCount(res.data.data?.invoice_count ?? 0);
+        setTotalPriceHt(res.data.data?.total_price_ht ?? 0);
+      } else setClientData(routeClient);
+    } catch (e) {
+      Alert.alert('Erreur', 'Impossible de charger les détails du client.');
+      setClientData(routeClient);
+    } finally {
+      setLoadingDetail(false);
+    }
   };
 
-  const handleDevisPress = () => {
-    navigation.navigate('Documents', { type: 'devis', client });
+  console.log('clientDataclientData22', clientData)
+
+  useEffect(() => { fetchClient(); }, []);
+
+  const handleDelete = () => {
+    Alert.alert(
+      'Supprimer',
+      `Voulez-vous vraiment supprimer le client "${clientData?.company_name ?? ''}" ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer', style: 'destructive', onPress: async () => {
+            setDeleting(true);
+            try {
+              await api.delete(`${Api_Endpoints.createCustomerClient}/${clientData.id}`);
+              Alert.alert('Succès', 'Client supprimé avec succès.', [
+                { text: 'OK', onPress: () => navigation.goBack() },
+              ]);
+            } catch (e: any) {
+              const msg = e?.response?.data?.message ?? 'Erreur lors de la suppression.';
+              Alert.alert('Erreur', msg);
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
-  const handleBonLivraisonPress = () => {
-    navigation.navigate('Documents', { type: 'bon_livraison', client });
-  };
-
-  const handleFacturesPress = () => {
-    navigation.navigate('Documents', { type: 'factures', client });
-  };
+  const companyName = clientData?.company_name ?? '—';
+  const contactName = clientData?.client_name ?? '—';
+  const email = clientData?.email ?? '—';
+  const phone = clientData?.telephone ?? '—';
+  const postalCity = `${clientData?.postal_code ?? ''} ${clientData?.city ?? ''}`.trim() || '—';
+  const registreCommerce = clientData?.commercial_register ?? '—';
+  const ice = clientData?.ice ?? '—';
+  const initial = companyName !== '—' ? companyName.charAt(0).toUpperCase() : '?';
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Text style={styles.backArrow}>←</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>CLT-0001</Text>
-        <View style={styles.placeholder} />
+        <View style={styles.headerTop}>
+          <Image source={appLogoIcon} style={styles.logo} resizeMode="contain" />
+        </View>
+        <View style={styles.titleRow}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
+            <ArrowLeft size={22} color="#1F2937" />
+          </TouchableOpacity>
+          <Text style={styles.titleText}>Fiche Client</Text>
+          <View style={{ flex: 1 }} />
+          {!loadingDetail && (
+            <TouchableOpacity style={styles.editButton} onPress={() => setShowEditModal(true)} activeOpacity={0.7}>
+              <Edit2 size={18} color="#1E5BAC" />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
-      <ScrollView
+      {loadingDetail ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#1E5BAC" />
+        </View>
+      ) : (
+        <ScrollView
         style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Client Name */}
-        <Text style={styles.clientName}>{client.name}</Text>
-
-        {/* Client Details */}
-        <View style={styles.detailsContainer}>
-          <Text style={styles.detailText}>Devise : MAD - Dirham marocain</Text>
-          <Text style={styles.detailText}>R.C : hcvjk</Text>
-          <Text style={styles.detailText}>I.C.E : 88588968888</Text>
+        {/* Hero Card */}
+        <View style={styles.card}>
+          <View style={styles.avatarCircle}>
+            <Text style={styles.avatarInitial}>{initial}</Text>
+          </View>
+          <Text style={styles.companyName}>{companyName}</Text>
+          <Text style={styles.contactName}>{contactName}</Text>
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={[styles.callBtn, phone === '—' && { opacity: 0.5 }]}
+              activeOpacity={0.85}
+              onPress={() => phone !== '—' && Linking.openURL(`tel:${phone}`)}
+            >
+              <Phone size={16} color="#FFFFFF" />
+              <Text style={styles.callBtnText}>Appeler</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.emailBtn, email === '—' && { opacity: 0.5 }]}
+              activeOpacity={0.85}
+              onPress={() => {
+                if (email === '—') return;
+                Linking.openURL(`mailto:${email}`).catch(() =>
+                  Alert.alert('Erreur', "Impossible d'ouvrir l'application mail.")
+                );
+              }}
+            >
+              <Mail size={16} color="#374151" />
+              <Text style={styles.emailBtnText}>Email</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Divider */}
-        <View style={styles.divider} />
+        {/* Coordonnées Card */}
+        <View style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <User size={18} color="#1E5BAC" />
+            <Text style={styles.sectionTitle}>Coordonnées</Text>
+          </View>
+          <View style={styles.infoRow}>
+            <View style={styles.infoIconBox}>
+              <Mail size={16} color="#6B7280" />
+            </View>
+            <View style={styles.infoTextBlock}>
+              <Text style={styles.infoLabel}>Email</Text>
+              <Text style={styles.infoValue}>{email}</Text>
+            </View>
+          </View>
+          <View style={styles.infoRow}>
+            <View style={styles.infoIconBox}>
+              <Phone size={16} color="#6B7280" />
+            </View>
+            <View style={styles.infoTextBlock}>
+              <Text style={styles.infoLabel}>Téléphone</Text>
+              <Text style={styles.infoValue}>{phone}</Text>
+            </View>
+          </View>
+          <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
+            <View style={styles.infoIconBox}>
+              <MapPin size={16} color="#6B7280" />
+            </View>
+            <View style={styles.infoTextBlock}>
+              <Text style={styles.infoLabel}>Adresse</Text>
+              <Text style={styles.infoValue}>{postalCity}</Text>
+            </View>
+          </View>
+        </View>
 
-        {/* Adresses Section */}
-        <Text style={styles.sectionTitle}>Adresses</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.horizontalScroll}
-          contentContainerStyle={styles.horizontalScrollContent}
+        {/* Informations légales Card */}
+        <View style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <LayoutGrid size={18} color="#1E5BAC" />
+            <Text style={styles.sectionTitle}>Informations légales</Text>
+          </View>
+          <View style={styles.legalRow}>
+            <Text style={styles.legalLabel}>RC</Text>
+            <Text style={styles.legalValue}>{registreCommerce}</Text>
+          </View>
+          <View style={styles.legalRow}>
+            <Text style={styles.legalLabel}>ICE</Text>
+            <Text style={styles.legalValue}>{ice}</Text>
+          </View>
+          <View style={[styles.legalRow, { borderBottomWidth: 0 }]}>
+            <Text style={styles.legalLabel}>Statut</Text>
+            <View style={styles.activeBadge}>
+              <Text style={styles.activeBadgeText}>Actif</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Finances Card */}
+        <View style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <CreditCard size={18} color="#1E5BAC" />
+            <Text style={styles.sectionTitle}>Finances</Text>
+          </View>
+          <View style={styles.financeStatsRow}>
+            <View style={styles.statBoxBlue}>
+              <Text style={styles.statLabel}>Chiffre d'affaires</Text>
+              <Text style={styles.statValueBlue}>{totalPriceHt.toLocaleString('fr-FR')} MAD</Text>
+            </View>
+            <View style={styles.statBoxOrange}>
+              <Text style={styles.statLabelOrange}>En attente</Text>
+              <Text style={styles.statValueOrange}>{invoiceCount} facture{invoiceCount !== 1 ? 's' : ''}</Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={styles.historiqueBtn}
+            onPress={() => navigation.navigate('Account Statement', { client: clientData })}
+            activeOpacity={0.85}
+          >
+            <FileText size={16} color="#1E5BAC" />
+            <Text style={styles.historiqueBtnText}>Voir l'historique</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Delete */}
+        <TouchableOpacity
+          style={[styles.deleteBtn, deleting && { opacity: 0.6 }]}
+          onPress={handleDelete}
+          disabled={deleting}
+          activeOpacity={0.7}
         >
-          <View style={styles.cardBlue}>
-            <Image source={fileIcon} style={styles.cardIcon} resizeMode="contain" />
-            <View>
-              <Text style={styles.cardLabel}>Facturé en TTC</Text>
-              <Text style={styles.cardAmount}>24,00 MAD</Text>
-            </View>
-          </View>
-          <View style={styles.cardBlue}>
-            <Image source={fileIcon} style={styles.cardIcon} resizeMode="contain" />
-            <View>
-              <Text style={styles.cardLabel}>Facturé en TTC</Text>
-              <Text style={styles.cardAmount}>24,00 MAD</Text>
-            </View>
-          </View>
-          <View style={styles.cardBlue}>
-            <Image source={fileIcon} style={styles.cardIcon} resizeMode="contain" />
-            <View>
-              <Text style={styles.cardLabel}>Facturé en TTC</Text>
-              <Text style={styles.cardAmount}>24,00 MAD</Text>
-            </View>
-          </View>
-        </ScrollView>
-
-        {/* Divider */}
-        <View style={styles.divider} />
-
-        {/* Ventes Section */}
-        <Text style={styles.sectionTitle}>Ventes</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.horizontalScroll}
-          contentContainerStyle={styles.horizontalScrollContent}
-        >
-          <TouchableOpacity style={styles.ventesCard} onPress={handleDevisPress}>
-            <Image source={fileIcon} style={[styles.ventesIcon, { tintColor: '#4A90E2' }]} resizeMode="contain" />
-            <Text style={styles.ventesText}>Devis (0)</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.ventesCard} onPress={handleBonLivraisonPress}>
-            <Image source={fileIcon} style={[styles.ventesIcon, { tintColor: '#4A90E2' }]} resizeMode="contain" />
-            <Text style={styles.ventesText}>Bon de livraison (0)</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.ventesCard} onPress={handleFacturesPress}>
-            <Image source={fileIcon} style={[styles.ventesIcon, { tintColor: '#4A90E2' }]} resizeMode="contain" />
-            <Text style={styles.ventesText}>Factures (0)</Text>
-          </TouchableOpacity>
-        </ScrollView>
-
-        {/* Divider */}
-        <View style={styles.divider} />
-
-        {/* Relevé de comptes */}
-        <TouchableOpacity style={styles.releveButton} onPress={handleRelevePress}>
-          <Image source={fileIcon} style={[styles.releveIcon, { tintColor: '#0B5FA5' }]} resizeMode="contain" />
-          <Text style={styles.releveText}>Relevé de comptes</Text>
-          <Text style={styles.chevron}>›</Text>
+          {deleting
+            ? <ActivityIndicator size="small" color="#DC2626" />
+            : <Trash2 size={16} color="#DC2626" />}
+          <Text style={styles.deleteBtnText}>Supprimer le client</Text>
         </TouchableOpacity>
 
-        {/* Divider */}
-        <View style={styles.divider} />
-
-        {/* Contacts Section */}
-        <Text style={styles.sectionTitle}>Contacts (0)</Text>
-        
-        {/* Bottom Spacing */}
-        <View style={styles.bottomSpacer} />
+        <View style={{ height: 40 }} />
       </ScrollView>
+      )}
+
+      <EditClientModal
+        visible={showEditModal}
+        clientData={clientData}
+        onClose={() => setShowEditModal(false)}
+        onUpdated={(updated) => setClientData(updated)}
+      />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
+  container: { flex: 1, backgroundColor: '#F3F4F6' },
+
+  // Header
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
+  headerTop: { alignItems: 'center', marginBottom: 12 },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  backButton: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  logo: { height: 48, width: 160 },
+  titleText: { fontSize: 20, fontWeight: '700', color: '#1F2937' },
+  editButton: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: '#EEF2FF',
+    justifyContent: 'center', alignItems: 'center',
   },
-  backArrow: {
-    fontSize: 28,
-    color: '#0B5FA5',
-    fontWeight: '600',
+
+  scrollView: { flex: 1 },
+  scrollContent: { padding: 16, gap: 14 },
+
+  // Card
+  card: {
+    backgroundColor: '#FFFFFF', borderRadius: 16, padding: 18,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
   },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333333',
-    flex: 1,
-    textAlign: 'center',
+
+  // Hero
+  avatarCircle: {
+    width: 72, height: 72, borderRadius: 36,
+    backgroundColor: '#DBEAFE',
+    justifyContent: 'center', alignItems: 'center',
+    alignSelf: 'center', marginBottom: 12,
   },
-  placeholder: {
-    width: 40,
+  avatarInitial: { fontSize: 32, fontWeight: '700', color: '#1E5BAC' },
+  companyName: { fontSize: 20, fontWeight: '700', color: '#1F2937', textAlign: 'center', marginBottom: 4 },
+  contactName: { fontSize: 14, color: '#6B7280', textAlign: 'center', marginBottom: 18 },
+  actionRow: { flexDirection: 'row', gap: 12 },
+  callBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, backgroundColor: '#1E5BAC', borderRadius: 10, paddingVertical: 13,
   },
-  scrollView: {
-    flex: 1,
+  callBtnText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
+  emailBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, backgroundColor: '#FFFFFF', borderRadius: 10, paddingVertical: 13,
+    borderWidth: 1.5, borderColor: '#E5E7EB',
   },
-  clientName: {
-    fontSize: 28,
-    fontWeight: '600',
-    color: '#333333',
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 16,
+  emailBtnText: { fontSize: 15, fontWeight: '600', color: '#374151' },
+
+  // Section Header
+  sectionHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    marginBottom: 14, paddingBottom: 12,
+    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
   },
-  detailsContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1F2937' },
+
+  // Info rows
+  infoRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: '#F9FAFB',
   },
-  detailText: {
-    fontSize: 16,
-    color: '#333333',
-    marginBottom: 12,
-    lineHeight: 24,
+  infoIconBox: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center', alignItems: 'center', flexShrink: 0,
   },
-  divider: {
-    // height: 8,
-    // backgroundColor: '#F5F5F5',
-    marginVertical: 16,
-        borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+  infoTextBlock: { flex: 1 },
+  infoLabel: { fontSize: 12, color: '#9CA3AF', marginBottom: 2 },
+  infoValue: { fontSize: 14, fontWeight: '500', color: '#1F2937' },
+
+  // Legal rows
+  legalRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingVertical: 13,
+    borderBottomWidth: 1, borderBottomColor: '#F9FAFB',
   },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#333333',
-    paddingHorizontal: 20,
+  legalLabel: { fontSize: 14, color: '#6B7280' },
+  legalValue: { fontSize: 14, fontWeight: '500', color: '#1F2937', textAlign: 'right', flex: 1, marginLeft: 16 },
+  activeBadge: {
+    backgroundColor: '#DCFCE7', borderRadius: 20,
+    paddingHorizontal: 12, paddingVertical: 4,
+  },
+  activeBadgeText: { fontSize: 12, fontWeight: '600', color: '#16A34A' },
+
+  // Finances
+  financeStatsRow: { flexDirection: 'row', gap: 12, marginBottom: 14 },
+  statBoxBlue: {
+    flex: 1, backgroundColor: '#EFF6FF', borderRadius: 12, padding: 14,
+  },
+  statLabel: { fontSize: 12, color: '#3B82F6', marginBottom: 6 },
+  statValueBlue: { fontSize: 18, fontWeight: '700', color: '#1E5BAC' },
+  statBoxOrange: {
+    flex: 1, backgroundColor: '#FFF7ED', borderRadius: 12, padding: 14,
+  },
+  statLabelOrange: { fontSize: 12, color: '#EA580C', marginBottom: 6 },
+  statValueOrange: { fontSize: 18, fontWeight: '700', color: '#EA580C' },
+  historiqueBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, borderWidth: 1.5, borderColor: '#BFDBFE', borderRadius: 10,
+    paddingVertical: 13,
+  },
+  historiqueBtnText: { fontSize: 14, fontWeight: '600', color: '#1E5BAC' },
+
+  // Delete
+  deleteBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, paddingVertical: 14,
+  },
+  deleteBtnText: { fontSize: 14, fontWeight: '600', color: '#DC2626' },
+
+  // Modal
+  modalContainer: { flex: 1, backgroundColor: '#F5F7FF' },
+  modalHeader: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 14,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1, borderBottomColor: '#E5E7EB',
+  },
+  modalBackBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  modalTitle: { fontSize: 15, fontWeight: '600', color: '#1F2937', flex: 1, textAlign: 'center', marginHorizontal: 8 },
+  modalConfirmBtn: {
+    backgroundColor: '#1E5BAC', borderRadius: 8,
+    paddingHorizontal: 14, paddingVertical: 8,
+    minWidth: 90, alignItems: 'center',
+  },
+  modalConfirmText: { fontSize: 13, fontWeight: '600', color: '#FFFFFF' },
+  modalContent: { padding: 16, paddingBottom: 40 },
+  formCard: {
+    borderRadius: 16,
+    paddingVertical: 18,
+    gap: 16,
     marginBottom: 16,
   },
-  horizontalScroll: {
-    paddingLeft: 20,
+  fieldBlock: { gap: 6 },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151' },
+  fieldInput: {
+    backgroundColor: '#EEF2FF', borderRadius: 10,
+    paddingHorizontal: 14, paddingVertical: 13,
+    fontSize: 14, color: '#1F2937',
+    borderWidth: 1, borderColor: '#E5E7EB',
   },
-  horizontalScrollContent: {
-    paddingRight: 20,
-    gap: 12,
+  confirmBtn: {
+    backgroundColor: '#1E5BAC', borderRadius: 12,
+    paddingVertical: 14, alignItems: 'center',
+    shadowColor: '#1E5BAC', shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25, shadowRadius: 6, elevation: 4,
   },
-  cardYellow: {
-    backgroundColor: '#FFF9E6',
-    borderRadius: 8,
-    padding: 16,
-    minWidth: 180,
-  },
-  cardBlue: {
-    backgroundColor: '#E8F4FD',
-    borderRadius: 8,
-    padding: 16,
-    minWidth: 200,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  cardIcon: {
-    width: 32,
-    height: 32,
-    tintColor: '#4A90E2',
-  },
-  cardIconPurple: {
-    width: 32,
-    height: 32,
-    tintColor: '#9B59B6',
-    marginLeft: 'auto',
-  },
-  cardLabel: {
-    fontSize: 14,
-    color: '#666666',
-    marginBottom: 4,
-  },
-  cardAmount: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#333333',
-  },
-  ventesCard: {
-    backgroundColor: '#F5F5F5',
-    borderRadius: 8,
-    padding: 20,
-    minWidth: 160,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ventesIcon: {
-    width: 40,
-    height: 40,
-    marginBottom: 12,
-  },
-  ventesText: {
-    fontSize: 16,
-    color: '#333333',
-    fontWeight: '500',
-  },
-  releveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-  },
-  releveIcon: {
-    width: 24,
-    height: 24,
-    marginRight: 12,
-  },
-  releveText: {
-    fontSize: 18,
-    color: '#0B5FA5',
-    fontWeight: '500',
-    flex: 1,
-  },
-  chevron: {
-    fontSize: 28,
-    color: '#999999',
-  },
-  bottomSpacer: {
-    height: 40,
-  },
+  confirmBtnText: { fontSize: 15, fontWeight: '700', color: '#FFFFFF' },
 });
 
 export default ClientDetail;
