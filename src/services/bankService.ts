@@ -14,9 +14,12 @@ interface BankStatementResponse {
 class BankService {
 
 
-    async getBankStatements() {
+    async getBankStatements(filter?: string) {
         try {
-            const response = await api.get('/customer/bank-statements');
+            const url = filter
+                ? `/customer/bank-statements?filter=${filter}`
+                : '/customer/bank-statements';
+            const response = await api.get(url);
             return response.data;
         } catch (error) {
             console.error('Bank statements fetch error:', error);
@@ -47,11 +50,13 @@ class BankService {
                 name: file.name || 'statement.pdf',
             } as any);
 
+            console.log('formdata101', formData);
             const response = await api.post<BankStatementResponse>('/customer/bank-statement', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                 },
             });
+            console.log('formdata102', response);
             return response.data;
         } catch (error: any) {
             console.error('Create bank statement error:', error.response?.data || error.message);

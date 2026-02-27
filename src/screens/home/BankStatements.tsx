@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,10 @@ import {
   TouchableOpacity,
   Image,
   TextInput,
+  ActivityIndicator,
+  RefreshControl,
+  Alert,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -23,34 +27,127 @@ import {
   CheckCircle2,
   Headphones,
 } from 'lucide-react-native';
+import { useSelector } from 'react-redux';
+import { pick, types, isErrorWithCode, errorCodes } from '@react-native-documents/picker';
 import { appLogoIcon } from '../../assets/icons';
+import { useBankStatement } from '../../hooks/useBankStatement';
 
 type StackNavigation = StackNavigationProp<any>;
 
-type StatementStatus = 'transmitted' | 'missing';
+interface BankStatementItem {
+  id: number;
+  customer_id: number;
+  file_path: string;
+  file_url: string;
+  month_year: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
 
-type Statement = {
-  id: string;
-  month: string;
-  year: string;
-  status: StatementStatus;
-};
-
-const STATEMENTS: Statement[] = [
-  { id: '1', month: 'Janvier',  year: '2026', status: 'transmitted' },
-  { id: '2', month: 'Février',  year: '2026', status: 'transmitted' },
-  { id: '3', month: 'Mars',     year: '2026', status: 'transmitted' },
-  { id: '4', month: 'Avril',    year: '2026', status: 'missing' },
-  { id: '5', month: 'Juin',     year: '2026', status: 'missing' },
-  { id: '6', month: 'Juillet',  year: '2026', status: 'missing' },
+const MONTH_NAMES = [
+  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
 ];
 
-const PERIODS = ['2026', '3 mois', '6 mois', '9 mois', '12 mois'];
+const formatMonthYear = (monthYear: string): string => {
+  const [month, year] = monthYear.split('-');
+  return `${MONTH_NAMES[parseInt(month, 10) - 1]} ${year}`;
+};
+
+const CURRENT_YEAR = new Date().getFullYear();
+const LAST_YEAR = CURRENT_YEAR - 1;
+
+const PERIODS: { label: string; filterValue: string }[] = [
+  { label: String(LAST_YEAR), filterValue: String(LAST_YEAR) },
+  { label: '3 mois', filterValue: '3' },
+  { label: '6 mois', filterValue: '6' },
+  { label: '9 mois', filterValue: '9' },
+  { label: '12 mois', filterValue: '12' },
+];
 
 const BankStatements: React.FC = () => {
   const navigation = useNavigation<StackNavigation>();
-  const [searchQuery, setSearchQuery]   = useState('');
-  const [selectedPeriod, setSelectedPeriod] = useState('3 mois');
+  const { getBankStatements, createBankStatement } = useBankStatement();
+  const user = useSelector((state: any) => state.user.customer);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPeriod, setSelectedPeriod] = useState('3');
+  const [apiStatements, setApiStatements] = useState<BankStatementItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [uploadingSlot, setUploadingSlot] = useState<string | null>(null);
+
+  const fetchStatements = async (filter?: string) => {
+    try {
+      setLoading(true);
+      const result = await getBankStatements(filter);
+      if (result.success && result.bankStatements) {
+        setApiStatements(result.bankStatements);
+      }
+    } catch (err) {
+      Alert.alert('Erreur', 'Impossible de charger les relevés bancaires.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => { fetchStatements(selectedPeriod); }, [selectedPeriod]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchStatements(selectedPeriod);
+  };
+
+  const handleUpload = async (slot: string) => {
+    try {
+      const [file] = await pick({ type: [types.pdf] });
+      setUploadingSlot(slot);
+      const result = await createBankStatement({
+        customer_id: String(user?.id ?? ''),
+        month_year: slot,
+        statement: file,
+      });
+      if (result.success) {
+        Alert.alert('Succès', 'Relevé bancaire uploadé avec succès.');
+        fetchStatements();
+      } else {
+        Alert.alert('Erreur', result.error || "Échec de l'upload.");
+      }
+    } catch (err) {
+      if (!isErrorWithCode(err) || err.code !== errorCodes.OPERATION_CANCELED) {
+        Alert.alert('Erreur', "Impossible d'uploader le fichier.");
+      }
+    } finally {
+      setUploadingSlot(null);
+    }
+  };
+
+  const generateMonthSlots = (): string[] => {
+    const currentYear = new Date().getFullYear();
+    if (/^\d{4}$/.test(selectedPeriod)) {
+      // Year filter: generate all 12 months for that year
+      const year = parseInt(selectedPeriod, 10);
+      return Array.from({ length: 12 }, (_, i) =>
+        `${String(i + 1).padStart(2, '0')}-${year}`
+      );
+    }
+    const numMonths = parseInt(selectedPeriod, 10);
+    if (!isNaN(numMonths)) {
+      // First N months of current year
+      return Array.from({ length: numMonths }, (_, i) =>
+        `${String(i + 1).padStart(2, '0')}-${currentYear}`
+      );
+    }
+    return [];
+  };
+
+  const transmittedMap = new Map(apiStatements.map(s => [s.month_year, s]));
+  const allSlots = generateMonthSlots();
+  const filteredSlots = allSlots.filter(slot => {
+    if (!searchQuery.trim()) return true;
+    return formatMonthYear(slot).toLowerCase().includes(searchQuery.toLowerCase().trim());
+  });
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -78,12 +175,12 @@ const BankStatements: React.FC = () => {
               onChangeText={setSearchQuery}
             />
           </View>
-          <TouchableOpacity style={styles.notificationButton} activeOpacity={0.7}>
+          {/* <TouchableOpacity style={styles.notificationButton} activeOpacity={0.7}>
             <Bell size={24} color="#4B5563" />
             <View style={styles.notificationBadge}>
               <Text style={styles.notificationBadgeText}>3</Text>
             </View>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       </View>
 
@@ -91,6 +188,9 @@ const BankStatements: React.FC = () => {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#2563EB']} />
+        }
       >
         {/* Title Card */}
         <View style={styles.titleCard}>
@@ -113,21 +213,21 @@ const BankStatements: React.FC = () => {
           >
             {PERIODS.map((period) => (
               <TouchableOpacity
-                key={period}
-                onPress={() => setSelectedPeriod(period)}
+                key={period.filterValue}
+                onPress={() => setSelectedPeriod(period.filterValue)}
                 activeOpacity={0.8}
                 style={[
                   styles.filterPill,
-                  selectedPeriod === period && styles.filterPillActive,
+                  selectedPeriod === period.filterValue && styles.filterPillActive,
                 ]}
               >
                 <Text
                   style={[
                     styles.filterPillText,
-                    selectedPeriod === period && styles.filterPillTextActive,
+                    selectedPeriod === period.filterValue && styles.filterPillTextActive,
                   ]}
                 >
-                  {period}
+                  {period.label}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -139,42 +239,73 @@ const BankStatements: React.FC = () => {
         </View>
 
         {/* Statements List */}
-        {STATEMENTS.map((statement) => (
-          <View key={statement.id} style={styles.statementCard}>
-            {/* Left: icon + text */}
-            <View style={styles.statementLeft}>
-              <View style={styles.statementIconBox}>
-                <FileText size={26} color="#2563EB" />
-              </View>
-              <View style={styles.statementInfo}>
-                <Text style={styles.statementTitle}>
-                  Relevé {statement.month} {statement.year}
-                </Text>
-                {statement.status === 'transmitted' ? (
-                  <View style={styles.transmittedRow}>
-                    <CheckCircle2 size={14} color="#16A34A" />
-                    <Text style={styles.transmittedText}>Transmis</Text>
+        {loading ? (
+          <ActivityIndicator size="large" color="#2563EB" style={{ marginTop: 40 }} />
+        ) : filteredSlots.length === 0 ? (
+          <View style={{ alignItems: 'center', marginTop: 40 }}>
+            <Text style={{ color: '#9CA3AF', fontSize: 16 }}>Aucun relevé trouvé</Text>
+          </View>
+        ) : (
+          filteredSlots.map(slot => {
+            const item = transmittedMap.get(slot);
+            const label = formatMonthYear(slot);
+            const [monthName, yearStr] = label.split(' ');
+            const isTransmitted = !!item;
+
+            return (
+              <View key={slot} style={styles.statementCard}>
+                {/* Left: icon + text */}
+                <View style={styles.statementLeft}>
+                  <View style={styles.statementIconBox}>
+                    <FileText size={26} color="#2563EB" />
                   </View>
+                  <View style={styles.statementInfo}>
+                    <Text style={styles.statementTitle}>
+                      Relevé {monthName} {yearStr}
+                    </Text>
+                    {isTransmitted ? (
+                      <View style={styles.transmittedRow}>
+                        <CheckCircle2 size={14} color="#16A34A" />
+                        <Text style={styles.transmittedText}>Transmis</Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.missingText}>Aucun document en ligne</Text>
+                    )}
+                  </View>
+                </View>
+
+                {/* Right: action button */}
+                {isTransmitted ? (
+                  <TouchableOpacity
+                    style={styles.pdfButton}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      if (!item?.file_url) return;
+                      Linking.openURL(item.file_url).catch(() =>
+                        Alert.alert('Erreur', "Impossible d'ouvrir le fichier PDF.")
+                      );
+                    }}
+                  >
+                    <Text style={styles.pdfButtonText}>PDF</Text>
+                    <Download size={15} color="#FFFFFF" />
+                  </TouchableOpacity>
                 ) : (
-                  <Text style={styles.missingText}>Aucun document en ligne</Text>
+                  <TouchableOpacity
+                    style={[styles.uploadButton, uploadingSlot === slot && { opacity: 0.6 }]}
+                    activeOpacity={0.8}
+                    disabled={uploadingSlot === slot}
+                    onPress={() => handleUpload(slot)}
+                  >
+                    {uploadingSlot === slot
+                      ? <ActivityIndicator size="small" color="#4B5563" />
+                      : <Upload size={18} color="#4B5563" />}
+                    <Text style={styles.uploadButtonText}>Mettre en ligne</Text>
+                  </TouchableOpacity>
                 )}
               </View>
-            </View>
-
-            {/* Right: action button */}
-            {statement.status === 'transmitted' ? (
-              <TouchableOpacity style={styles.pdfButton} activeOpacity={0.8}>
-                <Text style={styles.pdfButtonText}>PDF</Text>
-                <Download size={15} color="#FFFFFF" />
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity style={styles.uploadButton} activeOpacity={0.8}>
-                <Upload size={18} color="#4B5563" />
-                <Text style={styles.uploadButtonText}>Mettre en ligne</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        ))}
+            );
+          })
+        )}
 
         {/* Help / Contact Card */}
         <View style={styles.helpCard}>

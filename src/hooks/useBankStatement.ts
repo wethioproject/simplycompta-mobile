@@ -9,9 +9,9 @@ interface BankStatementPayload {
 
 export const useBankStatement = () => {
 
-    const getBankStatements = useCallback(async () => {
+    const getBankStatements = useCallback(async (filter?: string) => {
         try {
-            const response = await bankService.getBankStatements();
+            const response = await bankService.getBankStatements(filter);
             return {
                 bankStatements: response.data,
                 success: true
