@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,9 @@ import {
   TouchableOpacity,
   Image,
   TextInput,
+  ActivityIndicator,
+  Linking,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -26,75 +29,33 @@ import {
 } from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { appLogoIcon } from '../../assets/icons';
+import api from '../../api';
+import { Api_Endpoints } from '../../services/endpoints';
 
 type StackNavigation = StackNavigationProp<any>;
 
-type Document = {
+type ApiDocument = {
   id: number;
-  name: string;
-  date: string;
-  iconType: string;
-  isValidated: boolean;
+  customer_id: number;
+  sender_id: number;
+  title: string;
+  message: string;
+  is_read: boolean;
+  data: string;
+  document: string;
+  created_at: string;
+  updated_at: string;
 };
 
-const documents: Document[] = [
-  {
-    id: 1,
-    name: 'Bilan 2025',
-    date: 'Émis le 15 mars 2026',
-    iconType: 'scale',
-    isValidated: true,
-  },
-  {
-    id: 2,
-    name: 'Bilan 2024',
-    date: 'Émis le 12 mars 2025',
-    iconType: 'scale',
-    isValidated: true,
-  },
-  {
-    id: 3,
-    name: 'Bilan 2023',
-    date: 'Émis le 10 mars 2024',
-    iconType: 'scale',
-    isValidated: true,
-  },
-  {
-    id: 4,
-    name: 'Attestation de Paiement TVA',
-    date: 'Émis le 10 avril 2026',
-    iconType: 'fileCheck',
-    isValidated: true,
-  },
-  {
-    id: 5,
-    name: 'Attestation de Paiement TVA',
-    date: '4ème trimestre 2025',
-    iconType: 'fileCheck',
-    isValidated: false,
-  },
-  {
-    id: 6,
-    name: 'Attestation de Paiement IR',
-    date: 'Émis le 25 février 2026',
-    iconType: 'fileText',
-    isValidated: true,
-  },
-  {
-    id: 7,
-    name: 'Attestation de Paiement IS',
-    date: 'Émis le 1er avril 2026',
-    iconType: 'fileText',
-    isValidated: false,
-  },
-  {
-    id: 8,
-    name: 'Attestation de Paiement Taxe Professionnelle',
-    date: 'Émis le 28 février 2026',
-    iconType: 'fileText',
-    isValidated: false,
-  },
-];
+const BASE_DOCUMENT_URL = 'https://simply-compta.com/storage/';
+
+const formatDate = (iso: string) => {
+  try {
+    return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  } catch {
+    return iso;
+  }
+};
 
 const DocIcon: React.FC<{ iconType: string }> = ({ iconType }) => {
   const props = { size: 22, color: '#FFFFFF', strokeWidth: 2 };
@@ -113,6 +74,41 @@ const DocIcon: React.FC<{ iconType: string }> = ({ iconType }) => {
 const Accounting: React.FC = () => {
   const navigation = useNavigation<StackNavigation>();
   const [searchQuery, setSearchQuery] = useState('');
+  const [documents, setDocuments] = useState<ApiDocument[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchDocuments = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get(Api_Endpoints.documents, {
+        params: { documentType: 'comptables' },
+      });
+      setDocuments(res.data?.data?.documents ?? []);
+    } catch (e: any) {
+      Alert.alert('Erreur', e?.response?.data?.message ?? 'Impossible de charger les documents.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchDocuments(); }, []);
+
+  const filtered = documents.filter(doc =>
+    !searchQuery.trim() ||
+    doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    doc.message.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+
+    const handleDocOpen = async (doc: any) => {
+      const url = `${BASE_DOCUMENT_URL}${doc.document}`;
+      const supported = await Linking.canOpenURL(url);
+      if(supported){
+          await Linking.openURL(url)
+      } else {
+          Alert.alert('Error', 'Cannot open this file');
+      }
+    }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -141,12 +137,12 @@ const Accounting: React.FC = () => {
               onChangeText={setSearchQuery}
             />
           </View>
-          <TouchableOpacity style={styles.notificationButton} activeOpacity={0.7}>
+          {/* <TouchableOpacity style={styles.notificationButton} activeOpacity={0.7}>
             <Bell size={24} color="#4B5563" />
             <View style={styles.notificationBadge}>
               <Text style={styles.notificationBadgeText}>3</Text>
             </View>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       </View>
 
@@ -165,47 +161,69 @@ const Accounting: React.FC = () => {
         </View>
 
         {/* Documents List Card */}
-        <View style={styles.listCard}>
-          {documents.map((doc, index) => (
-            <View
-              key={doc.id}
-              style={[
-                styles.docRow,
-                index < documents.length - 1 && styles.docRowBorder,
-              ]}
-            >
-              {/* Icon */}
-              <View style={styles.docIconBox}>
-                <DocIcon iconType={doc.iconType} />
-              </View>
+        {loading ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="large" color="#1E5BAC" />
+          </View>
+        ) : filtered.length === 0 ? (
+          <View style={styles.emptyBox}>
+            <FileText size={40} color="#D1D5DB" />
+            <Text style={styles.emptyText}>Aucun document trouvé</Text>
+          </View>
+        ) : (
+          <View style={styles.listCard}>
+            {filtered.map((doc, index) => (
+              <View
+                key={doc.id}
+                style={[
+                  styles.docRow,
+                  index < filtered.length - 1 && styles.docRowBorder,
+                ]}
+              >
+                {/* Icon */}
+                <View style={styles.docIconBox}>
+                  <DocIcon iconType="fileText" />
+                </View>
 
-              {/* Name & Date */}
-              <View style={styles.docInfo}>
-                <Text style={styles.docName} numberOfLines={2}>{doc.name}</Text>
-                <Text style={styles.docDate}>{doc.date}</Text>
-              </View>
+                {/* Title & Date */}
+                <View style={styles.docInfo}>
+                  <Text style={styles.docName} numberOfLines={2}>{doc.title}</Text>
+                  <Text style={styles.docDate}>Émis le {formatDate(doc.created_at)}</Text>
+                  {doc.message ? (
+                    <Text style={styles.docMessage} numberOfLines={1}>{doc.message}</Text>
+                  ) : null}
+                </View>
 
-              {/* Status & Download */}
-              <View style={styles.docActions}>
-                {doc.isValidated ? (
-                  <View style={styles.badgeValidated}>
-                    <CheckCircle2 size={11} color="#15803D" />
-                    <Text style={styles.badgeValidatedText}>Validé</Text>
-                  </View>
-                ) : (
-                  <View style={styles.badgePending}>
-                    <Clock size={11} color="#C2410C" />
-                    <Text style={styles.badgePendingText}>En attente</Text>
-                  </View>
-                )}
-                <TouchableOpacity style={styles.downloadButton} activeOpacity={0.8}>
-                  <Text style={styles.downloadButtonText}>PDF</Text>
-                  <Download size={14} color="#FFFFFF" />
-                </TouchableOpacity>
+                {/* Read badge & Download */}
+                <View style={styles.docActions}>
+                  {doc.is_read ? (
+                    <View style={styles.badgeValidated}>
+                      <CheckCircle2 size={11} color="#15803D" />
+                      <Text style={styles.badgeValidatedText}>Lu</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.badgePending}>
+                      <Clock size={11} color="#C2410C" />
+                      <Text style={styles.badgePendingText}>Non lu</Text>
+                    </View>
+                  )}
+                  <TouchableOpacity
+                    style={styles.downloadButton}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                        handleDocOpen(doc);
+                    //   const url = `${BASE_DOCUMENT_URL}${doc.document}`;
+                    //   Alert.alert('Télécharger', url);
+                    }}
+                  >
+                    <Text style={styles.downloadButtonText}>PDF</Text>
+                    <Download size={14} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          ))}
-        </View>
+            ))}
+          </View>
+        )}
 
         {/* Help / Contact Section */}
         <View style={styles.helpCard}>
@@ -225,7 +243,7 @@ const Accounting: React.FC = () => {
             <ArrowRight size={20} color="#9CA3AF" />
           </View>
 
-          <TouchableOpacity style={styles.contactButton} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.contactButton} activeOpacity={0.8} onPress={() => navigation.navigate('Contact')}>
             <Text style={styles.contactButtonText}>Contacter mon comptable</Text>
             <ArrowRight size={16} color="#1E5BAC" />
           </TouchableOpacity>
@@ -442,6 +460,30 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  // Loading / Empty
+  loadingBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 48,
+    alignItems: 'center',
+    gap: 12,
+  },
+  emptyText: {
+    fontSize: 15,
+    color: '#9CA3AF',
+  },
+  docMessage: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 2,
   },
   // Help Card
   helpCard: {

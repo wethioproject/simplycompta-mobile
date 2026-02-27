@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, Activity } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   Image,
   TextInput,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -27,57 +29,118 @@ import {
 } from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { appLogoIcon } from '../../assets/icons';
+import api from '../../api';
+import { Api_Endpoints } from '../../services/endpoints';
+import { useAuth } from '../../hooks/useAuth';
 
 type StackNavigation = StackNavigationProp<any>;
 
 const Profile: React.FC = () => {
   const navigation = useNavigation<StackNavigation>();
+  const { logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<any>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+     const res = await api.get(Api_Endpoints.customerProfile);
+     setData(res.data?.data ?? null);
+     console.log('profile data', res.data?.data);
+    }
+    catch (e: any) {
+        Alert.alert('Erreur', e?.response?.data?.message ?? 'Impossible de charger les données.');
+    } finally {
+        setLoading(false);
+    }
+  }
+
+  useEffect(() => { fetchData(); }, []);
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await logout();
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+    } catch (e: any) {
+      Alert.alert('Erreur', 'Impossible de se déconnecter.');
+    } finally {
+      setLoggingOut(false);
+    }
+  };
 
   const profileRows = [
     {
       icon: <User size={20} color="#1E5BAC" />,
       label: 'Nom & Prénom',
-      value: 'Alex Durand',
+      value: data?.name,
       action: null,
     },
     {
       icon: <Phone size={20} color="#1E5BAC" />,
       label: 'Téléphone',
-      value: '+212 6 45 67 89 01',
+      value: data?.contact,
       action: null,
     },
     {
       icon: <Mail size={20} color="#1E5BAC" />,
       label: 'Email',
-      value: 'alex.durand@duran-sarl.ma',
+      value: data?.email,
       action: null,
     },
     {
       icon: <MapPin size={20} color="#1E5BAC" />,
       label: 'Adresse',
-      value: '15 rue de la Liberté, Casablanca',
+      value: data?.shipping_address,
       action: 'Télécharger Extrait RC',
     },
     {
       icon: <Globe size={20} color="#1E5BAC" />,
       label: 'N° ICE',
-      value: '001234567000058',
+      value: data?.ice_number || 'Non renseigné',
       action: 'Télécharger Extrait RC',
     },
     {
       icon: <FileText size={20} color="#1E5BAC" />,
       label: 'N° RC',
-      value: '345678',
+      value: data?.rc_number  || 'Non renseigné',
       action: 'Télécharger Attestation IF',
     },
     {
       icon: <Briefcase size={20} color="#1E5BAC" />,
       label: 'N° de Patente',
-      value: '40321678',
+      value: data?.patent_number || 'Non renseigné',
       action: 'Télécharger Attestation Patente',
     },
   ];
+
+  if(loading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.7}
+            >
+              <ArrowLeft size={24} color="#374151" />
+            </TouchableOpacity>
+            <Image source={appLogoIcon} style={styles.logo} resizeMode="contain" />
+            <View style={styles.headerSpacer} />
+          </View>
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color="#1E5BAC" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -106,12 +169,12 @@ const Profile: React.FC = () => {
               onChangeText={setSearchQuery}
             />
           </View>
-          <TouchableOpacity style={styles.notificationButton} activeOpacity={0.7}>
+          {/* <TouchableOpacity style={styles.notificationButton} activeOpacity={0.7}>
             <Bell size={24} color="#4B5563" />
             <View style={styles.notificationBadge}>
               <Text style={styles.notificationBadgeText}>3</Text>
             </View>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
       </View>
 
@@ -135,7 +198,7 @@ const Profile: React.FC = () => {
             </View>
             <View style={styles.profileHeaderText}>
               <Text style={styles.profileHeaderTitle}>Mon Profil</Text>
-              <Text style={styles.profileHeaderSubtitle}>CEO</Text>
+              <Text style={styles.profileHeaderSubtitle}>{data?.short_bio || 'N/A'}</Text>
             </View>
           </View>
             </View>
@@ -144,8 +207,8 @@ const Profile: React.FC = () => {
         {/* Profile Details Card */}
         <View style={styles.detailsCard}>
           <View style={styles.detailsCardHeader}>
-            <Text style={styles.detailsName}>Alex Durand</Text>
-            <Text style={styles.detailsCompany}>DuranElectronics SARL</Text>
+            <Text style={styles.detailsName}>{data?.name}</Text>
+            <Text style={styles.detailsCompany}>{data?.bio || 'N/A'}</Text>
           </View>
 
           {profileRows.map((row, index) => (
@@ -191,6 +254,20 @@ const Profile: React.FC = () => {
             <ChevronRight size={20} color="#9CA3AF" />
           </TouchableOpacity>
         </View>
+
+        {/* Logout Button */}
+        <TouchableOpacity
+          style={[styles.logoutBtn, loggingOut && { opacity: 0.6 }]}
+          onPress={handleLogout}
+          disabled={loggingOut}
+          activeOpacity={0.85}
+        >
+          {loggingOut ? (
+            <ActivityIndicator color="#DC2626" />
+          ) : (
+            <Text style={styles.logoutBtnText}>Se déconnecter</Text>
+          )}
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -432,6 +509,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#374151',
     lineHeight: 20,
+  },
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    marginTop: 8,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#DC2626',
+    backgroundColor: '#FEF2F2',
+  },
+  logoutBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#DC2626',
   },
 });
 

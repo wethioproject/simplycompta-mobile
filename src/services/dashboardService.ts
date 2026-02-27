@@ -30,6 +30,19 @@ export interface DashboardResponse {
     data: DashboardData;
 }
 
+export interface ActivityStats {
+    total_invoices_sum: number;
+    total_invoices_issued_sum: number;
+    total_expenses_sum: number;
+    total_vat_payable: number;
+}
+
+export interface ActivityResponse {
+    success: boolean;
+    message: string;
+    data: ActivityStats;
+}
+
 export type DashboardFilter = 'this_week' | 'this_month' | 'this_year' | 'last_year' | 'all' | null;
 
 class DashboardService {
@@ -45,6 +58,41 @@ class DashboardService {
             throw error;
         }
     }
+
+    async getActivityData(date_from: string, date_to: string): Promise<ActivityResponse> {
+        try {
+            const response = await api.get<ActivityResponse>(Api_Endpoints.dashboard, {
+                params: { date_from, date_to },
+            });
+            return response.data;
+        } catch (error: any) {
+            throw error;
+        }
+    }
+
+    async getGraphData(year: number): Promise<GraphResponse> {
+        try {
+            const response = await api.get<GraphResponse>(Api_Endpoints.dashboardGraph, {
+                params: { year },
+            });
+            return response.data;
+        } catch (error: any) {
+            throw error;
+        }
+    }
+}
+
+export interface GraphPoint {
+    label: string;
+    value: number;
+}
+
+export interface GraphResponse {
+    year: string;
+    chart: {
+        ca: GraphPoint[];
+        expenses: GraphPoint[];
+    };
 }
 
 export default new DashboardService();

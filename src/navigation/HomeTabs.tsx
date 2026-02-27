@@ -3,11 +3,13 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, Platform, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fileIcon } from '../assets/icons';
-import Home from '../screens/home/Home';
+import HomeStack from './HomeStack';
+import Invoice from '../screens/home/Invoice'
 import Transactions from '../screens/home/Transactions';
 import BankStatement from '../screens/home/BankStatement';
 import Clients from '../screens/home/Clients';
 import Plus from '../screens/home/Plus';
+import Expenses from '../screens/home/Expenses';
 
 const Tab = createBottomTabNavigator();
 
@@ -35,7 +37,7 @@ const HomeTabs: React.FC = () => {
     >
       <Tab.Screen
         name="Dashboard"
-        component={Home}
+        component={HomeStack}
         options={{
           tabBarIcon: ({ color, size }) => (
             <Image source={fileIcon} style={{ width: 24, height: 24, tintColor: color }} resizeMode="contain" />
@@ -43,6 +45,24 @@ const HomeTabs: React.FC = () => {
         }}
       />
       <Tab.Screen
+        name="Facture"
+        component={Invoice}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Image source={fileIcon} style={{ width: 24, height: 24, tintColor: color }} resizeMode="contain" />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Dépenses"
+        component={Expenses}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Image source={fileIcon} style={{ width: 24, height: 24, tintColor: color }} resizeMode="contain" />
+          ),
+        }}
+      />
+      {/* <Tab.Screen
         name="Transaction"
         component={Transactions}
         options={{
@@ -50,8 +70,8 @@ const HomeTabs: React.FC = () => {
             <Image source={fileIcon} style={{ width: 24, height: 24, tintColor: color }} resizeMode="contain" />
           ),
         }}
-      />
-      <Tab.Screen
+      /> */}
+      {/* <Tab.Screen
         name="Bank"
         component={BankStatement}
         options={{
@@ -59,7 +79,7 @@ const HomeTabs: React.FC = () => {
             <Image source={fileIcon} style={{ width: 24, height: 24, tintColor: color }} resizeMode="contain" />
           ),
         }}
-      />
+      /> */}
       <Tab.Screen
         name="Clients"
         component={Clients}

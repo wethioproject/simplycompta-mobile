@@ -1,5 +1,23 @@
-export const Api_Endpoints={
-
-    dashboard:"customer/dashboard-data"
-
+export const Api_Endpoints = {
+  dashboard: 'customer/dashboard-data',
+  customerClients: 'customer/customer-clients',
+  customerClientsSearch: 'customer/customer-clients',
+  customerClient: 'customer/customer-client',
+  createCustomerClient: 'customer/customer-client',
+  documents: 'customer/documents',
+  accountantInfo: 'customer/accountant-info',
+  customerInvoices: 'customer/customer-invoices',
+  customerInvoice: 'customer/customer-invoice',
+  customerInvoiceResources: 'customer/customer-clients-resources',
+  customerInvoiceExport: 'customer/export-invoices',
+  customerExpenses: 'customer/customer-expenses',
+  customerExpense: 'customer/customer-expense',
+  customerExpenseResources: 'customer/transaction-resources',
+  customerExpenseExport: 'customer/export-expenses',
+  customerProfile: '/customer/profile',
+  sendAccountantEmail: 'customer/send-accountant-email',
+  customerClientInvoice: 'customer/customer-client-invoice',
+  lastPasswordUpdate: 'customer/last-password-update',
+  dashboardGraph: 'customer/dashboard-graph-data',
+  hasUnreadNotifications: 'customer/has-unread-notifications',
 }

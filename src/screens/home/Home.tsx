@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -12,12 +12,19 @@ import {
 } from 'lucide-react-native';
 import { appLogoIcon } from '../../assets/icons';
 import LinearGradient from 'react-native-linear-gradient';
+import notificationService from '../../services/notificationService';
 
 type DrawerNavigation = DrawerNavigationProp<any>;
 
 const Home: React.FC = () => {
   const navigation = useNavigation<DrawerNavigation>();
   const [searchQuery, setSearchQuery] = useState('');
+  const [hasUnread, setHasUnread] = useState(false);
+  console.log('hasUnread', hasUnread)
+
+  useEffect(() => {
+    notificationService.hasUnreadNotifications().then(setHasUnread);
+  }, []);
 
   const handleNavigate = (page: string) => {
     const routes: { [key: string]: string } = {
@@ -60,11 +67,13 @@ const Home: React.FC = () => {
             />
           </View>
 
-          <TouchableOpacity style={styles.notificationButton}>
+          <TouchableOpacity style={styles.notificationButton} onPress={() => handleNavigate('notifications')}>
             <Bell size={24} color="#4B5563" />
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>3</Text>
-            </View>
+            {hasUnread && (
+              <View style={styles.notificationBadge}>
+                <View style={styles.notificationBadgeDot} />
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -82,182 +91,141 @@ const Home: React.FC = () => {
             onPress={() => handleNavigate('profile')}
             activeOpacity={0.8}
           >
-            <View style={[styles.card, styles.cardBlue]}>
-              <View style={styles.cardIconContainer}>
-                <View style={styles.cardIconWhiteBg}>
-                  <HomeIcon size={36} color="#1E5BAC" />
+            <LinearGradient
+              colors={['#2563EB', '#1E5BAC']}
+              style={styles.card}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <View style={styles.cardInner}>
+                <View style={styles.cardIconContainer}>
+                  <View style={styles.cardIconWhiteBg}>
+                    <HomeIcon size={36} color="#1E5BAC" />
+                  </View>
                 </View>
+                <Text style={styles.cardText}>Mon Profil</Text>
               </View>
-              <Text style={styles.cardText}>Mon Profil</Text>
-            </View>
+            </LinearGradient>
           </TouchableOpacity>
 
           {/* Documents Juridiques */}
-          {/* <TouchableOpacity
+          <TouchableOpacity
             style={styles.cardButton}
             onPress={() => handleNavigate('legal')}
             activeOpacity={0.8}
           >
             <LinearGradient
               colors={['#22D3EE', '#0891B2']}
-              style={[styles.card, styles.gradientCard]}
+              style={styles.card}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <View style={styles.cardIconContainer}>
-                <HomeIcon size={40} color="#FFFFFF" />
-              </View>
-              <Text style={styles.cardText}>Documents Juridiques</Text>
-            </LinearGradient>
-          </TouchableOpacity> */}
-          <TouchableOpacity
-            style={styles.cardButton}
-            onPress={() => handleNavigate('legal')}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.card, {backgroundColor: '#0891B2'}]}>
-              <View style={styles.cardIconContainer}>
-                <View style={styles.cardIconBg}>
-                  <HomeIcon size={36} color="#FFFFFF" />
+              <View style={styles.cardInner}>
+                <View style={styles.cardIconContainer}>
+                  <View style={styles.cardIconBg}>
+                    <HomeIcon size={36} color="#FFFFFF" />
+                  </View>
                 </View>
+                <Text style={styles.cardText}>Documents Juridiques</Text>
               </View>
-              <Text style={styles.cardText}>Documents Juridiques</Text>
-            </View>
+            </LinearGradient>
           </TouchableOpacity>
 
           {/* Documents Comptables */}
-          {/* <TouchableOpacity
+          <TouchableOpacity
             style={styles.cardButton}
             onPress={() => handleNavigate('accounting')}
             activeOpacity={0.8}
           >
             <LinearGradient
               colors={['#9333EA', '#6B21A8']}
-              style={[styles.card, styles.gradientCard]}
+              style={styles.card}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <View style={styles.cardIconContainer}>
-                <HomeIcon size={40} color="#FFFFFF" />
-              </View>
-              <Text style={styles.cardText}>Documents Comptables</Text>
-            </LinearGradient>
-          </TouchableOpacity> */}
-          <TouchableOpacity
-            style={styles.cardButton}
-            onPress={() => handleNavigate('accounting')}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.card, {backgroundColor: '#6B21A8'}]}>
-              <View style={styles.cardIconContainer}>
-                <View style={styles.cardIconBg}>
-                  <HomeIcon size={36} color="#FFFFFF" />
+              <View style={styles.cardInner}>
+                <View style={styles.cardIconContainer}>
+                  <View style={styles.cardIconBg}>
+                    <HomeIcon size={36} color="#FFFFFF" />
+                  </View>
                 </View>
+                <Text style={styles.cardText}>Documents Comptables</Text>
               </View>
-              <Text style={styles.cardText}>Documents Comptables</Text>
-            </View>
+            </LinearGradient>
           </TouchableOpacity>
 
           {/* Mon Activité */}
-          {/* <TouchableOpacity
+          <TouchableOpacity
             style={styles.cardButton}
             onPress={() => handleNavigate('activity')}
             activeOpacity={0.8}
           >
             <LinearGradient
               colors={['#FB923C', '#EA580C']}
-              style={[styles.card, styles.gradientCard]}
+              style={styles.card}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <View style={styles.cardIconContainer}>
-                <HomeIcon size={40} color="#FFFFFF" />
-              </View>
-              <Text style={styles.cardText}>Mon Activité</Text>
-            </LinearGradient>
-          </TouchableOpacity> */}
-          <TouchableOpacity
-            style={styles.cardButton}
-            onPress={() => handleNavigate('activity')}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.card, {backgroundColor: '#EA580C'}]}>
-              <View style={styles.cardIconContainer}>
-                <View style={styles.cardIconBg}>
-                  <HomeIcon size={36} color="#FFFFFF" />
+              <View style={styles.cardInner}>
+                <View style={styles.cardIconContainer}>
+                  <View style={styles.cardIconBg}>
+                    <HomeIcon size={36} color="#FFFFFF" />
+                  </View>
                 </View>
+                <Text style={styles.cardText}>Mon Activité</Text>
               </View>
-              <Text style={styles.cardText}>Mon Activité</Text>
-            </View>
+            </LinearGradient>
           </TouchableOpacity>
 
           {/* Mes Relevés Bancaires */}
-          {/* <TouchableOpacity
+          <TouchableOpacity
             style={styles.cardButton}
             onPress={() => handleNavigate('bank')}
             activeOpacity={0.8}
           >
             <LinearGradient
               colors={['#10B981', '#047857']}
-              style={[styles.card, styles.gradientCard]}
+              style={styles.card}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <View style={styles.cardIconContainer}>
-                <HomeIcon size={40} color="#FFFFFF" />
-              </View>
-              <Text style={styles.cardText}>Mes Relevés Bancaires</Text>
-            </LinearGradient>
-          </TouchableOpacity> */}
-          <TouchableOpacity
-            style={styles.cardButton}
-            onPress={() => handleNavigate('bank')}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.card, {backgroundColor: '#047857'}]}>
-              <View style={styles.cardIconContainer}>
-                <View style={styles.cardIconBg}>
-                  <HomeIcon size={36} color="#FFFFFF" />
+              <View style={styles.cardInner}>
+                <View style={styles.cardIconContainer}>
+                  <View style={styles.cardIconBg}>
+                    <HomeIcon size={36} color="#FFFFFF" />
+                  </View>
                 </View>
+                <Text style={styles.cardText}>Mes Relevés Bancaires</Text>
               </View>
-              <Text style={styles.cardText}>Mes Relevés Bancaires</Text>
-            </View>
+            </LinearGradient>
           </TouchableOpacity>
 
           {/* Mes Notifications */}
-          {/* <TouchableOpacity
+          <TouchableOpacity
             style={styles.cardButton}
             onPress={() => handleNavigate('notifications')}
             activeOpacity={0.8}
           >
             <LinearGradient
               colors={['#1E5BAC', '#14407A']}
-              style={[styles.card, styles.gradientCard]}
+              style={styles.card}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
             >
-              <View style={styles.cardIconContainer}>
-                <Bell size={40} color="#FFFFFF" strokeWidth={2} />
-              </View>
-              <Text style={styles.cardText}>Mes Notifications</Text>
-              <View style={styles.cardBadge}>
-                <Text style={styles.cardBadgeText}>3</Text>
+              <View style={styles.cardInner}>
+                {hasUnread && (
+                  <View style={styles.cardBadge}>
+                    <View style={styles.cardBadgeDot} />
+                  </View>
+                )}
+                <View style={styles.cardIconContainer}>
+                  <View style={styles.cardIconBg}>
+                    <HomeIcon size={36} color="#FFFFFF" />
+                  </View>
+                </View>
+                <Text style={styles.cardText}>Mes Notifications</Text>
               </View>
             </LinearGradient>
-          </TouchableOpacity> */}
-          <TouchableOpacity
-            style={styles.cardButton}
-            onPress={() => handleNavigate('notifications')}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.card, {backgroundColor: '#14407A'}]}>
-              <View style={styles.cardIconContainer}>
-                <View style={styles.cardIconBg}>
-                  <HomeIcon size={36} color="#FFFFFF" />
-                </View>
-              </View>
-              <Text style={styles.cardText}>Mes Notifications</Text>
-            </View>
           </TouchableOpacity>
         </View>
 
@@ -347,19 +315,22 @@ const styles = StyleSheet.create({
   },
   notificationBadge: {
     position: 'absolute',
-    top: 4,
-    right: 4,
+    top: 6,
+    right: 6,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: '#EF4444',
-    borderRadius: 10,
-    width: 20,
-    height: 20,
+    borderWidth: 1.5,
+    borderColor: '#F9FAFB',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  notificationBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: 'bold',
+  notificationBadgeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#EF4444',
   },
   mainContent: {
     flex: 1,
@@ -382,20 +353,18 @@ const styles = StyleSheet.create({
   },
   card: {
     borderRadius: 16,
-    padding: 6,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+  },
+  cardInner: {
     aspectRatio: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  cardBlue: {
-    backgroundColor: '#1E5BAC',
-  },
-  gradientCard: {
+    padding: 6,
   },
   cardIconContainer: {
     marginBottom: 12,
@@ -430,11 +399,18 @@ const styles = StyleSheet.create({
     top: 12,
     right: 12,
     backgroundColor: '#EF4444',
-    borderRadius: 12,
-    width: 24,
-    height: 24,
+    borderRadius: 8,
+    width: 16,
+    height: 16,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 1,
+  },
+  cardBadgeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
   },
   cardBadgeText: {
     color: '#FFFFFF',

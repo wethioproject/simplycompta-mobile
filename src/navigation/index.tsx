@@ -51,6 +51,12 @@ import LegalDocuments from '../screens/home/Legal';
 import AccountingDocuments from '../screens/home/Accounting';
 import Activity from '../screens/home/Activity';
 import BankStatements from '../screens/home/BankStatements';
+import Contact from '../screens/home/Contact';
+import Invoice from '../screens/home/Invoice';
+import PersonalProfile from '../screens/home/PersonalProfile';
+import CompanyProfile from '../screens/home/CompanyProfile';
+import NotificationPreferences from '../screens/home/NotificationPreferences';
+import AccountSecurity from '../screens/home/AccountSecurity';
 
 const Stack = createStackNavigator();
 
@@ -109,6 +115,12 @@ const AppNavigator = () => {
         <Stack.Screen name="Accounting Documents" component={AccountingDocuments} options={{ headerShown: false }} />
         <Stack.Screen name="Activity" component={Activity} options={{ headerShown: false }} />
         <Stack.Screen name="Bank Statements" component={BankStatements} options={{ headerShown: false }} />
+        <Stack.Screen name="Contact" component={Contact} options={{ headerShown: false }} />
+        <Stack.Screen name="Invoice" component={Invoice} options={{ headerShown: false }} />
+        <Stack.Screen name="Personal Profile" component={PersonalProfile} options={{ headerShown: false }} />
+        <Stack.Screen name="Company Profile" component={CompanyProfile} options={{ headerShown: false }} />
+        <Stack.Screen name="Notification Preferences" component={NotificationPreferences} options={{ headerShown: false }} />
+        <Stack.Screen name="Account Security" component={AccountSecurity} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
     <Toast />

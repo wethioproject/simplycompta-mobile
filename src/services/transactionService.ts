@@ -86,11 +86,13 @@ class TransactionService {
                 formData.append('description', payload.description);
                 formData.append('reference', payload.reference);
                 const file = payload.payment_receipt;
-                formData.append('payment_receipt', {
+                formData.append('attachment_path', {
                     uri: file.fileCopyUri || file.uri,
                     type: file.type || 'image/jpeg',
                     name: file.name || 'receipt.jpg',
                 } as any);
+
+                console.log('payllltransss', formData)
                 const response = await api.post<TransactionResponse>('/customer/transaction', formData, {
                     headers: {
                         'Content-Type': 'multipart/form-data',
