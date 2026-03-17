@@ -90,11 +90,11 @@ export const useExpense = () => {
 
     const exportExpenses = useCallback(async () => {
         try {
-            const fileUrl = await expenseService.exportExpenses();
-            return { success: true, fileUrl };
+            const { csvData, fileName } = await expenseService.exportExpenses();
+            return { success: true, csvData, fileName };
         } catch (error: any) {
             const errorMessage = error.response?.data?.message || 'Failed to export expenses.';
-            return { success: false, error: errorMessage, fileUrl: '' };
+            return { success: false, error: errorMessage, csvData: '', fileName: '' };
         }
     }, []);
 

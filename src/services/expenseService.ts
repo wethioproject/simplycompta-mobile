@@ -47,6 +47,10 @@ class ExpenseService {
             formData.append('total_ttc', payload.total_ttc);
             formData.append('total_tva', payload.total_tva);
 
+            if (payload.supplier_id != null) {
+                formData.append('supplier_id', String(payload.supplier_id));
+            }
+
             if (payload.document) {
                 const file = payload.document;
                 formData.append('file', {
@@ -80,6 +84,10 @@ class ExpenseService {
             formData.append('total_tva', payload.total_tva);
             formData.append('_method', 'PUT');
 
+            if (payload.supplier_id != null) {
+                formData.append('supplier_id', String(payload.supplier_id));
+            }
+
             if (payload.document) {
                 const file = payload.document;
                 formData.append('file', {
@@ -99,16 +107,20 @@ class ExpenseService {
         }
     }
 
-
-    async exportExpenses(): Promise<string> {
+    async exportExpenses(): Promise<{ csvData: string; fileName: string }> {
         try {
-            const response = await api.get(Api_Endpoints.customerExpenseExport);
-            // Response shape: { success, message, data: { file_url: '/storage/...' } }
-            const filePath: string = response.data?.data?.file_url;
-            if (!filePath) throw new Error('No file_url in export response.');
-            // Strip trailing /api/ from BASE_URL to get domain root
-            const domain = 'https://simply-compta.com';
-            return `${domain}${filePath}`;
+            const response = await api.get(Api_Endpoints.customerExpenseExport, {
+                responseType: 'text',
+            });
+            const csvData: string = typeof response.data === 'string'
+                ? response.data
+                : JSON.stringify(response.data);
+            const disposition: string =
+                response.headers?.['content-disposition'] ||
+                response.headers?.['Content-Disposition'] || '';
+            const match = disposition.match(/filename=([^;\s]+)/);
+            const fileName = match ? match[1].replace(/"/g, '') : 'expenses_export.csv';
+            return { csvData, fileName };
         } catch (error: any) {
             console.error('Export expenses error:', error.response?.data || error.message);
             throw error;
