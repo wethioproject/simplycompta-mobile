@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import {
@@ -36,6 +37,7 @@ import { useAuth } from '../../hooks/useAuth';
 type StackNavigation = StackNavigationProp<any>;
 
 const Profile: React.FC = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<StackNavigation>();
   const { logout } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -51,7 +53,7 @@ const Profile: React.FC = () => {
      console.log('profile data', res.data?.data);
     }
     catch (e: any) {
-        Alert.alert('Erreur', e?.response?.data?.message ?? 'Impossible de charger les données.');
+        Alert.alert(t('error_title'), e?.response?.data?.message ?? t('error_load_data'));
     } finally {
         setLoading(false);
     }
@@ -68,7 +70,7 @@ const Profile: React.FC = () => {
         routes: [{ name: 'Login' }],
       });
     } catch (e: any) {
-      Alert.alert('Erreur', 'Impossible de se déconnecter.');
+      Alert.alert(t('error_title'), t('error_logout_failed'));
     } finally {
       setLoggingOut(false);
     }
@@ -77,45 +79,45 @@ const Profile: React.FC = () => {
   const profileRows = [
     {
       icon: <User size={20} color="#1E5BAC" />,
-      label: 'Nom & Prénom',
+      label: t('label_name_full'),
       value: data?.name,
       action: null,
     },
     {
       icon: <Phone size={20} color="#1E5BAC" />,
-      label: 'Téléphone',
+      label: t('label_phone_contact'),
       value: data?.contact,
       action: null,
     },
     {
       icon: <Mail size={20} color="#1E5BAC" />,
-      label: 'Email',
+      label: t('label_email_contact'),
       value: data?.email,
       action: null,
     },
     {
       icon: <MapPin size={20} color="#1E5BAC" />,
-      label: 'Adresse',
+      label: t('label_address'),
       value: data?.shipping_address,
-      action: 'Télécharger Extrait RC',
+      action: t('action_download_rc_extract'),
     },
     {
       icon: <Globe size={20} color="#1E5BAC" />,
-      label: 'N° ICE',
-      value: data?.ice_number || 'Non renseigné',
-      action: 'Télécharger Extrait RC',
+      label: t('label_ice_number'),
+      value: data?.ice_number || t('profile_not_provided'),
+      action: t('action_download_rc_extract'),
     },
     {
       icon: <FileText size={20} color="#1E5BAC" />,
-      label: 'N° RC',
-      value: data?.rc_number  || 'Non renseigné',
-      action: 'Télécharger Attestation IF',
+      label: t('label_rc_number'),
+      value: data?.rc_number  || t('profile_not_provided'),
+      action: t('action_download_if_certificate'),
     },
     {
       icon: <Briefcase size={20} color="#1E5BAC" />,
-      label: 'N° de Patente',
-      value: data?.patent_number || 'Non renseigné',
-      action: 'Télécharger Attestation Patente',
+      label: t('label_patent_number'),
+      value: data?.patent_number || t('profile_not_provided'),
+      action: t('action_download_patent_certificate'),
     },
   ];
 
@@ -163,7 +165,7 @@ const Profile: React.FC = () => {
             <Search size={20} color="#9CA3AF" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Rechercher..."
+              placeholder={t('search_placeholder')}
               placeholderTextColor="#9CA3AF"
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -197,8 +199,8 @@ const Profile: React.FC = () => {
               <User size={32} color="#FFFFFF" strokeWidth={2.5} />
             </View>
             <View style={styles.profileHeaderText}>
-              <Text style={styles.profileHeaderTitle}>Mon Profil</Text>
-              <Text style={styles.profileHeaderSubtitle}>{data?.short_bio || 'N/A'}</Text>
+              <Text style={styles.profileHeaderTitle}>{t('profile_header_title')}</Text>
+              <Text style={styles.profileHeaderSubtitle}>{data?.short_bio || t('profile_na')}</Text>
             </View>
           </View>
             </View>
@@ -208,7 +210,7 @@ const Profile: React.FC = () => {
         <View style={styles.detailsCard}>
           <View style={styles.detailsCardHeader}>
             <Text style={styles.detailsName}>{data?.name}</Text>
-            <Text style={styles.detailsCompany}>{data?.bio || 'N/A'}</Text>
+            <Text style={styles.detailsCompany}>{data?.bio || t('profile_na')}</Text>
           </View>
 
           {profileRows.map((row, index) => (
@@ -247,7 +249,7 @@ const Profile: React.FC = () => {
               </View>
               <View style={styles.contactTextContainer}>
                 <Text style={styles.contactText}>
-                  Une question ou un document à{'\n'}transmettre à votre cabinet ?
+                  {t('contact_question_text')}
                 </Text>
               </View>
             </View>
@@ -265,7 +267,7 @@ const Profile: React.FC = () => {
           {loggingOut ? (
             <ActivityIndicator color="#DC2626" />
           ) : (
-            <Text style={styles.logoutBtnText}>Se déconnecter</Text>
+            <Text style={styles.logoutBtnText}>{t('button_logout')}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>

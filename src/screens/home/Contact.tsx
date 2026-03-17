@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import {
@@ -43,6 +44,8 @@ type StackNavigation = StackNavigationProp<any>;
 
 // ─── Contact Form View ────────────────────────────────────────────────────────
 const ContactForm: React.FC<{ onBack: () => void; accountant?: AccountantInfo | null }> = ({ onBack, accountant }) => {
+  const { t } = useTranslation();
+  console.log(`accinfooo2`, accountant);
   const [sujet, setSujet] = useState('');
   const [message, setMessage] = useState('');
   const [attachment, setAttachment] = useState<{ uri: string; name: string; type: string } | null>(null);
@@ -58,18 +61,18 @@ const ContactForm: React.FC<{ onBack: () => void; accountant?: AccountantInfo | 
       });
     } catch (e: any) {
       if (!isErrorWithCode(e) || e.code !== errorCodes.OPERATION_CANCELED) {
-        Alert.alert('Erreur', 'Impossible de sélectionner le fichier.');
+        Alert.alert(t('error_title'), 'Impossible de sélectionner le fichier.');
       }
     }
   };
 
   const handleSubmit = async () => {
     if (!sujet.trim() || !message.trim()) {
-      Alert.alert('Champs requis', 'Veuillez remplir le sujet et le message.');
+      Alert.alert(t('alert_required_fields'), t('message_fill_fields'));
       return;
     }
     if (!accountant?.email) {
-      Alert.alert('Erreur', 'Adresse email du comptable introuvable.');
+      Alert.alert(t('error_title'), t('error_accountant_email_missing'));
       return;
     }
     setSending(true);
@@ -89,14 +92,14 @@ const ContactForm: React.FC<{ onBack: () => void; accountant?: AccountantInfo | 
       await api.post(Api_Endpoints.sendAccountantEmail, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      Alert.alert('Message envoyé', 'Votre message a été envoyé à votre comptable !', [
-        { text: 'OK', onPress: () => { setSujet(''); setMessage(''); setAttachment(null); onBack(); } },
+      Alert.alert(t('success_message_sent'), t('success_message_sent_text'), [
+        { text: t('button_ok'), onPress: () => { setSujet(''); setMessage(''); setAttachment(null); onBack(); } },
       ]);
     } catch (e: any) {
         
         console.log('testeee101', e)
       const msg = e?.response?.data?.message ?? 'Erreur lors de l\'envoi du message.';
-      Alert.alert('Erreur', msg);
+      Alert.alert(t('error_title'), msg);
     } finally {
       setSending(false);
     }
@@ -114,7 +117,7 @@ const ContactForm: React.FC<{ onBack: () => void; accountant?: AccountantInfo | 
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.headerPill}>
-          <Text style={styles.headerPillText}>Formulaire de contact</Text>
+          <Text style={styles.headerPillText}>{t('form_title_contact')}</Text>
         </View>
       </View>
 
@@ -135,7 +138,7 @@ const ContactForm: React.FC<{ onBack: () => void; accountant?: AccountantInfo | 
             <View style={styles.titleIconBox}>
               <Mail size={20} color="#FFFFFF" strokeWidth={2.5} />
             </View>
-            <Text style={styles.titleText}>Envoyer un message</Text>
+            <Text style={styles.titleText}>{t('header_send_message')}</Text>
           </View>
         </LinearGradient>
 
@@ -151,17 +154,17 @@ const ContactForm: React.FC<{ onBack: () => void; accountant?: AccountantInfo | 
             )}
             <View>
               <Text style={styles.accountantName}>{accountant?.name ?? '—'}</Text>
-              <Text style={styles.accountantRole}>Votre expert-comptable</Text>
+              <Text style={styles.accountantRole}>{t('role_your_accountant')}</Text>
             </View>
           </View>
         </View>
 
         {/* Sujet */}
         <View style={styles.card}>
-          <Text style={styles.fieldLabel}>Sujet de votre demande *</Text>
+          <Text style={styles.fieldLabel}>{t('label_subject')}</Text>
           <TextInput
             style={styles.textInput}
-            placeholder="Ex: Question sur ma déclaration TVA"
+            placeholder={t('placeholder_subject')}
             placeholderTextColor="#9CA3AF"
             value={sujet}
             onChangeText={setSujet}
@@ -170,10 +173,10 @@ const ContactForm: React.FC<{ onBack: () => void; accountant?: AccountantInfo | 
 
         {/* Message */}
         <View style={styles.card}>
-          <Text style={styles.fieldLabel}>Votre message *</Text>
+          <Text style={styles.fieldLabel}>{t('label_message')}</Text>
           <TextInput
             style={[styles.textInput, styles.textArea]}
-            placeholder="Décrivez votre demande en détail..."
+            placeholder={t('placeholder_message')}
             placeholderTextColor="#9CA3AF"
             value={message}
             onChangeText={setMessage}
@@ -185,12 +188,12 @@ const ContactForm: React.FC<{ onBack: () => void; accountant?: AccountantInfo | 
 
         {/* Attachment placeholder */}
         <View style={styles.card}>
-          <Text style={styles.fieldLabel}>Joindre un document (optionnel)</Text>
+          <Text style={styles.fieldLabel}>{t('label_attachment')}</Text>
           <TouchableOpacity style={styles.attachmentBox} activeOpacity={0.7} onPress={handlePickAttachment}>
             <FileText size={20} color={attachment ? '#1E5BAC' : '#9CA3AF'} />
             <Text style={[styles.attachmentText, attachment && { color: '#1E5BAC', fontWeight: '600' }]}
               numberOfLines={1}>
-              {attachment ? attachment.name : 'Sélectionner un fichier'}
+              {attachment ? attachment.name : t('button_select_file')}
             </Text>
             {attachment && (
               <TouchableOpacity onPress={() => setAttachment(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -198,14 +201,14 @@ const ContactForm: React.FC<{ onBack: () => void; accountant?: AccountantInfo | 
               </TouchableOpacity>
             )}
           </TouchableOpacity>
-          <Text style={styles.attachmentHint}>Formats acceptés: PDF, JPG, PNG, DOC (Max 10 Mo)</Text>
+          <Text style={styles.attachmentHint}>{t('hint_attachment_format')}</Text>
         </View>
 
         {/* Delay info */}
         <View style={styles.delayBanner}>
           <Clock size={18} color="#D97706" style={{ flexShrink: 0 }} />
           <Text style={styles.delayText}>
-            Votre comptable vous répondra sous 24h ouvrées
+            {t('info_response_time')}
           </Text>
         </View>
 
@@ -220,7 +223,7 @@ const ContactForm: React.FC<{ onBack: () => void; accountant?: AccountantInfo | 
             ? <ActivityIndicator color="#FFFFFF" />
             : <>
                 <Send size={20} color="#FFFFFF" />
-                <Text style={styles.submitButtonText}>Envoyer le message</Text>
+                <Text style={styles.submitButtonText}>{t('button_send_message')}</Text>
               </>}
         </TouchableOpacity>
       </ScrollView>
@@ -230,6 +233,7 @@ const ContactForm: React.FC<{ onBack: () => void; accountant?: AccountantInfo | 
 
 // ─── Main Contact View ────────────────────────────────────────────────────────
 const Contact: React.FC = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<StackNavigation>();
   const [showForm, setShowForm] = useState(false);
   const [accountant, setAccountant] = useState<AccountantInfo | null>(null);
@@ -262,7 +266,7 @@ const Contact: React.FC = () => {
           <View style={styles.headerSpacer} />
         </View>
         <View style={styles.headerPill}>
-          <Text style={styles.headerPillText}>Contacter mon comptable</Text>
+          <Text style={styles.headerPillText}>{t('title_contact_accountant')}</Text>
         </View>
       </View>
 
@@ -282,7 +286,7 @@ const Contact: React.FC = () => {
             <View style={styles.titleIconBox}>
               <Headphones size={20} color="#FFFFFF" strokeWidth={2.5} />
             </View>
-            <Text style={styles.titleText}>Contacter mon comptable</Text>
+            <Text style={styles.titleText}>{t('title_contact_accountant')}</Text>
           </View>
         </LinearGradient>
 
@@ -307,11 +311,11 @@ const Contact: React.FC = () => {
                 )}
                 <View style={styles.accountantInfoText}>
                   <Text style={styles.accountantName}>{accountant?.name ?? '—'}</Text>
-                  <Text style={styles.accountantRole}>Expert-comptable agréé</Text>
+                  <Text style={styles.accountantRole}>{t('role_certified_accountant')}</Text>
                   <View style={styles.availableRow}>
                     <View style={[styles.greenDot, accountant?.is_active !== 1 && { backgroundColor: '#9CA3AF' }]} />
                     <Text style={styles.availableText}>
-                      {accountant?.is_active === 1 ? "Disponible aujourd'hui" : 'Non disponible'}
+                      {accountant?.is_active === 1 ? t('status_available_today') : t('status_not_available')}
                     </Text>
                   </View>
                 </View>
@@ -326,7 +330,7 @@ const Contact: React.FC = () => {
                 </View>
                 <View style={styles.contactDetailRow}>
                   <Clock size={16} color="#9CA3AF" />
-                  <Text style={styles.contactDetailText}>Lun-Ven: 9h00 - 18h00</Text>
+                  <Text style={styles.contactDetailText}>{t('label_business_hours')}</Text>
                 </View>
               </View>
             </>
@@ -349,8 +353,8 @@ const Contact: React.FC = () => {
                 <Phone size={28} color="#16A34A" strokeWidth={2.5} />
               </View>
               <View style={styles.actionCardText}>
-                <Text style={styles.actionCardTitle}>Appeler directement</Text>
-                <Text style={styles.actionCardSubtitle}>Discutez avec votre comptable maintenant</Text>
+                <Text style={styles.actionCardTitle}>{t('action_call_directly')}</Text>
+                <Text style={styles.actionCardSubtitle}>{t('subtitle_call_directly')}</Text>
               </View>
             </View>
           </LinearGradient>
@@ -369,8 +373,8 @@ const Contact: React.FC = () => {
                 <Mail size={28} color="#FFFFFF" strokeWidth={2.5} />
               </View>
               <View style={styles.actionCardText}>
-                <Text style={styles.actionCardTitle}>Envoyer un message</Text>
-                <Text style={styles.actionCardSubtitle}>Formulaire de contact avec pièces jointes</Text>
+                <Text style={styles.actionCardTitle}>{t('action_send_message')}</Text>
+                <Text style={styles.actionCardSubtitle}>{t('subtitle_send_message')}</Text>
               </View>
             </View>
           </LinearGradient>
@@ -383,13 +387,13 @@ const Contact: React.FC = () => {
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
-          <Text style={styles.urgentTitle}>Besoin d'aide urgente ?</Text>
+          <Text style={styles.urgentTitle}>{t('title_urgent_help')}</Text>
           <Text style={styles.urgentBody}>
-            Pour toute urgence, privilégiez l'appel téléphonique. Pour les questions administratives et l'envoi de documents, utilisez le formulaire de contact.
+            {t('text_urgent_help')}
           </Text>
           <View style={styles.urgentFooter}>
             <Clock size={14} color="#7C3AED" />
-            <Text style={styles.urgentFooterText}>Réponse sous 24h ouvrées par message</Text>
+            <Text style={styles.urgentFooterText}>{t('footer_response_time')}</Text>
           </View>
         </LinearGradient>
       </ScrollView>

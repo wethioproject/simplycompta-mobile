@@ -2,6 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, Platform, Image } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { fileIcon } from '../assets/icons';
 import HomeStack from './HomeStack';
 import Invoice from '../screens/home/Invoice'
@@ -10,11 +11,21 @@ import BankStatement from '../screens/home/BankStatement';
 import Clients from '../screens/home/Clients';
 import Plus from '../screens/home/Plus';
 import Expenses from '../screens/home/Expenses';
+import Suppliers from '../screens/home/Suppliers';
+import { 
+  House,
+  FileText,
+  TrendingDown,
+  Users,
+  Truck,
+  MoreHorizontal
+} from 'lucide-react-native';
 
 const Tab = createBottomTabNavigator();
 
 const HomeTabs: React.FC = () => {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   return (
     <Tab.Navigator
@@ -39,8 +50,13 @@ const HomeTabs: React.FC = () => {
         name="Dashboard"
         component={HomeStack}
         options={{
+          tabBarLabel: t('tab_dashboard'),
           tabBarIcon: ({ color, size }) => (
-            <Image source={fileIcon} style={{ width: 24, height: 24, tintColor: color }} resizeMode="contain" />
+        <House
+          size={size ?? 24}
+          color={color}
+          strokeWidth={2}
+        />
           ),
         }}
       />
@@ -48,8 +64,13 @@ const HomeTabs: React.FC = () => {
         name="Facture"
         component={Invoice}
         options={{
+          tabBarLabel: t('tab_invoice'),
           tabBarIcon: ({ color, size }) => (
-            <Image source={fileIcon} style={{ width: 24, height: 24, tintColor: color }} resizeMode="contain" />
+          <FileText
+          size={size ?? 24}
+          color={color}
+          strokeWidth={2}
+        />
           ),
         }}
       />
@@ -57,8 +78,13 @@ const HomeTabs: React.FC = () => {
         name="Dépenses"
         component={Expenses}
         options={{
+          tabBarLabel: t('tab_expenses'),
           tabBarIcon: ({ color, size }) => (
-            <Image source={fileIcon} style={{ width: 24, height: 24, tintColor: color }} resizeMode="contain" />
+          <TrendingDown
+          size={size ?? 24}
+          color={color}
+          strokeWidth={2}
+        />
           ),
         }}
       />
@@ -84,8 +110,27 @@ const HomeTabs: React.FC = () => {
         name="Clients"
         component={Clients}
         options={{
+          tabBarLabel: t('tab_clients'),
           tabBarIcon: ({ color, size }) => (
-            <Image source={fileIcon} style={{ width: 24, height: 24, tintColor: color }} resizeMode="contain" />
+        <Users
+          size={size ?? 24}
+          color={color}
+          strokeWidth={2}
+        />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Fournisseurs"
+        component={Suppliers}
+        options={{
+          tabBarLabel: t('tab_suppliers'),
+          tabBarIcon: ({ color, size }) => (
+            <Truck
+              size={size ?? 24}
+              color={color}
+              strokeWidth={2}
+            />
           ),
         }}
       />
@@ -93,8 +138,13 @@ const HomeTabs: React.FC = () => {
         name="Plus"
         component={Plus}
         options={{
+          tabBarLabel: t('tab_more'),
           tabBarIcon: ({ color, size }) => (
-            <Image source={fileIcon} style={{ width: 24, height: 24, tintColor: color }} resizeMode="contain" />
+        <MoreHorizontal
+          size={size ?? 24}
+          color={color}
+          strokeWidth={2}
+        />
           ),
         }}
       />

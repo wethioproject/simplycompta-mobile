@@ -12,14 +12,16 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { Lock, ShieldCheck, Monitor, ArrowLeft } from 'lucide-react-native';
 import { appLogoIcon } from '../../assets/icons';
 import api from '../../api';
 import { Api_Endpoints } from '../../services/endpoints';
 
 const AccountSecurity: React.FC = ({ navigation }: any) => {
+  const { t } = useTranslation();
   const [twoFactor, setTwoFactor] = useState(false);
-  const [lastPasswordUpdate, setLastPasswordUpdate] = useState<string>('Chargement...');
+  const [lastPasswordUpdate, setLastPasswordUpdate] = useState<string>('');
   const [loadingPassword, setLoadingPassword] = useState(true);
   const [deleting, setDeleting] = useState(false);
 
@@ -35,14 +37,14 @@ const AccountSecurity: React.FC = ({ navigation }: any) => {
       const diffMonths = Math.floor(diffDays / 30);
       const diffYears = Math.floor(diffMonths / 12);
 
-      if (diffYears > 0) return `il y a ${diffYears} ${diffYears === 1 ? 'an' : 'ans'}`;
-      if (diffMonths > 0) return `il y a ${diffMonths} ${diffMonths === 1 ? 'mois' : 'mois'}`;
-      if (diffDays > 0) return `il y a ${diffDays} ${diffDays === 1 ? 'jour' : 'jours'}`;
-      if (diffHours > 0) return `il y a ${diffHours} ${diffHours === 1 ? 'heure' : 'heures'}`;
-      if (diffMins > 0) return `il y a ${diffMins} ${diffMins === 1 ? 'minute' : 'minutes'}`;
-      return 'À l\'instant';
+      if (diffYears > 0) return `${t('time_ago_prefix')} ${diffYears} ${diffYears === 1 ? t('time_ago_year') : t('time_ago_year_plural')}`;
+      if (diffMonths > 0) return `${t('time_ago_prefix')} ${diffMonths} ${diffMonths === 1 ? t('time_ago_month') : t('time_ago_month_plural')}`;
+      if (diffDays > 0) return `${t('time_ago_prefix')} ${diffDays} ${diffDays === 1 ? t('time_ago_day') : t('time_ago_day_plural')}`;
+      if (diffHours > 0) return `${t('time_ago_prefix')} ${diffHours} ${diffHours === 1 ? t('time_ago_hour') : t('time_ago_hour_plural')}`;
+      if (diffMins > 0) return `${t('time_ago_prefix')} ${diffMins} ${diffMins === 1 ? t('time_ago_minute') : t('time_ago_minute_plural')}`;
+      return t('time_ago_just_now');
     } catch {
-      return 'Dernière modification inconnue';
+      return t('time_ago_last_update_unknown');
     }
   };
 
@@ -57,11 +59,11 @@ const AccountSecurity: React.FC = ({ navigation }: any) => {
       const timestamp = response.data?.data?.last_password_update || response.data?.last_password_update;
       if (timestamp) {
         const formattedTime = calculateTimeAgo(timestamp);
-        setLastPasswordUpdate(`Dernière modification ${formattedTime}`);
+        setLastPasswordUpdate(`${t('label_last_updated')} ${formattedTime}`);
       }
     } catch (error) {
       console.error('Error fetching last password update:', error);
-      setLastPasswordUpdate('Dernière modification inconnue');
+      setLastPasswordUpdate(t('time_ago_last_update_unknown'));
     } finally {
       setLoadingPassword(false);
     }
@@ -69,12 +71,12 @@ const AccountSecurity: React.FC = ({ navigation }: any) => {
 
   const handleDeleteAccount = () => {
     Alert.alert(
-      'Supprimer mon compte',
-      'Voulez-vous vraiment supprimer votre compte ? Cette action est irréversible.',
+      t('alert_delete_account_title'),
+      t('alert_delete_account_message'),
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('button_cancel'), style: 'cancel' },
         {
-          text: 'Supprimer',
+          text: t('button_delete'),
           style: 'destructive',
           onPress: async () => {
             setDeleting(true);
@@ -82,8 +84,8 @@ const AccountSecurity: React.FC = ({ navigation }: any) => {
               await api.delete(Api_Endpoints.customerProfile);
               navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
             } catch (e: any) {
-              const msg = e?.response?.data?.message ?? 'Erreur lors de la suppression.';
-              Alert.alert('Erreur', msg);
+              const msg = e?.response?.data?.message ?? t('error_delete_account');
+              Alert.alert(t('error_title'), msg);
             } finally {
               setDeleting(false);
             }
@@ -104,7 +106,7 @@ const AccountSecurity: React.FC = ({ navigation }: any) => {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
             <ArrowLeft size={22} color="#1F2937" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Sécurité</Text>
+          <Text style={styles.headerTitle}>{t('header_security')}</Text>
           <View style={{ flex: 1 }} />
         </View>
       </View>
@@ -115,7 +117,7 @@ const AccountSecurity: React.FC = ({ navigation }: any) => {
       >
         {/* Main security card */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Sécurité du compte</Text>
+          <Text style={styles.cardTitle}>{t('card_account_security')}</Text>
 
           {/* Password row */}
           <View style={styles.row}>
@@ -123,7 +125,7 @@ const AccountSecurity: React.FC = ({ navigation }: any) => {
               <Lock size={20} color="#9CA3AF" />
             </View>
             <View style={styles.rowBody}>
-              <Text style={styles.rowTitle}>Mot de passe</Text>
+              <Text style={styles.rowTitle}>{t('label_password')}</Text>
               {loadingPassword ? (
                 <ActivityIndicator size="small" color="#6B7280" />
               ) : (
@@ -131,7 +133,7 @@ const AccountSecurity: React.FC = ({ navigation }: any) => {
               )}
             </View>
             <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.navigate('Change Password')}>
-              <Text style={styles.actionLink}>Modifier</Text>
+              <Text style={styles.actionLink}>{t('button_change')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -174,8 +176,8 @@ const AccountSecurity: React.FC = ({ navigation }: any) => {
 
         {/* Danger zone card */}
         <View style={styles.dangerCard}>
-          <Text style={styles.dangerTitle}>Zone de danger</Text>
-          <Text style={styles.dangerSub}>Actions irréversibles sur votre compte</Text>
+          <Text style={styles.dangerTitle}>{t('header_danger_zone')}</Text>
+          <Text style={styles.dangerSub}>{t('danger_zone_description')}</Text>
           <TouchableOpacity
             style={[styles.deleteBtn, deleting && { opacity: 0.7 }]}
             onPress={handleDeleteAccount}
@@ -185,7 +187,7 @@ const AccountSecurity: React.FC = ({ navigation }: any) => {
             {deleting ? (
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <Text style={styles.deleteBtnText}>Supprimer mon compte</Text>
+              <Text style={styles.deleteBtnText}>{t('button_delete_account')}</Text>
             )}
           </TouchableOpacity>
         </View>

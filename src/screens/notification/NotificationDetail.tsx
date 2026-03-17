@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useNotification } from '../../hooks/useNotification';
 import { Notification } from '../../services/notificationService';
 
 const NotificationDetail: React.FC = ({ navigation, route }: any) => {
+  const { t } = useTranslation();
   const { notificationId } = route.params;
   const { viewSingleNotification } = useNotification();
   const [notification, setNotification] = useState<Notification | null>(null);
@@ -53,7 +55,7 @@ const NotificationDetail: React.FC = ({ navigation, route }: any) => {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <Text style={styles.backArrow}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Notification</Text>
+          <Text style={styles.headerTitle}>{t('header_notification')}</Text>
           <View style={styles.placeholder} />
         </View>
         <View style={styles.loadingContainer}>
@@ -70,11 +72,11 @@ const NotificationDetail: React.FC = ({ navigation, route }: any) => {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
             <Text style={styles.backArrow}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Notification</Text>
+          <Text style={styles.headerTitle}>{t('header_notification')}</Text>
           <View style={styles.placeholder} />
         </View>
         <View style={styles.loadingContainer}>
-          <Text style={styles.errorText}>Notification introuvable</Text>
+          <Text style={styles.errorText}>{t('error_notification_not_found')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -87,7 +89,7 @@ const NotificationDetail: React.FC = ({ navigation, route }: any) => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notification</Text>
+        <Text style={styles.headerTitle}>{t('header_notification')}</Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -108,7 +110,7 @@ const NotificationDetail: React.FC = ({ navigation, route }: any) => {
           {/* Document */}
           {notification.document && (
             <TouchableOpacity style={styles.documentButton} onPress={openDocument}>
-              <Text style={styles.documentButtonText}>Ouvrir le document</Text>
+              <Text style={styles.documentButtonText}>{t('button_open_document')}</Text>
             </TouchableOpacity>
           )}
         </View>

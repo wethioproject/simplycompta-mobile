@@ -11,6 +11,7 @@ import {
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import {
@@ -104,6 +105,7 @@ const NotificationIcon: React.FC<{ type: IconType }> = ({ type }) => {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 const Notifications: React.FC = ({ navigation: navProp }: any) => {
+  const { t } = useTranslation();
   const navigation = useNavigation<StackNavigation>();
   const nav = navProp ?? navigation;
 
@@ -136,15 +138,15 @@ const Notifications: React.FC = ({ navigation: navProp }: any) => {
     fetchNotifications();
   }, []);
 
-  const formatTime = (timestamp: string): string => {
+  const formatTime = (timestamp: string, t: any): string => {
     if (!timestamp) return '';
     const date = new Date(timestamp);
     const now = new Date();
     const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
-    if (diff < 60) return "À l'instant";
-    if (diff < 3600) return `il y a ${Math.floor(diff / 60)} min`;
-    if (diff < 86400) return `il y a ${Math.floor(diff / 3600)} h`;
-    if (diff < 604800) return `il y a ${Math.floor(diff / 86400)} j`;
+    if (diff < 60) return t('time_just_now');
+    if (diff < 3600) return `${t('time_ago_minutes')} ${Math.floor(diff / 60)} ${t('time_unit_min')}`;
+    if (diff < 86400) return `${t('time_ago_hours')} ${Math.floor(diff / 3600)} ${t('time_unit_h')}`;
+    if (diff < 604800) return `${t('time_ago_days')} ${Math.floor(diff / 86400)} ${t('time_unit_j')}`;
     return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
   };
 
@@ -165,7 +167,7 @@ const Notifications: React.FC = ({ navigation: navProp }: any) => {
               {item.message}
             </Text>
             {!!item.created_at && (
-              <Text style={styles.notifTime}>{formatTime(item.created_at)}</Text>
+              <Text style={styles.notifTime}>{formatTime(item.created_at, t)}</Text>
             )}
           </View>
 
@@ -186,7 +188,7 @@ const Notifications: React.FC = ({ navigation: navProp }: any) => {
         <View style={styles.titleIconBox}>
           <Bell size={20} color="#FFFFFF" strokeWidth={2.5} />
         </View>
-        <Text style={styles.titleText}>Mes Notifications</Text>
+        <Text style={styles.titleText}>{t('title_notifications')}</Text>
       </View>
     </LinearGradient>
   );
@@ -194,7 +196,7 @@ const Notifications: React.FC = ({ navigation: navProp }: any) => {
   const ListEmpty = (
     <View style={styles.emptyContainer}>
       <Bell size={40} color="#D1D5DB" />
-      <Text style={styles.emptyText}>Aucune notification</Text>
+      <Text style={styles.emptyText}>{t('empty_no_notifications')}</Text>
     </View>
   );
 
@@ -205,7 +207,7 @@ const Notifications: React.FC = ({ navigation: navProp }: any) => {
           <Headphones size={20} color="#0F766E" />
         </View>
         <Text style={styles.helpText}>
-          Une question ou un document à transmettre à votre cabinet ?
+          {t('help_text_contact')}
         </Text>
       </View>
       <TouchableOpacity
@@ -213,7 +215,7 @@ const Notifications: React.FC = ({ navigation: navProp }: any) => {
         onPress={() => nav.navigate('Contact')}
         activeOpacity={0.8}
       >
-        <Text style={styles.contactButtonText}>Contacter mon comptable</Text>
+        <Text style={styles.contactButtonText}>{t('button_contact_accountant')}</Text>
         <ArrowRight size={16} color="#1E5BAC" />
       </TouchableOpacity>
     </View>
@@ -250,7 +252,7 @@ const Notifications: React.FC = ({ navigation: navProp }: any) => {
             <Search size={20} color="#9CA3AF" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Rechercher..."
+              placeholder={t('search_placeholder')}
               placeholderTextColor="#9CA3AF"
               value={searchQuery}
               onChangeText={setSearchQuery}

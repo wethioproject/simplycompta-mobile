@@ -15,6 +15,7 @@ import {
   Linking,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Edit2, Phone, Mail, MapPin, User, LayoutGrid, CreditCard, FileText, Trash2 } from 'lucide-react-native';
 import { appLogoIcon } from '../../assets/icons';
 import api from '../../api';
@@ -27,6 +28,7 @@ const EditClientModal: React.FC<{
   onUpdated: (updated: any) => void;
 }> = ({ visible, clientData, onClose, onUpdated }) => {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [companyName, setCompanyName] = useState('');
   const [clientName, setClientName] = useState('');
   const [email, setEmail] = useState('');
@@ -51,7 +53,7 @@ const EditClientModal: React.FC<{
   }, [visible, clientData]);
 
   const handleUpdate = async () => {
-    if (!companyName) { Alert.alert('Requis', 'Veuillez saisir le nom de la société.'); return; }
+    if (!companyName) { Alert.alert(t('alert_field_required'), t('message_company_name_required')); return; }
     setSaving(true);
     try {
       const res = await api.post(`${Api_Endpoints.createCustomerClient}/${clientData.id}`, {
@@ -66,12 +68,12 @@ const EditClientModal: React.FC<{
         ice,
       });
       const updated = res.data?.data ?? { ...clientData, company_name: companyName, client_name: clientName, email, telephone, postal_code: postalCode, city, commercial_register: commercialRegister, ice };
-      Alert.alert('Succès', 'Client mis à jour avec succès.');
+      Alert.alert(t('success_title'), t('success_client_updated'));
       onUpdated(updated);
       onClose();
     } catch (e: any) {
       const msg = e?.response?.data?.message ?? 'Erreur lors de la mise à jour du client.';
-      Alert.alert('Erreur', msg);
+      Alert.alert(t('error_title'), msg);
     } finally {
       setSaving(false);
     }
@@ -84,7 +86,7 @@ const EditClientModal: React.FC<{
           <TouchableOpacity onPress={onClose} style={styles.modalBackBtn} activeOpacity={0.7}>
             <ArrowLeft size={22} color="#1E5BAC" />
           </TouchableOpacity>
-          <Text style={styles.modalTitle}>Modifier le client</Text>
+          <Text style={styles.modalTitle}>{t('title_edit_client')}</Text>
           <TouchableOpacity
             style={[styles.modalConfirmBtn, saving && { opacity: 0.7 }]}
             onPress={handleUpdate}
@@ -93,7 +95,7 @@ const EditClientModal: React.FC<{
           >
             {saving
               ? <ActivityIndicator size="small" color="#FFFFFF" />
-              : <Text style={styles.modalConfirmText}>Enregistrer</Text>}
+              : <Text style={styles.modalConfirmText}>{t('modal_confirm_text')}</Text>}
           </TouchableOpacity>
         </View>
 
@@ -101,35 +103,35 @@ const EditClientModal: React.FC<{
           <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false}>
             <View style={styles.formCard}>
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Nom de la société</Text>
+                <Text style={styles.fieldLabel}>{t('label_company_name')}</Text>
                 <TextInput style={styles.fieldInput} value={companyName} onChangeText={setCompanyName} />
               </View>
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Nom et prénom du contact</Text>
+                <Text style={styles.fieldLabel}>{t('label_contact_name')}</Text>
                 <TextInput style={styles.fieldInput} value={clientName} onChangeText={setClientName} />
               </View>
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Email</Text>
+                <Text style={styles.fieldLabel}>{t('label_email')}</Text>
                 <TextInput style={styles.fieldInput} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
               </View>
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Téléphone</Text>
+                <Text style={styles.fieldLabel}>{t('label_phone')}</Text>
                 <TextInput style={styles.fieldInput} value={telephone} onChangeText={setTelephone} keyboardType="phone-pad" />
               </View>
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Code postal</Text>
+                <Text style={styles.fieldLabel}>{t('label_postal_code')}</Text>
                 <TextInput style={styles.fieldInput} value={postalCode} onChangeText={setPostalCode} keyboardType="numeric" />
               </View>
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Ville</Text>
+                <Text style={styles.fieldLabel}>{t('label_city')}</Text>
                 <TextInput style={styles.fieldInput} value={city} onChangeText={setCity} />
               </View>
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Registre du commerce</Text>
+                <Text style={styles.fieldLabel}>{t('label_commercial_register')}</Text>
                 <TextInput style={styles.fieldInput} value={commercialRegister} onChangeText={setCommercialRegister} />
               </View>
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>ICE</Text>
+                <Text style={styles.fieldLabel}>{t('label_ice')}</Text>
                 <TextInput style={styles.fieldInput} value={ice} onChangeText={setIce} />
               </View>
             </View>
@@ -153,6 +155,7 @@ const EditClientModal: React.FC<{
 
 const ClientDetail: React.FC = ({ navigation, route }: any) => {
   const { client: routeClient } = route.params ?? {};
+  const { t } = useTranslation();
   const [clientData, setClientData] = useState<any>(null);
   const [invoiceCount, setInvoiceCount] = useState<number>(0);
   const [totalPriceHt, setTotalPriceHt] = useState<number>(0);
@@ -170,7 +173,7 @@ const ClientDetail: React.FC = ({ navigation, route }: any) => {
         setTotalPriceHt(res.data.data?.total_price_ht ?? 0);
       } else setClientData(routeClient);
     } catch (e) {
-      Alert.alert('Erreur', 'Impossible de charger les détails du client.');
+      Alert.alert(t('error_title'), t('error_load_client_details'));
       setClientData(routeClient);
     } finally {
       setLoadingDetail(false);
@@ -183,21 +186,21 @@ const ClientDetail: React.FC = ({ navigation, route }: any) => {
 
   const handleDelete = () => {
     Alert.alert(
-      'Supprimer',
-      `Voulez-vous vraiment supprimer le client "${clientData?.company_name ?? ''}" ?`,
+      t('alert_delete_client'),
+      t('message_confirm_delete_client', { name: clientData?.company_name ?? '' }),
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('button_cancel'), style: 'cancel' },
         {
-          text: 'Supprimer', style: 'destructive', onPress: async () => {
+          text: t('button_delete'), style: 'destructive', onPress: async () => {
             setDeleting(true);
             try {
               await api.delete(`${Api_Endpoints.createCustomerClient}/${clientData.id}`);
-              Alert.alert('Succès', 'Client supprimé avec succès.', [
-                { text: 'OK', onPress: () => navigation.goBack() },
+              Alert.alert(t('success_title'), t('success_client_deleted'), [
+                { text: t('button_ok'), onPress: () => navigation.goBack() },
               ]);
             } catch (e: any) {
               const msg = e?.response?.data?.message ?? 'Erreur lors de la suppression.';
-              Alert.alert('Erreur', msg);
+              Alert.alert(t('error_title'), msg);
             } finally {
               setDeleting(false);
             }
@@ -227,7 +230,7 @@ const ClientDetail: React.FC = ({ navigation, route }: any) => {
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
             <ArrowLeft size={22} color="#1F2937" />
           </TouchableOpacity>
-          <Text style={styles.titleText}>Fiche Client</Text>
+          <Text style={styles.titleText}>{t('title_client_sheet')}</Text>
           <View style={{ flex: 1 }} />
           {!loadingDetail && (
             <TouchableOpacity style={styles.editButton} onPress={() => setShowEditModal(true)} activeOpacity={0.7}>
@@ -261,7 +264,7 @@ const ClientDetail: React.FC = ({ navigation, route }: any) => {
               onPress={() => phone !== '—' && Linking.openURL(`tel:${phone}`)}
             >
               <Phone size={16} color="#FFFFFF" />
-              <Text style={styles.callBtnText}>Appeler</Text>
+              <Text style={styles.callBtnText}>{t('button_call')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.emailBtn, email === '—' && { opacity: 0.5 }]}
@@ -269,12 +272,12 @@ const ClientDetail: React.FC = ({ navigation, route }: any) => {
               onPress={() => {
                 if (email === '—') return;
                 Linking.openURL(`mailto:${email}`).catch(() =>
-                  Alert.alert('Erreur', "Impossible d'ouvrir l'application mail.")
+                  Alert.alert(t('error_title'), t('error_open_email_app'))
                 );
               }}
             >
               <Mail size={16} color="#374151" />
-              <Text style={styles.emailBtnText}>Email</Text>
+              <Text style={styles.emailBtnText}>{t('button_email')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -283,14 +286,14 @@ const ClientDetail: React.FC = ({ navigation, route }: any) => {
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
             <User size={18} color="#1E5BAC" />
-            <Text style={styles.sectionTitle}>Coordonnées</Text>
+            <Text style={styles.sectionTitle}>{t('section_coordinates')}</Text>
           </View>
           <View style={styles.infoRow}>
             <View style={styles.infoIconBox}>
               <Mail size={16} color="#6B7280" />
             </View>
             <View style={styles.infoTextBlock}>
-              <Text style={styles.infoLabel}>Email</Text>
+              <Text style={styles.infoLabel}>{t('label_email')}</Text>
               <Text style={styles.infoValue}>{email}</Text>
             </View>
           </View>
@@ -299,7 +302,7 @@ const ClientDetail: React.FC = ({ navigation, route }: any) => {
               <Phone size={16} color="#6B7280" />
             </View>
             <View style={styles.infoTextBlock}>
-              <Text style={styles.infoLabel}>Téléphone</Text>
+              <Text style={styles.infoLabel}>{t('label_phone')}</Text>
               <Text style={styles.infoValue}>{phone}</Text>
             </View>
           </View>
@@ -308,7 +311,7 @@ const ClientDetail: React.FC = ({ navigation, route }: any) => {
               <MapPin size={16} color="#6B7280" />
             </View>
             <View style={styles.infoTextBlock}>
-              <Text style={styles.infoLabel}>Adresse</Text>
+              <Text style={styles.infoLabel}>{t('label_address')}</Text>
               <Text style={styles.infoValue}>{postalCity}</Text>
             </View>
           </View>
@@ -318,20 +321,20 @@ const ClientDetail: React.FC = ({ navigation, route }: any) => {
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
             <LayoutGrid size={18} color="#1E5BAC" />
-            <Text style={styles.sectionTitle}>Informations légales</Text>
+            <Text style={styles.sectionTitle}>{t('section_legal_info')}</Text>
           </View>
           <View style={styles.legalRow}>
-            <Text style={styles.legalLabel}>RC</Text>
+            <Text style={styles.legalLabel}>{t('label_rc')}</Text>
             <Text style={styles.legalValue}>{registreCommerce}</Text>
           </View>
           <View style={styles.legalRow}>
-            <Text style={styles.legalLabel}>ICE</Text>
+            <Text style={styles.legalLabel}>{t('label_ice')}</Text>
             <Text style={styles.legalValue}>{ice}</Text>
           </View>
           <View style={[styles.legalRow, { borderBottomWidth: 0 }]}>
-            <Text style={styles.legalLabel}>Statut</Text>
+            <Text style={styles.legalLabel}>{t('label_status')}</Text>
             <View style={styles.activeBadge}>
-              <Text style={styles.activeBadgeText}>Actif</Text>
+              <Text style={styles.activeBadgeText}>{t('status_active')}</Text>
             </View>
           </View>
         </View>
@@ -340,15 +343,15 @@ const ClientDetail: React.FC = ({ navigation, route }: any) => {
         <View style={styles.card}>
           <View style={styles.sectionHeader}>
             <CreditCard size={18} color="#1E5BAC" />
-            <Text style={styles.sectionTitle}>Finances</Text>
+            <Text style={styles.sectionTitle}>{t('section_finances')}</Text>
           </View>
           <View style={styles.financeStatsRow}>
             <View style={styles.statBoxBlue}>
-              <Text style={styles.statLabel}>Chiffre d'affaires</Text>
+              <Text style={styles.statLabel}>{t('label_revenue')}</Text>
               <Text style={styles.statValueBlue}>{totalPriceHt.toLocaleString('fr-FR')} MAD</Text>
             </View>
             <View style={styles.statBoxOrange}>
-              <Text style={styles.statLabelOrange}>En attente</Text>
+              <Text style={styles.statLabelOrange}>{t('label_pending')}</Text>
               <Text style={styles.statValueOrange}>{invoiceCount} facture{invoiceCount !== 1 ? 's' : ''}</Text>
             </View>
           </View>
@@ -358,7 +361,7 @@ const ClientDetail: React.FC = ({ navigation, route }: any) => {
             activeOpacity={0.85}
           >
             <FileText size={16} color="#1E5BAC" />
-            <Text style={styles.historiqueBtnText}>Voir l'historique</Text>
+            <Text style={styles.historiqueBtnText}>{t('button_view_history')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -372,7 +375,7 @@ const ClientDetail: React.FC = ({ navigation, route }: any) => {
           {deleting
             ? <ActivityIndicator size="small" color="#DC2626" />
             : <Trash2 size={16} color="#DC2626" />}
-          <Text style={styles.deleteBtnText}>Supprimer le client</Text>
+          <Text style={styles.deleteBtnText}>{t('button_delete_client')}</Text>
         </TouchableOpacity>
 
         <View style={{ height: 40 }} />

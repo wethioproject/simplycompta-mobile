@@ -13,6 +13,7 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { Save, Camera, Trash2 } from 'lucide-react-native';
 import { pick, types, isErrorWithCode, errorCodes } from '@react-native-documents/picker';
 import { appLogoIcon } from '../../assets/icons';
@@ -26,6 +27,7 @@ interface AvatarFile {
 }
 
 const PersonalProfile: React.FC = ({ navigation }: any) => {
+  const { t } = useTranslation();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -51,7 +53,7 @@ const PersonalProfile: React.FC = ({ navigation }: any) => {
       setBio(d.bio ?? '');
       setAvatarUrl(d.avatar_url ?? '');
     } catch (e: any) {
-      Alert.alert('Erreur', e?.response?.data?.message ?? 'Impossible de charger le profil.');
+      Alert.alert(t('error_title'), e?.response?.data?.message ?? t('error_load_profile'));
     } finally {
       setLoading(false);
     }
@@ -76,7 +78,7 @@ const PersonalProfile: React.FC = ({ navigation }: any) => {
       });
     } catch (e) {
       if (isErrorWithCode(e) && e.code === errorCodes.OPERATION_CANCELED) return;
-      Alert.alert('Erreur', 'Impossible de sélectionner l\'image.');
+      Alert.alert(t('error_title'), t('error_select_image'));
     }
   };
 
@@ -88,7 +90,7 @@ const PersonalProfile: React.FC = ({ navigation }: any) => {
 
   const handleSave = async () => {
     if (!firstName.trim()) {
-      Alert.alert('Requis', 'Veuillez saisir votre prénom.');
+      Alert.alert(t('field_required'), t('error_first_name_required'));
       return;
     }
     setSaving(true);
@@ -115,10 +117,10 @@ const PersonalProfile: React.FC = ({ navigation }: any) => {
       const updated = res.data?.data;
       if (updated?.avatar) setAvatarUrl(updated.avatar);
       setAvatarFile(null);
-      Alert.alert('Succès', 'Profil mis à jour avec succès.');
+      Alert.alert(t('success_title'), t('success_profile_updated'));
     } catch (e: any) {
-      const msg = e?.response?.data?.message ?? 'Erreur lors de la mise à jour.';
-      Alert.alert('Erreur', msg);
+      const msg = e?.response?.data?.message ?? t('error_profile_update');
+      Alert.alert(t('error_title'), msg);
     } finally {
       setSaving(false);
     }
@@ -126,19 +128,19 @@ const PersonalProfile: React.FC = ({ navigation }: any) => {
 
   const handleDelete = () => {
     Alert.alert(
-      'Supprimer le compte',
-      'Voulez-vous vraiment supprimer votre compte ? Cette action est irréversible.',
+      t('delete_account_title'),
+      t('delete_account_confirmation'),
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('button_cancel'), style: 'cancel' },
         {
-          text: 'Supprimer', style: 'destructive', onPress: async () => {
+          text: t('button_delete'), style: 'destructive', onPress: async () => {
             setDeleting(true);
             try {
               await api.delete(Api_Endpoints.customerProfile);
               navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
             } catch (e: any) {
-              const msg = e?.response?.data?.message ?? 'Erreur lors de la suppression.';
-              Alert.alert('Erreur', msg);
+              const msg = e?.response?.data?.message ?? t('error_delete_account');
+              Alert.alert(t('error_title'), msg);
             } finally {
               setDeleting(false);
             }
@@ -180,7 +182,7 @@ const PersonalProfile: React.FC = ({ navigation }: any) => {
         >
           {/* Card */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Informations personnelles</Text>
+            <Text style={styles.cardTitle}>{t('personal_info_title')}</Text>
 
             {/* Avatar row */}
             <View style={styles.avatarRow}>
@@ -197,10 +199,10 @@ const PersonalProfile: React.FC = ({ navigation }: any) => {
               <View style={styles.avatarActions}>
                 <TouchableOpacity style={styles.changePhotoBtn} onPress={handlePickAvatar} activeOpacity={0.8}>
                   <Camera size={15} color="#1A1A2E" />
-                  <Text style={styles.changePhotoBtnText}>Changer la photo</Text>
+                  <Text style={styles.changePhotoBtnText}>{t('button_change_photo')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={handleRemoveAvatar} activeOpacity={0.7}>
-                  <Text style={styles.removePhotoText}>Supprimer</Text>
+                  <Text style={styles.removePhotoText}>{t('button_remove')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -210,22 +212,22 @@ const PersonalProfile: React.FC = ({ navigation }: any) => {
             {/* Prénom + Nom side by side */}
             <View style={styles.rowFields}>
               <View style={styles.halfField}>
-                <Text style={styles.fieldLabel}>Prénom</Text>
+                <Text style={styles.fieldLabel}>{t('label_first_name')}</Text>
                 <TextInput
                   style={styles.fieldInput}
                   value={firstName}
                   onChangeText={setFirstName}
-                  placeholder="Prénom"
+                  placeholder={t('placeholder_first_name')}
                   placeholderTextColor="#AAAAAA"
                 />
               </View>
               <View style={styles.halfField}>
-                <Text style={styles.fieldLabel}>Nom</Text>
+                <Text style={styles.fieldLabel}>{t('label_last_name')}</Text>
                 <TextInput
                   style={styles.fieldInput}
                   value={lastName}
                   onChangeText={setLastName}
-                  placeholder="Nom"
+                  placeholder={t('placeholder_last_name')}
                   placeholderTextColor="#AAAAAA"
                 />
               </View>
@@ -233,12 +235,12 @@ const PersonalProfile: React.FC = ({ navigation }: any) => {
 
             {/* Email */}
             <View style={styles.fieldBlock}>
-              <Text style={styles.fieldLabel}>Email</Text>
+              <Text style={styles.fieldLabel}>{t('label_email')}</Text>
               <TextInput
                 style={styles.fieldInput}
                 value={email}
                 onChangeText={setEmail}
-                placeholder="email@exemple.com"
+                placeholder={t('placeholder_email')}
                 placeholderTextColor="#AAAAAA"
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -247,12 +249,12 @@ const PersonalProfile: React.FC = ({ navigation }: any) => {
 
             {/* Téléphone */}
             <View style={styles.fieldBlock}>
-              <Text style={styles.fieldLabel}>Téléphone</Text>
+              <Text style={styles.fieldLabel}>{t('label_phone')}</Text>
               <TextInput
                 style={styles.fieldInput}
                 value={phone}
                 onChangeText={setPhone}
-                placeholder="+212 6 00 00 00 00"
+                placeholder={t('placeholder_phone')}
                 placeholderTextColor="#AAAAAA"
                 keyboardType="phone-pad"
               />
@@ -260,12 +262,12 @@ const PersonalProfile: React.FC = ({ navigation }: any) => {
 
             {/* Bio */}
             <View style={styles.fieldBlock}>
-              <Text style={styles.fieldLabel}>Bio (optionnel)</Text>
+              <Text style={styles.fieldLabel}>{t('label_bio')}</Text>
               <TextInput
                 style={styles.bioInput}
                 value={bio}
                 onChangeText={setBio}
-                placeholder="Parlez-nous de vous..."
+                placeholder={t('placeholder_bio')}
                 placeholderTextColor="#AAAAAA"
                 multiline
                 textAlignVertical="top"
@@ -281,7 +283,7 @@ const PersonalProfile: React.FC = ({ navigation }: any) => {
                 onPress={handleCancel}
                 activeOpacity={0.8}
               >
-                <Text style={styles.cancelBtnText}>Annuler</Text>
+                <Text style={styles.cancelBtnText}>{t('button_cancel')}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -295,7 +297,7 @@ const PersonalProfile: React.FC = ({ navigation }: any) => {
                 ) : (
                   <>
                     <Save size={17} color="#FFFFFF" />
-                    <Text style={styles.saveBtnText}>Enregistrer</Text>
+                    <Text style={styles.saveBtnText}>{t('button_save')}</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -312,7 +314,7 @@ const PersonalProfile: React.FC = ({ navigation }: any) => {
             {deleting
               ? <ActivityIndicator size="small" color="#E53535" />
               : <Trash2 size={16} color="#E53535" />}
-            <Text style={styles.deleteAccountText}>Supprimer mon compte</Text>
+            <Text style={styles.deleteAccountText}>{t('button_delete_account')}</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>

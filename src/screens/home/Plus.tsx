@@ -2,25 +2,30 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { fileIcon } from '../../assets/icons';
 import { useAuth } from '../../hooks/useAuth';
+import {
+  User,
+  Building2,
+  Shield,
+  Package,
+  Languages,
+} from 'lucide-react-native';
 
 const Plus: React.FC = ({ navigation }: any) => {
   const nav = useNavigation<any>();
   const { logout } = useAuth();
+  const { t } = useTranslation();
   const [loggingOut, setLoggingOut] = useState(false);
 
   const menuItems = [
-    { id: 1, label: 'Profil', icon: fileIcon },
-    { id: 2, label: 'Entreprise', icon: fileIcon },
-    // { id: 3, label: 'Notifications', icon: fileIcon },
-    { id: 4, label: 'Sécurité', icon: fileIcon },
-    { id: 5, label: 'Déconnexion', icon: null },
-    // { id: 5, label: 'Avoirs', icon: fileIcon },
-    // { id: 6, label: 'Produits', icon: fileIcon },
-    // { id: 7, label: 'Règlements', icon: fileIcon },
-    // { id: 8, label: 'Dépenses', icon: fileIcon },
-    // { id: 9, label: 'Bons de livraison', icon: fileIcon },
+    { id: 1, label: t('menu_profile'), action: 'profile', icon: User },
+    { id: 2, label: t('menu_company'), action: 'company', icon: Building2 },
+    { id: 4, label: t('menu_security'), action: 'security', icon: Shield },
+    { id: 6, label: t('menu_products'), action: 'products', icon: Package },
+    { id: 10, label: t('menu_language'), action: 'language', icon: Languages },
+    { id: 5, label: t('menu_logout'), action: 'logout', icon: null },
   ];
 
   const handleLogout = async () => {
@@ -32,34 +37,26 @@ const Plus: React.FC = ({ navigation }: any) => {
         routes: [{ name: 'Login' }],
       });
     } catch (e: any) {
-      Alert.alert('Erreur', 'Impossible de se déconnecter.');
+      Alert.alert(t('error_title'), t('error_logout_message'));
     } finally {
       setLoggingOut(false);
     }
   };
 
-  const handleMenuPress = (label: string) => {
-    console.log('Navigate to:', label);
-    if (label === 'Profil') {
+  const handleMenuPress = (action: string) => {
+    console.log('Navigate to:', action);
+    if (action === 'profile') {
       navigation.navigate('Personal Profile');
-    } else if (label === 'Entreprise') {
+    } else if (action === 'company') {
       navigation.navigate('Company Profile');
-    } else if (label === 'Notifications') {
-      navigation.navigate('Notification Preferences');
-    } else if (label === 'Sécurité') {
+    } else if (action === 'security') {
       navigation.navigate('Account Security');
-    } else if (label === 'Déconnexion') {
-      handleLogout();
-    } else if (label === 'Avoirs') {
-      navigation.navigate('Credits');
-    } else if (label === 'Produits') {
+    } else if (action === 'products') {
       navigation.navigate('Products');
-    } else if (label === 'Règlements') {
-      navigation.navigate('Payments');
-    } else if (label === 'Dépenses') {
-      navigation.navigate('Expenses');
-    } else if (label === 'Bons de livraison') {
-      navigation.navigate('Delivery Notes');
+    } else if (action === 'language') {
+      navigation.navigate('Language Settings');
+    } else if (action === 'logout') {
+      handleLogout();
     }
   };
 
@@ -67,23 +64,28 @@ const Plus: React.FC = ({ navigation }: any) => {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Plus</Text>
+        <Text style={styles.headerTitle}>{t('header_plus')}</Text>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {menuItems.map((item) => (
           <TouchableOpacity
             key={item.id}
-            style={[styles.menuItem, item.label === 'Déconnexion' && { borderTopWidth: 1, borderTopColor: '#E5E7EB', marginTop: 8, paddingTop: 16 }]}
-            onPress={() => handleMenuPress(item.label)}
-            disabled={item.label === 'Déconnexion' && loggingOut}
+            style={[styles.menuItem, item.action === 'logout' && { borderTopWidth: 1, borderTopColor: '#E5E7EB', marginTop: 8, paddingTop: 16 }]}
+            onPress={() => handleMenuPress(item.action)}
+            disabled={item.action === 'logout' && loggingOut}
             activeOpacity={0.7}
           >
             <View style={styles.menuItemLeft}>
-              {item.icon && <Image source={item.icon} style={styles.menuItemIcon} resizeMode="contain" />}
-              <Text style={[styles.menuItemLabel, item.label === 'Déconnexion' && { color: '#DC2626' }]}>{item.label}</Text>
+              {item.icon && <item.icon
+                size={32}
+                style={{ marginRight: 16 }}
+                color={"#0B5FA5"}
+                strokeWidth={2}
+              />}
+              <Text style={[styles.menuItemLabel, item.action === 'logout' && { color: '#DC2626' }]}>{item.label}</Text>
             </View>
-            {item.label === 'Déconnexion' && loggingOut ? (
+            {item.action === 'logout' && loggingOut ? (
               <ActivityIndicator color="#DC2626" />
             ) : (
               <Text style={styles.chevron}>›</Text>
