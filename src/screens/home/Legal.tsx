@@ -10,10 +10,15 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useSelector } from 'react-redux';
+import i18n from '../../i18n/i18n';
 import {
   ArrowLeft,
   Bell,
@@ -51,9 +56,21 @@ type ApiDocument = {
 
 const BASE_DOCUMENT_URL = 'https://simply-compta.com/storage/';
 
+// const formatDate = (iso: string) => {
+//   try {
+//     return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+//   } catch {
+//     return iso;
+//   }
+// };
+
 const formatDate = (iso: string) => {
   try {
-    return new Date(iso).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+    return new Date(iso).toLocaleDateString(i18n.language, {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
   } catch {
     return iso;
   }
@@ -78,7 +95,9 @@ const DocIcon: React.FC<{ iconType: string }> = ({ iconType }) => {
 };
 
 const Legal: React.FC = () => {
+  const { t } = useTranslation();
   const navigation = useNavigation<StackNavigation>();
+  const token = useSelector((state: any) => state.user.token);
   const [searchQuery, setSearchQuery] = useState('');
   const [documents, setDocuments] = useState<ApiDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -91,7 +110,7 @@ const Legal: React.FC = () => {
       });
       setDocuments(res.data?.data?.documents ?? []);
     } catch (e: any) {
-      Alert.alert('Erreur', e?.response?.data?.message ?? 'Impossible de charger les documents.');
+      Alert.alert(t('error_title'), e?.response?.data?.message ?? t('error_load_documents'));
     } finally {
       setLoading(false);
     }
@@ -105,15 +124,44 @@ const Legal: React.FC = () => {
     doc.message.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleDocOpen = async (doc: any) => {
-    const url = `${BASE_DOCUMENT_URL}${doc.document}`;
-    const supported = await Linking.canOpenURL(url);
-    if(supported){
-        await Linking.openURL(url)
+const handleDocOpen = async (doc: any) => {
+  try {
+    const { fs, config } = ReactNativeBlobUtil;
+
+    const fileName = `document_${doc.id}.pdf`;
+    const path =
+      Platform.OS === 'ios'
+        ? `${fs.dirs.DocumentDir}/${fileName}`
+        : `${fs.dirs.DownloadDir}/${fileName}`;
+
+    const res = await config({
+      fileCache: true,
+      path,
+    }).fetch(
+      'GET',
+      doc.document_url,
+      {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/pdf',
+      }
+    );
+    console.log('File downloaded to:101', res.path());
+    console.log('File downloaded to:102', await res.text());
+    console.log('File downloaded to:103', res.info());
+
+    if (Platform.OS === 'ios') {
+      ReactNativeBlobUtil.ios.openDocument(res.path());
     } else {
-        Alert.alert('Error', 'Cannot open this file');
+      ReactNativeBlobUtil.android.actionViewIntent(
+        res.path(),
+        'application/pdf'
+      );
     }
+  } catch (error) {
+    console.log(error);
+    Alert.alert(t('error_title'), t('error_download_document'));
   }
+};
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -136,7 +184,7 @@ const Legal: React.FC = () => {
             <Search size={20} color="#9CA3AF" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Rechercher..."
+              placeholder={t('search_placeholder')}
               placeholderTextColor="#9CA3AF"
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -162,7 +210,7 @@ const Legal: React.FC = () => {
           <View style={styles.titleIconBox}>
             <FileText size={24} color="#FFFFFF" strokeWidth={2.5} />
           </View>
-          <Text style={styles.titleText}>Documents Juridiques</Text>
+          <Text style={styles.titleText}>{t('title_legal_documents')}</Text>
         </View>
 
         {/* Documents List Card */}
@@ -175,7 +223,7 @@ const Legal: React.FC = () => {
                         filtered.length === 0 ? (
                             <View style={styles.emptyBox}>
                                 <FileText size={40} color="#D1D5DB" />
-                                <Text style={styles.emptyText}>Aucun document trouvé</Text>
+                                <Text style={styles.emptyText}>{t('empty_no_documents')}</Text>
                             </View>
                         )
                             :
@@ -197,7 +245,7 @@ const Legal: React.FC = () => {
                                             {/* Title & Date */}
                                             <View style={styles.docInfo}>
                                                 <Text style={styles.docName} numberOfLines={2}>{doc.title}</Text>
-                                                <Text style={styles.docDate}>Émis le {formatDate(doc.created_at)}</Text>
+                                                <Text style={styles.docDate}>{t('label_issued_date')} {formatDate(doc.created_at)}</Text>
                                                 {doc.message ? (
                                                     <Text style={styles.docMessage} numberOfLines={1}>{doc.message}</Text>
                                                 ) : null}
@@ -210,12 +258,12 @@ const Legal: React.FC = () => {
                                                 {doc.is_read ? (
                                                     <View style={styles.badgeValidated}>
                                                         <CheckCircle2 size={11} color="#15803D" />
-                                                        <Text style={styles.badgeValidatedText}>Lu</Text>
+                                                        <Text style={styles.badgeValidatedText}>{t('badge_read')}</Text>
                                                     </View>
                                                 ) : (
                                                     <View style={styles.badgePending}>
                                                         <Clock size={11} color="#C2410C" />
-                                                        <Text style={styles.badgePendingText}>Non lu</Text>
+                                                        <Text style={styles.badgePendingText}>{t('badge_unread')}</Text>
                                                     </View>
                                                 )}
                                                 <TouchableOpacity
@@ -227,7 +275,7 @@ const Legal: React.FC = () => {
                                                         // Alert.alert('Télécharger', url);
                                                     }}
                                                 >
-                                                    <Text style={styles.downloadButtonText}>PDF</Text>
+                                                    <Text style={styles.downloadButtonText}>{t('button_pdf_download')}</Text>
                                                     <Download size={14} color="#FFFFFF" />
                                                 </TouchableOpacity>
                                             </View>
@@ -249,14 +297,13 @@ const Legal: React.FC = () => {
               <Headphones size={22} color="#FFFFFF" />
             </LinearGradient>
             <View style={styles.helpTextContainer}>
-              <Text style={styles.helpText}>Une question ou un document à</Text>
-              <Text style={styles.helpText}>transmettre à votre cabinet ?</Text>
+              <Text style={styles.helpText}>{t('help_text_contact')}</Text>
             </View>
             <ArrowRight size={20} color="#9CA3AF" />
           </View>
 
           <TouchableOpacity style={styles.contactButton} activeOpacity={0.8} onPress={() => navigation.navigate('Contact')}>
-            <Text style={styles.contactButtonText}>Contacter mon comptable</Text>
+            <Text style={styles.contactButtonText}>{t('button_contact_accountant')}</Text>
             <ArrowRight size={16} color="#1E5BAC" />
           </TouchableOpacity>
         </View>
