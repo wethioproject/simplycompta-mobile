@@ -20,4 +20,11 @@ export const Api_Endpoints = {
   lastPasswordUpdate: 'customer/last-password-update',
   dashboardGraph: 'customer/dashboard-graph-data',
   hasUnreadNotifications: 'customer/has-unread-notifications',
+  customerProducts: 'customer/customer-products',
+  customerProduct: 'customer/customer-product',
+  customerSuppliers: 'customer/customer-suppliers',
+  customerSupplier: 'customer/customer-supplier',
+  customerSupplierExpenses: 'customer/customer-supplier-expenses',
+  customerInvoicePdf: 'customer/customer-invoices/pdf',
+  customerExpenseCategoryChart: 'customer/customer-expenses/chart',
 }
