@@ -80,6 +80,15 @@ class DashboardService {
             throw error;
         }
     }
+
+    async getExpenseCategoryChart(): Promise<{ success: boolean; data: ExpenseCategoryItem[] }> {
+        try {
+            const response = await api.get(Api_Endpoints.customerExpenseCategoryChart);
+            return response.data;
+        } catch (error: any) {
+            throw error;
+        }
+    }
 }
 
 export interface GraphPoint {
@@ -93,6 +102,13 @@ export interface GraphResponse {
         ca: GraphPoint[];
         expenses: GraphPoint[];
     };
+}
+
+export interface ExpenseCategoryItem {
+    category_id: number;
+    label: string;
+    value: string;
+    file_url: string | null;
 }
 
 export default new DashboardService();
