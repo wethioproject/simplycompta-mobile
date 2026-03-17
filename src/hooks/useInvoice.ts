@@ -90,11 +90,11 @@ export const useInvoice = () => {
 
     const exportInvoices = useCallback(async () => {
         try {
-            const fileUrl = await invoiceService.exportInvoices();
-            return { success: true, fileUrl };
+            const { csvData, fileName } = await invoiceService.exportInvoices();
+            return { success: true, csvData, fileName };
         } catch (error: any) {
             const errorMessage = error.response?.data?.message || 'Failed to export invoices.';
-            return { success: false, error: errorMessage, fileUrl: '' };
+            return { success: false, error: errorMessage, csvData: '', fileName: '' };
         }
     }, []);
 
@@ -108,6 +108,10 @@ export const useInvoice = () => {
         }
     }, [])
 
+    const getPdfDownloadUrl = useCallback((id: number): string => {
+        return invoiceService.getPdfDownloadUrl(id);
+    }, []);
+
     return {
         getInvoices,
         getInvoice,
@@ -116,5 +120,6 @@ export const useInvoice = () => {
         updateInvoice,
         exportInvoices,
         deleteInvoice,
+        getPdfDownloadUrl,
     }
 };

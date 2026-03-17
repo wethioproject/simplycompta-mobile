@@ -112,15 +112,20 @@ class InvoiceService {
     }
 
 
-    async exportInvoices(): Promise<string> {
+    async exportInvoices(): Promise<{ csvData: string; fileName: string }> {
         try {
-            const response = await api.get(Api_Endpoints.customerInvoiceExport);
-            // Response shape: { success, message, data: { file_url: '/storage/...' } }
-            const filePath: string = response.data?.data?.file_url;
-            if (!filePath) throw new Error('No file_url in export response.');
-            // Strip trailing /api/ from BASE_URL to get domain root
-            const domain = 'https://simply-compta.com';
-            return `${domain}${filePath}`;
+            const response = await api.get(Api_Endpoints.customerInvoiceExport, {
+                responseType: 'text',
+            });
+            const csvData: string = typeof response.data === 'string'
+                ? response.data
+                : JSON.stringify(response.data);
+            const disposition: string =
+                response.headers?.['content-disposition'] ||
+                response.headers?.['Content-Disposition'] || '';
+            const match = disposition.match(/filename=([^;\s]+)/);
+            const fileName = match ? match[1].replace(/"/g, '') : 'invoices_export.csv';
+            return { csvData, fileName };
         } catch (error: any) {
             console.error('Export invoices error:', error.response?.data || error.message);
             throw error;
@@ -135,6 +140,11 @@ class InvoiceService {
             console.error('Invoice delete error:', error.response?.data || error.message);
             throw error;
         }
+    }
+
+    getPdfDownloadUrl(id: number): string {
+        const base = (api.defaults.baseURL ?? 'https://simply-compta.com/api/').replace(/\/$/, '');
+        return `${base}/${Api_Endpoints.customerInvoicePdf}/${id}`;
     }
 
 }

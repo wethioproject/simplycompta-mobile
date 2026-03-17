@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
 import {
   View,
   Text,
@@ -15,8 +18,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   Linking,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -31,17 +36,27 @@ import {
   Trash2,
   X,
   CloudUpload,
+  Camera,
   Calendar,
   Upload,
   Receipt,
-  CirclePlus
+  CirclePlus,
+  Share2,
+  Eye,
 } from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import { appLogoIcon } from '../../assets/icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useInvoice } from '../../hooks/useInvoice';
+import { useProducts } from '../../hooks/useProduct';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { pick, types, isErrorWithCode, errorCodes } from '@react-native-documents/picker';
+import { launchCamera } from 'react-native-image-picker';
+import { getMimeType } from '../../utils/helpers';
+import { CreateClientModal } from './Clients';
+import api from '../../api';
+import { Api_Endpoints } from '../../services/endpoints';
 
 type StackNavigation = StackNavigationProp<any>;
 
@@ -49,10 +64,10 @@ interface Account { id: number; name: string; }
 interface Category { id: number; name: string; }
 interface Client { id: number; name: string; }
 
-const STATUT_OPTIONS = ['Quote', 'Issued', 'Paid', 'Cancelled'];
+const STATUT_OPTIONS = ['Quotes', 'Issued', 'Paid', 'Cancelled'];
 
-type InvoiceTabType = 'Tous' | 'Quote' | 'Issued' | 'Paid' | 'Cancelled';
-const INVOICE_TABS: InvoiceTabType[] = ['Tous', 'Quote', 'Issued', 'Paid', 'Cancelled'];
+type InvoiceTabType = 'Tous' | 'Quotes' | 'Issued' | 'Paid' | 'Cancelled';
+const INVOICE_TABS: InvoiceTabType[] = ['Tous', 'Quotes', 'Issued', 'Paid', 'Cancelled'];
 
 interface InvoiceArticle {
   id: number;
@@ -72,10 +87,12 @@ interface InvoiceItem {
   invoice_number: string;
   payment_method: string;
   status: string;
+  review_status: string;
   document_path: string | null;
   invoice_url: string | null;
   client: { id: number; client_name: string } | null;
   articles: InvoiceArticle[];
+  notes?: string | null;
 }
 
 interface Article {
@@ -86,14 +103,39 @@ interface Article {
   tva: number;
 }
 
+const statusConfig = (status: string): { badge: object; text: object } => {
+  switch (status) {
+    case 'Payé':    return { badge: styles.badgeGreen,  text: styles.badgeTextGreen };
+    case 'Annulé':  return { badge: styles.badgeRed,    text: styles.badgeTextRed };
+    case 'Issued':  return { badge: styles.badgeBlue,   text: styles.badgeTextBlue };
+    default:        return { badge: styles.badgeOrange, text: styles.badgeTextOrange };
+  }
+};
+
+const reviewConfig = (rs: string): { badge: object; text: object } => {
+  switch (rs) {
+    case 'APPROVED': return { badge: styles.badgeGreen,  text: styles.badgeTextGreen };
+    case 'REJECTED': return { badge: styles.badgeRed,    text: styles.badgeTextRed };
+    default:         return { badge: styles.badgeOrange, text: styles.badgeTextOrange }; // PENDING
+  }
+};
+
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
-  const isCompleted = status === 'Payé';
-  const isCancelled = status === 'Annulé';
-  const badgeStyle = isCompleted ? styles.badgeGreen : isCancelled ? styles.badgeRed : styles.badgeOrange;
-  const textStyle = isCompleted ? styles.badgeTextGreen : isCancelled ? styles.badgeTextRed : styles.badgeTextOrange;
+  const { badge, text } = statusConfig(status);
   return (
-    <View style={[styles.badge, badgeStyle]}>
-      <Text style={[styles.badgeText, textStyle]}>{status}</Text>
+    <View style={[styles.badge, badge]}>
+      <Text style={[styles.badgeText, text]}>{status}</Text>
+    </View>
+  );
+};
+
+const ReviewBadge: React.FC<{ reviewStatus: string }> = ({ reviewStatus }) => {
+  const { t } = useTranslation();
+  const { badge, text } = reviewConfig(reviewStatus);
+  const label = reviewStatus === 'PENDING' ? t('review_status_pending') : reviewStatus === 'APPROVED' ? t('review_status_approved') : t('review_status_rejected');
+  return (
+    <View style={[styles.badge, badge]}>
+      <Text style={[styles.badgeText, text]}>{label}</Text>
     </View>
   );
 };
@@ -104,6 +146,9 @@ const ArticleModal: React.FC<{
   onClose: () => void;
   onConfirm: (article: Article) => void;
 }> = ({ visible, onClose, onConfirm }) => {
+  const { t } = useTranslation();
+  const { getProducts } = useProducts();
+
   const [form, setForm] = useState<Article>({
     designation: '',
     unitPriceHT: 0,
@@ -111,18 +156,73 @@ const ArticleModal: React.FC<{
     totalHT: 0,
     tva: 20,
   });
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Recalculate total whenever unit price or quantity changes
   useEffect(() => {
     setForm(prev => ({ ...prev, totalHT: prev.unitPriceHT * prev.quantity }));
   }, [form.unitPriceHT, form.quantity]);
 
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!visible) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    }
+  }, [visible]);
+
+  const handleDesignationChange = (value: string) => {
+    setForm(prev => ({ ...prev, designation: value }));
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    if (!value.trim()) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+    debounceTimer.current = setTimeout(async () => {
+      setSuggestionsLoading(true);
+      setShowSuggestions(true);
+      const result = await getProducts({ like: value });
+      setSuggestionsLoading(false);
+      if (result.success) {
+        const raw = result.products;
+        const list = Array.isArray(raw) ? raw : (raw as any)?.data ?? [];
+        setSuggestions(list);
+        setShowSuggestions(list.length > 0 || false);
+      } else {
+        setShowSuggestions(false);
+      }
+    }, 350);
+  };
+
+  const handleSelectSuggestion = (product: any) => {
+    const unitPrice = parseFloat(product.unit_price_ht) || 0;
+    const qty = parseFloat(product.quantity) || form.quantity;
+    const tva = parseFloat(product.tva_percent) || form.tva;
+    setForm({
+      designation: product.designation,
+      unitPriceHT: unitPrice,
+      quantity: qty,
+      totalHT: unitPrice * qty,
+      tva,
+    });
+    setSuggestions([]);
+    setShowSuggestions(false);
+  };
+
   const handleConfirm = () => {
     if (!form.designation.trim()) {
-      Alert.alert('Champ requis', 'Veuillez saisir la désignation.');
+      Alert.alert(t('alert_field_required'), t('message_designation_required'));
       return;
     }
     onConfirm(form);
     setForm({ designation: '', unitPriceHT: 0, quantity: 1, totalHT: 0, tva: 20 });
+    setSuggestions([]);
+    setShowSuggestions(false);
   };
 
   return (
@@ -132,11 +232,11 @@ const ArticleModal: React.FC<{
           {/* Modal Header */}
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={onClose} activeOpacity={0.7}>
-              <Text style={styles.modalCancelText}>Annuler</Text>
+              <Text style={styles.modalCancelText}>{t('modal_cancel_text')}</Text>
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>Désignation de l'article</Text>
+            <Text style={styles.modalTitle}>{t('modal_title_article_designation')}</Text>
             <TouchableOpacity style={styles.modalConfirmBtn} onPress={handleConfirm} activeOpacity={0.8}>
-              <Text style={styles.modalConfirmText}>Confirmer</Text>
+              <Text style={styles.modalConfirmText}>{t('modal_confirm_text')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -144,19 +244,48 @@ const ArticleModal: React.FC<{
             {/* Désignation */}
             <View style={styles.formCard}>
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Désignation <Text style={styles.required}>*</Text></Text>
+                <Text style={styles.fieldLabel}>{t('label_designation')} <Text style={styles.required}>*</Text></Text>
                 <TextInput
                   style={styles.fieldInput}
-                  placeholder="Ajouter désignation"
+                  placeholder={t('placeholder_designation')}
                   placeholderTextColor="#9CA3AF"
                   value={form.designation}
-                  onChangeText={v => setForm({ ...form, designation: v })}
+                  onChangeText={handleDesignationChange}
+                  autoCorrect={false}
                 />
+                {/* Autocomplete suggestions */}
+                {showSuggestions && (
+                  <View style={styles.suggestionsContainer}>
+                    {suggestionsLoading ? (
+                      <View style={styles.suggestionLoadingRow}>
+                        <ActivityIndicator size="small" color="#1E5BAC" />
+                        <Text style={styles.suggestionLoadingText}>{t('text_searching')}</Text>
+                      </View>
+                    ) : (
+                      suggestions.map((product, index) => (
+                        <TouchableOpacity
+                          key={product.id ?? index}
+                          style={[
+                            styles.suggestionItem,
+                            index < suggestions.length - 1 && styles.suggestionItemBorder,
+                          ]}
+                          onPress={() => handleSelectSuggestion(product)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={styles.suggestionDesignation}>{product.designation}</Text>
+                          <Text style={styles.suggestionMeta}>
+                            {parseFloat(product.unit_price_ht).toLocaleString('fr-FR')} MAD HT  ·  TVA {product.tva_percent}%
+                          </Text>
+                        </TouchableOpacity>
+                      ))
+                    )}
+                  </View>
+                )}
               </View>
 
               {/* Prix H.T. unitaire */}
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Prix H.T. unitaire <Text style={styles.required}>*</Text></Text>
+                <Text style={styles.fieldLabel}>{t('label_unit_price_ht')} <Text style={styles.required}>*</Text></Text>
                 <View style={styles.fieldInputRow}>
                   <TextInput
                     style={[styles.fieldInput, { flex: 1 }]}
@@ -164,41 +293,49 @@ const ArticleModal: React.FC<{
                     placeholderTextColor="#9CA3AF"
                     keyboardType="numeric"
                     value={form.unitPriceHT > 0 ? String(form.unitPriceHT) : ''}
-                    onChangeText={v => setForm({ ...form, unitPriceHT: parseFloat(v) || 0 })}
+                    onChangeText={v => setForm(prev => ({
+                      ...prev,
+                      unitPriceHT: parseFloat(v) || 0,
+                      totalHT: (parseFloat(v) || 0) * prev.quantity,
+                    }))}
                   />
-                  <Text style={styles.fieldUnit}>MAD</Text>
+                  <Text style={styles.fieldUnit}>{t('field_unit')}</Text>
                 </View>
               </View>
 
               {/* Quantité */}
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Quantité <Text style={styles.required}>*</Text></Text>
+                <Text style={styles.fieldLabel}>{t('label_quantity')} <Text style={styles.required}>*</Text></Text>
                 <TextInput
                   style={styles.fieldInput}
                   placeholder="1"
                   placeholderTextColor="#9CA3AF"
                   keyboardType="numeric"
                   value={form.quantity > 0 ? String(form.quantity) : ''}
-                  onChangeText={v => setForm({ ...form, quantity: parseFloat(v) || 0 })}
+                  onChangeText={v => setForm(prev => ({
+                    ...prev,
+                    quantity: parseFloat(v) || 0,
+                    totalHT: prev.unitPriceHT * (parseFloat(v) || 0),
+                  }))}
                 />
               </View>
 
               {/* Prix H.T. total (read-only) */}
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Prix H.T. total</Text>
+                <Text style={styles.fieldLabel}>{t('label_price_ht_total')}</Text>
                 <View style={styles.fieldInputRow}>
                   <TextInput
                     style={[styles.fieldInput, styles.fieldInputReadOnly, { flex: 1 }]}
                     value={form.totalHT.toLocaleString('fr-FR')}
                     editable={false}
                   />
-                  <Text style={styles.fieldUnit}>MAD</Text>
+                  <Text style={styles.fieldUnit}>{t('field_unit')}</Text>
                 </View>
               </View>
 
               {/* TVA */}
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>TVA %</Text>
+                <Text style={styles.fieldLabel}>{t('label_tva_percent')}</Text>
                 <View style={styles.fieldInputRow}>
                   <TextInput
                     style={[styles.fieldInput, { flex: 1 }]}
@@ -213,7 +350,7 @@ const ArticleModal: React.FC<{
               </View>
 
               <TouchableOpacity style={styles.addArticleBtn} onPress={handleConfirm} activeOpacity={0.85}>
-                <Text style={styles.addArticleBtnText}>Ajouter</Text>
+                <Text style={styles.addArticleBtnText}>{t('button_add')}</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
@@ -221,6 +358,59 @@ const ArticleModal: React.FC<{
       </SafeAreaView>
     </Modal>
   );
+};
+
+// ─── Yup validation schema ───────────────────────────────────────────────────
+const invoiceSchema = yup.object({
+  invoiceNumber: yup.string().trim().required('Invoice number is required'),
+  date: yup.string().required('Date is required'),
+  clientId: yup
+    .number()
+    .typeError('Client is required')
+    .required('Client is required')
+    .positive('Client is required'),
+  accountId: yup
+    .number()
+    .typeError('Payment method is required')
+    .required('Payment method is required')
+    .positive('Payment method is required'),
+  status: yup.string().required('Status is required'),
+  articles: yup
+    .array()
+    .of(
+      yup.object({
+        designation: yup.string().trim().required('Designation is required'),
+        unitPriceHT: yup
+          .number()
+          .typeError('Unit price must be a number')
+          .moreThan(0, 'Unit price must be greater than 0')
+          .required(),
+        quantity: yup
+          .number()
+          .typeError('Quantity must be a number')
+          .positive('Quantity must be a positive number')
+          .required(),
+        tva: yup
+          .number()
+          .typeError('TVA must be a number')
+          .min(0, 'TVA must be ≥ 0')
+          .required(),
+        totalHT: yup.number().required(),
+      })
+    )
+    .min(1, 'At least one article is required')
+    .default([]),
+  notes: yup.string().default(''),
+});
+
+type InvoiceFormValues = {
+  invoiceNumber: string;
+  date: string;
+  clientId: number;
+  accountId: number;
+  status: string;
+  articles: Article[];
+  notes: string;
 };
 
 // Create Invoice Modal
@@ -234,69 +424,165 @@ const CreateInvoiceModal: React.FC<{
   onSave: (payload: any) => Promise<{ success: boolean; error?: string }>;
   editItem?: InvoiceItem;
   onUpdate?: (id: number, payload: any) => Promise<{ success: boolean; error?: string }>;
-}> = ({ visible, onClose, accounts, clients, customerId, onCreated, onSave, editItem, onUpdate }) => {
+  onClientsRefresh?: () => void;
+}> = ({ visible, onClose, accounts, clients, customerId, onCreated, onSave, editItem, onUpdate, onClientsRefresh }) => {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+
+  // ── Non-form UI state ──────────────────────────────────────────────────────
   const [showArticleModal, setShowArticleModal] = useState(false);
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [invoiceNumber, setInvoiceNumber] = useState('F2026-001');
-  const [date, setDate] = useState('2026-04-24');
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState<string>('');
-  const [showClientPicker, setShowClientPicker] = useState(false);
-  const [showAccountPicker, setShowAccountPicker] = useState(false);
-  const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [document, setDocument] = useState<any>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [tempDate, setTempDate] = useState<Date>(new Date());
   const [saving, setSaving] = useState(false);
+  const [showClientPicker, setShowClientPicker] = useState(false);
+  const [showAccountPicker, setShowAccountPicker] = useState(false);
+  const [showStatusPicker, setShowStatusPicker] = useState(false);
+  const [showCreateClientModal, setShowCreateClientModal] = useState(false);
+  const [showImagePreview, setShowImagePreview] = useState(false);
 
+  // ── Client search state ────────────────────────────────────────────────────
+  const [showClientSearch, setShowClientSearch] = useState(false);
+  const [clientSearchQuery, setClientSearchQuery] = useState('');
+  const [clientSearchResults, setClientSearchResults] = useState<Client[] | null>(null);
+  const [clientSearchLoading, setClientSearchLoading] = useState(false);
+  const clientSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── react-hook-form ────────────────────────────────────────────────────────
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    watch,
+    reset,
+    formState: { errors, isValid },
+  } = useForm<InvoiceFormValues>({
+    resolver: yupResolver(invoiceSchema) as any,
+    mode: 'onChange',
+    defaultValues: {
+      invoiceNumber: '',
+      date: '',
+      clientId: undefined,
+      accountId: undefined,
+      status: 'Quotes',
+      articles: [],
+      notes: '',
+    },
+  });
+
+  const watchedClientId = watch('clientId');
+  const watchedAccountId = watch('accountId');
+  const watchedStatus = watch('status');
+  const watchedDate = watch('date');
+  const watchedArticles = watch('articles') ?? [];
+
+  // Derived display objects from IDs
+  const selectedClient = clients.find(c => c.id === watchedClientId) ?? null;
+  const selectedAccount = accounts.find(a => a.id === watchedAccountId) ?? null;
+
+  // ── Reset / populate form when modal opens ────────────────────────────────
   useEffect(() => {
     if (!visible) return;
     setShowArticleModal(false);
     setShowDatePicker(false);
     setSaving(false);
+
     if (editItem) {
-      setInvoiceNumber(editItem.invoice_number);
       const datePart = editItem.date.split('T')[0];
-      setDate(datePart);
       const [ey, em, ed] = datePart.split('-').map(Number);
       setTempDate(new Date(ey, em - 1, ed));
       const client = clients.find(c => c.id === editItem.client_id) ?? null;
-      setSelectedClient(client);
       const account = accounts.find(a => a.name === editItem.payment_method) ?? null;
-      setSelectedAccount(account);
-      setSelectedStatus(editItem.status);
-      setArticles(
-        editItem.articles.map(a => ({
-          designation: a.designation,
-          unitPriceHT: parseFloat(a.unit_price_ht),
-          quantity: a.quantity,
-          totalHT: parseFloat(a.total_price_ht),
-          tva: parseFloat(a.tva_percentage),
-        }))
-      );
       if (editItem.document_path) {
         const fileName = editItem.document_path.split('/').pop() ?? 'document';
         setDocument({ name: fileName, isExisting: true });
       } else {
         setDocument(null);
       }
+      reset({
+        invoiceNumber: editItem.invoice_number,
+        date: datePart,
+        clientId: client?.id ?? undefined,
+        accountId: account?.id ?? undefined,
+        status: editItem.status,
+        notes: editItem.notes ?? '',
+        articles: editItem.articles.map(a => ({
+          designation: a.designation,
+          unitPriceHT: parseFloat(a.unit_price_ht),
+          quantity: a.quantity,
+          totalHT: parseFloat(a.total_price_ht),
+          tva: parseFloat(a.tva_percentage),
+        })),
+      });
     } else {
-      setArticles([]);
       const today = new Date();
       const y = today.getFullYear();
       const mo = String(today.getMonth() + 1).padStart(2, '0');
       const d = String(today.getDate()).padStart(2, '0');
-      setInvoiceNumber('');
-      setDate(`${y}-${mo}-${d}`);
-      setSelectedClient(null);
-      setSelectedAccount(null);
-      setSelectedStatus('');
       setDocument(null);
       setTempDate(today);
+      reset({
+        invoiceNumber: '',
+        date: `${y}-${mo}-${d}`,
+        clientId: undefined,
+        accountId: undefined,
+        status: 'Quotes',
+        notes: '',
+        articles: [],
+      });
     }
   }, [visible]);
+
+  // ── Debounced client search ─────────────────────────────────────────────
+  useEffect(() => {
+    if (clientSearchTimer.current) clearTimeout(clientSearchTimer.current);
+    if (!clientSearchQuery.trim()) {
+      setClientSearchResults(null);
+      setClientSearchLoading(false);
+      return;
+    }
+    setClientSearchLoading(true);
+    clientSearchTimer.current = setTimeout(async () => {
+      try {
+        const res = await api.get(Api_Endpoints.customerClientsSearch, {
+          params: { like: clientSearchQuery.trim() },
+        });
+        const mapped: Client[] = (res.data?.data ?? []).map((c: any) => ({
+          id: c.id,
+          name: c.company_name ?? c.client_name ?? c.name ?? '',
+        }));
+        setClientSearchResults(mapped);
+      } catch {
+        setClientSearchResults([]);
+      } finally {
+        setClientSearchLoading(false);
+      }
+    }, 350);
+    return () => { if (clientSearchTimer.current) clearTimeout(clientSearchTimer.current); };
+  }, [clientSearchQuery]);
+
+  const closeClientPicker = () => {
+    setShowClientPicker(false);
+    setShowClientSearch(false);
+    setClientSearchQuery('');
+    setClientSearchResults(null);
+  };
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const handlePreviewDocument = async () => {
+    const uri = document?.fileCopyUri ?? document?.uri;
+    if (!uri) return;
+    try {
+      if (Platform.OS === 'ios') {
+        await Share.share({ url: uri });
+      } else {
+        await ReactNativeBlobUtil.android.actionViewIntent(
+          uri.replace('file://', ''),
+          document?.type ?? 'application/octet-stream'
+        );
+      }
+    } catch {}
+  };
 
   const handlePickDocument = async () => {
     try {
@@ -304,8 +590,25 @@ const CreateInvoiceModal: React.FC<{
       setDocument(file);
     } catch (e: any) {
       if (isErrorWithCode(e) && e.code === errorCodes.OPERATION_CANCELED) return;
-      Alert.alert('Erreur', 'Impossible de sélectionner le fichier.');
+      Alert.alert(t('error_title'), t('error_select_file'));
     }
+  };
+
+  const handleTakePhoto = async () => {
+    launchCamera(
+      { mediaType: 'photo', saveToPhotos: false, quality: 0.8 },
+      (response) => {
+        if (response.didCancel || response.errorCode) return;
+        const asset = response.assets?.[0];
+        if (!asset?.uri) return;
+        setDocument({
+          uri: asset.uri,
+          fileCopyUri: asset.uri,
+          name: asset.fileName ?? `photo_${Date.now()}.jpg`,
+          type: asset.type ?? 'image/jpeg',
+        });
+      }
+    );
   };
 
   const handleDateChange = (_: DateTimePickerEvent, selected?: Date) => {
@@ -316,31 +619,30 @@ const CreateInvoiceModal: React.FC<{
     const y = tempDate.getFullYear();
     const m = String(tempDate.getMonth() + 1).padStart(2, '0');
     const d = String(tempDate.getDate()).padStart(2, '0');
-    setDate(`${y}-${m}-${d}`);
+    const formatted = `${y}-${m}-${d}`;
+    setValue('date', formatted, { shouldValidate: true });
     setShowDatePicker(false);
   };
 
-  const totalHT = articles.reduce((s, a) => s + a.totalHT, 0);
-  const totalTVA = articles.reduce((s, a) => s + (a.totalHT * a.tva) / 100, 0);
+  // Totals derived from form articles
+  const totalHT = watchedArticles.reduce((s, a) => s + (a.totalHT ?? 0), 0);
+  const totalTVA = watchedArticles.reduce((s, a) => s + ((a.totalHT ?? 0) * (a.tva ?? 0)) / 100, 0);
   const totalTTC = totalHT + totalTVA;
 
-  const handleSave = async () => {
-    if (!selectedClient) { Alert.alert('Requis', 'Veuillez sélectionner un client.'); return; }
-    if (!selectedAccount) { Alert.alert('Requis', 'Veuillez choisir un mode de paiement.'); return; }
-    if (!selectedStatus) { Alert.alert('Requis', 'Veuillez sélectionner un statut.'); return; }
-    if (articles.length === 0) { Alert.alert('Requis', 'Ajoutez au moins un article.'); return; }
-
+  // ── Submit ─────────────────────────────────────────────────────────────────
+  const onSubmit = async (data: InvoiceFormValues) => {
     setSaving(true);
     try {
       const payload = {
         customer_id: customerId,
-        client_id: selectedClient.id,
-        date,
-        invoice_number: invoiceNumber,
+        client_id: data.clientId,
+        date: data.date,
+        invoice_number: data.invoiceNumber,
         payment_method: selectedAccount!.name,
-        status: selectedStatus,
+        status: data.status,
+        notes: data.notes || null,
         document: document?.isExisting ? null : document,
-        articles: articles.map(a => ({
+        articles: (data.articles ?? []).map(a => ({
           designation: a.designation,
           unit_price_ht: a.unitPriceHT,
           quantity: a.quantity,
@@ -351,20 +653,20 @@ const CreateInvoiceModal: React.FC<{
       if (editItem && onUpdate) {
         const result = await onUpdate(editItem.id, payload);
         if (result.success) {
-          Alert.alert('Succès', 'Facture modifiée avec succès.');
+          Alert.alert(t('success_title'), t('success_invoice_updated'));
           onCreated();
           onClose();
         } else {
-          Alert.alert('Erreur', result.error ?? 'Une erreur est survenue.');
+          Alert.alert(t('error_title'), result.error ?? t('error_generic'));
         }
       } else {
         const result = await onSave(payload);
         if (result.success) {
-          Alert.alert('Succès', 'Facture créée avec succès.');
+          Alert.alert(t('success_title'), t('success_invoice_created'));
           onCreated();
           onClose();
         } else {
-          Alert.alert('Erreur', result.error ?? 'Une erreur est survenue.');
+          Alert.alert(t('error_title'), result.error ?? t('error_generic'));
         }
       }
     } finally {
@@ -379,13 +681,18 @@ const CreateInvoiceModal: React.FC<{
           {/* Header */}
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={onClose} activeOpacity={0.7}>
-              <Text style={styles.modalCancelText}>Annuler</Text>
+              <Text style={styles.modalCancelText}>{t('modal_cancel_text')}</Text>
             </TouchableOpacity>
-            <Text style={styles.modalTitle}>{editItem ? 'Modification de facture' : 'Création de facture'}</Text>
-            <TouchableOpacity style={styles.modalConfirmBtn} onPress={handleSave} disabled={saving} activeOpacity={0.8}>
+            <Text style={styles.modalTitle}>{editItem ? t('title_edit_invoice') : t('title_create_invoice')}</Text>
+            <TouchableOpacity
+              style={[styles.modalConfirmBtn, !isValid && styles.modalConfirmBtnDisabled]}
+              onPress={handleSubmit(onSubmit as any)}
+              disabled={saving}
+              activeOpacity={0.8}
+            >
               {saving
                 ? <ActivityIndicator size="small" color="#FFFFFF" />
-                : <Text style={styles.modalConfirmText}>Confirmer</Text>
+                : <Text style={styles.modalConfirmText}>{t('modal_confirm_text')}</Text>
               }
             </TouchableOpacity>
           </View>
@@ -393,127 +700,221 @@ const CreateInvoiceModal: React.FC<{
           <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
             <View style={styles.formCard}>
               {/* Upload Doc */}
-              <TouchableOpacity style={[styles.uploadRow, document && styles.uploadRowDone]} onPress={handlePickDocument} activeOpacity={0.7}>
-                <CloudUpload size={22} color={document ? '#16A34A' : '#1E5BAC'} />
-                <Text style={[styles.uploadText, document && styles.uploadTextDone]} numberOfLines={1}>
-                  {document ? document.name : 'Télécharger un document'}
-                </Text>
-                {document && (
-                  <TouchableOpacity onPress={() => setDocument(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <X size={16} color="#6B7280" />
+              {document ? (
+                <View style={styles.attachmentPreview}>
+                  {(document.type ?? '').startsWith('image/') && (document.uri ?? document.fileCopyUri) ? (
+                    <TouchableOpacity style={styles.attachmentThumbWrapper} onPress={() => setShowImagePreview(true)} activeOpacity={0.85}>
+                      <Image source={{ uri: document.uri ?? document.fileCopyUri }} style={styles.attachmentThumb} resizeMode="cover" />
+                      <View style={styles.attachmentThumbOverlay}>
+                        <Eye size={16} color="#FFFFFF" />
+                      </View>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity style={styles.attachmentFileIconBox} onPress={handlePreviewDocument} activeOpacity={0.85}>
+                      <FileText size={24} color="#1E5BAC" />
+                    </TouchableOpacity>
+                  )}
+                  <View style={styles.attachmentInfo}>
+                    <Text style={styles.attachmentFileName} numberOfLines={2}>{document.name}</Text>
+                    <Text style={styles.attachmentFileMeta}>
+                      {document.isExisting ? t('label_attached_file') : (document.type ?? 'file')}
+                    </Text>
+                  </View>
+                  {!document.isExisting && (
+                    <TouchableOpacity style={styles.attachmentRemoveBtn} onPress={() => setDocument(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <X size={16} color="#DC2626" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ) : (
+                <View style={styles.uploadArea}>
+                  <TouchableOpacity style={styles.uploadBtn} activeOpacity={0.8} onPress={handleTakePhoto}>
+                    <Camera size={20} color="#1E5BAC" />
+                    <Text style={styles.uploadBtnText}>{t('button_take_photo')}</Text>
                   </TouchableOpacity>
-                )}
-              </TouchableOpacity>
+                  <TouchableOpacity style={styles.uploadBtn} activeOpacity={0.8} onPress={handlePickDocument}>
+                    <FileText size={20} color="#16A34A" />
+                    <Text style={styles.uploadBtnText}>{t('button_select_file')}</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
 
               {/* Invoice Number */}
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Numéro de facture <Text style={styles.required}>*</Text></Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  value={invoiceNumber}
-                  onChangeText={setInvoiceNumber}
-                  placeholder="F2026-001"
-                  placeholderTextColor="#9CA3AF"
+                <Text style={styles.fieldLabel}>{t('label_invoice_number')} <Text style={styles.required}>*</Text></Text>
+                <Controller
+                  control={control}
+                  name="invoiceNumber"
+                  render={({ field: { value, onChange, onBlur } }) => (
+                    <TextInput
+                      style={[styles.fieldInput, errors.invoiceNumber && styles.fieldInputError]}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      placeholder={t('placeholder_invoice_number')}
+                      placeholderTextColor="#9CA3AF"
+                    />
+                  )}
                 />
+                {errors.invoiceNumber && (
+                  <Text style={styles.fieldError}>{errors.invoiceNumber.message}</Text>
+                )}
               </View>
 
               {/* Date */}
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Date <Text style={styles.required}>*</Text></Text>
+                <Text style={styles.fieldLabel}>{t('label_date')} <Text style={styles.required}>*</Text></Text>
                 <TouchableOpacity
-                  style={[styles.fieldInput, styles.fieldInputRow, { paddingVertical: 13 }]}
-                  onPress={() => { setTempDate(date ? new Date(date) : new Date()); setShowDatePicker(true); }}
+                  style={[styles.fieldInput, styles.fieldInputRow, { paddingVertical: 13 }, errors.date && styles.fieldInputError]}
+                  onPress={() => { setTempDate(watchedDate ? new Date(watchedDate) : new Date()); setShowDatePicker(true); }}
                   activeOpacity={0.7}
                 >
-                  <Text style={[{ flex: 1, fontSize: 14 }, date ? { color: '#1F2937' } : { color: '#9CA3AF' }]}>
-                    {date || 'YYYY-MM-DD'}
+                  <Text style={[{ flex: 1, fontSize: 14 }, watchedDate ? { color: '#1F2937' } : { color: '#9CA3AF' }]}>
+                    {watchedDate || 'YYYY-MM-DD'}
                   </Text>
                   <Calendar size={18} color="#1E5BAC" />
                 </TouchableOpacity>
-
+                {errors.date && (
+                  <Text style={styles.fieldError}>{errors.date.message}</Text>
+                )}
               </View>
 
               {/* Client */}
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Client <Text style={styles.required}>*</Text></Text>
-                <TouchableOpacity style={styles.pickerRow} onPress={() => setShowClientPicker(true)} activeOpacity={0.7}>
+                <Text style={styles.fieldLabel}>{t('label_client')} <Text style={styles.required}>*</Text></Text>
+                <TouchableOpacity
+                  style={[styles.pickerRow, errors.clientId && styles.fieldInputError]}
+                  onPress={() => setShowClientPicker(true)}
+                  activeOpacity={0.7}
+                >
                   <Text style={selectedClient ? styles.pickerValueText : styles.pickerPlaceholderText}>
-                    {selectedClient ? selectedClient.name : 'Sélectionner un client'}
+                    {selectedClient ? selectedClient.name : t('placeholder_client')}
                   </Text>
                   <ChevronDown size={18} color="#1E5BAC" />
                 </TouchableOpacity>
+                {errors.clientId && (
+                  <Text style={styles.fieldError}>{errors.clientId.message}</Text>
+                )}
               </View>
 
               {/* Mode de paiement */}
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Mode de paiement <Text style={styles.required}>*</Text></Text>
-                <TouchableOpacity style={styles.pickerRow} onPress={() => setShowAccountPicker(true)} activeOpacity={0.7}>
+                <Text style={styles.fieldLabel}>{t('label_payment_method')} <Text style={styles.required}>*</Text></Text>
+                <TouchableOpacity
+                  style={[styles.pickerRow, errors.accountId && styles.fieldInputError]}
+                  onPress={() => setShowAccountPicker(true)}
+                  activeOpacity={0.7}
+                >
                   <Text style={selectedAccount ? styles.pickerValueText : styles.pickerPlaceholderText}>
-                    {selectedAccount ? selectedAccount.name : 'Sélectionner le mode de paiement'}
+                    {selectedAccount ? selectedAccount.name : t('placeholder_payment_method')}
                   </Text>
                   <ChevronDown size={18} color="#1E5BAC" />
                 </TouchableOpacity>
+                {errors.accountId && (
+                  <Text style={styles.fieldError}>{errors.accountId.message}</Text>
+                )}
               </View>
 
               {/* Statut */}
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Statut <Text style={styles.required}>*</Text></Text>
-                <TouchableOpacity style={styles.pickerRow} onPress={() => setShowStatusPicker(true)} activeOpacity={0.7}>
-                  <Text style={selectedStatus ? styles.pickerValueText : styles.pickerPlaceholderText}>
-                    {selectedStatus || 'Sélectionner le statut'}
+                <Text style={styles.fieldLabel}>{t('label_status')} <Text style={styles.required}>*</Text></Text>
+                <TouchableOpacity
+                  style={[styles.pickerRow, errors.status && styles.fieldInputError]}
+                  disabled={!editItem}
+                  onPress={() => setShowStatusPicker(true)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[watchedStatus ? styles.pickerValueText : styles.pickerPlaceholderText, editItem ? { color: '#1F2937' } : { color: '#9CA3AF' }]}>
+                    {watchedStatus || t('placeholder_status')}
                   </Text>
                   <ChevronDown size={18} color="#1E5BAC" />
                 </TouchableOpacity>
+                {errors.status && (
+                  <Text style={styles.fieldError}>{errors.status.message}</Text>
+                )}
+              </View>
+
+              {/* Notes */}
+              <View style={styles.fieldBlock}>
+                <Text style={styles.fieldLabel}>{t('label_notes')}</Text>
+                <Controller
+                  control={control}
+                  name="notes"
+                  render={({ field: { value, onChange, onBlur } }) => (
+                    <TextInput
+                      style={[styles.fieldInput, styles.notesInput]}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      placeholder={t('placeholder_notes')}
+                      placeholderTextColor="#9CA3AF"
+                      multiline={true}
+                      numberOfLines={4}
+                      textAlignVertical="top"
+                    />
+                  )}
+                />
               </View>
 
               {/* Articles */}
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Articles</Text>
-                {articles.map((a, i) => (
+                <Text style={styles.fieldLabel}>{t('label_articles')}</Text>
+                {watchedArticles.map((a, i) => (
                   <View key={i} style={styles.articleRow}>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.articleDesignation}>{a.designation}</Text>
                       <Text style={styles.articleMeta}>
-                        {a.quantity} × {a.unitPriceHT.toLocaleString('fr-FR')} MAD HT
+                        {a.quantity} × {(a.unitPriceHT ?? 0).toLocaleString('fr-FR')} MAD HT
                       </Text>
                     </View>
-                    <Text style={styles.articleTotal}>{a.totalHT.toLocaleString('fr-FR')} MAD</Text>
-                    <TouchableOpacity onPress={() => setArticles(articles.filter((_, j) => j !== i))} style={{ marginLeft: 8 }}>
+                    <Text style={styles.articleTotal}>{(a.totalHT ?? 0).toLocaleString('fr-FR')} MAD</Text>
+                    <TouchableOpacity
+                      onPress={() => setValue('articles', watchedArticles.filter((_, j) => j !== i), { shouldValidate: true })}
+                      style={{ marginLeft: 8 }}
+                    >
                       <X size={16} color="#9CA3AF" />
                     </TouchableOpacity>
                   </View>
                 ))}
                 <TouchableOpacity style={styles.addArticleRowBtn} onPress={() => setShowArticleModal(true)} activeOpacity={0.8}>
                   <Plus size={18} color="#1E5BAC" />
-                  <Text style={styles.addArticleRowText}>Ajouter un article</Text>
+                  <Text style={styles.addArticleRowText}>{t('button_add_article')}</Text>
                 </TouchableOpacity>
-                {articles.length === 0 && (
-                  <Text style={styles.articleHint}>Ajoutez un ou plusieurs articles</Text>
+                {watchedArticles.length === 0 && (
+                  <Text style={styles.articleHint}>{t('text_no_articles')}</Text>
+                )}
+                {errors.articles && !Array.isArray(errors.articles) && (
+                  <Text style={styles.fieldError}>{(errors.articles as any).message}</Text>
                 )}
               </View>
 
               {/* Totals */}
-              {articles.length > 0 && (
+              {watchedArticles.length > 0 && (
                 <View style={styles.totalsBlock}>
                   <View style={styles.totalRow}>
-                    <Text style={styles.totalLabel}>Total H.T.</Text>
+                    <Text style={styles.totalLabel}>{t('label_total_ht')}</Text>
                     <Text style={styles.totalValue}>{totalHT.toLocaleString('fr-FR')} MAD</Text>
                   </View>
                   <View style={styles.totalRow}>
-                    <Text style={styles.totalLabel}>Total TVA</Text>
+                    <Text style={styles.totalLabel}>{t('label_total_tva')}</Text>
                     <Text style={styles.totalValue}>{totalTVA.toLocaleString('fr-FR')} MAD</Text>
                   </View>
                   <View style={[styles.totalRow, styles.totalRowLast]}>
-                    <Text style={styles.totalLabelBold}>Total TTC</Text>
+                    <Text style={styles.totalLabelBold}>{t('label_total_ttc')}</Text>
                     <Text style={styles.totalValueBold}>{totalTTC.toLocaleString('fr-FR')} MAD</Text>
                   </View>
                 </View>
               )}
 
-              <TouchableOpacity style={styles.addArticleBtn} onPress={handleSave} disabled={saving} activeOpacity={0.85}>
+              <TouchableOpacity
+                style={[styles.addArticleBtn, !isValid && styles.addArticleBtnDisabled]}
+                onPress={handleSubmit(onSubmit as any)}
+                disabled={saving}
+                activeOpacity={0.85}
+              >
                 {saving
                   ? <ActivityIndicator size="small" color="#FFFFFF" />
-                  : <Text style={styles.addArticleBtnText}>Confirmer</Text>
+                  : <Text style={styles.addArticleBtnText}>{t('button_confirm')}</Text>
                 }
               </TouchableOpacity>
             </View>
@@ -521,17 +922,87 @@ const CreateInvoiceModal: React.FC<{
         </KeyboardAvoidingView>
 
         {/* Client Picker Modal */}
-        <Modal visible={showClientPicker} transparent animationType="fade" onRequestClose={() => setShowClientPicker(false)}>
-          <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowClientPicker(false)}>
-            <View style={styles.pickerSheet}>
-              <Text style={styles.pickerSheetTitle}>Client</Text>
-              {clients.map(c => (
-                <TouchableOpacity key={c.id} style={styles.pickerOption} onPress={() => { setSelectedClient(c); setShowClientPicker(false); }}>
-                  <Text style={[styles.pickerOptionText, selectedClient?.id === c.id && styles.pickerOptionSelected]}>{c.name}</Text>
-                  {selectedClient?.id === c.id && <Text style={styles.pickerCheck}>✓</Text>}
-                </TouchableOpacity>
-              ))}
-            </View>
+        <Modal visible={showClientPicker} transparent animationType="fade" onRequestClose={closeClientPicker}>
+          <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={closeClientPicker}>
+            {/* Inner wrapper stops touch from bubbling to the overlay close handler */}
+            <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ width: '100%' }}>
+              <View style={styles.pickerSheet}>
+                {/* Title row: title + Search icon + Plus icon */}
+                <View style={styles.pickerSheetTitleRow}>
+                  <Text style={styles.pickerSheetTitleText}>{t('modal_title_client')}</Text>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <TouchableOpacity
+                      style={[styles.pickerSheetAddBtn, showClientSearch && styles.pickerSheetAddBtnActive]}
+                      onPress={() => {
+                        setShowClientSearch(prev => {
+                          if (prev) { setClientSearchQuery(''); setClientSearchResults(null); }
+                          return !prev;
+                        });
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Search size={18} color={showClientSearch ? '#FFFFFF' : '#1E5BAC'} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.pickerSheetAddBtn}
+                      onPress={() => { closeClientPicker(); setShowCreateClientModal(true); }}
+                      activeOpacity={0.7}
+                    >
+                      <Plus size={18} color="#1E5BAC" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Inline search input */}
+                {showClientSearch && (
+                  <View style={styles.clientSearchRow}>
+                    <Search size={15} color="#9CA3AF" />
+                    <TextInput
+                      style={styles.clientSearchInput}
+                      value={clientSearchQuery}
+                      onChangeText={setClientSearchQuery}
+                      placeholder={t('placeholder_search_client')}
+                      placeholderTextColor="#9CA3AF"
+                      autoFocus
+                      returnKeyType="search"
+                    />
+                    {clientSearchQuery.length > 0 && (
+                      <TouchableOpacity onPress={() => { setClientSearchQuery(''); setClientSearchResults(null); }} activeOpacity={0.7}>
+                        <X size={15} color="#9CA3AF" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+
+                {/* Options list */}
+                <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 300 }}>
+                  {clientSearchLoading ? (
+                    <View style={{ padding: 20, alignItems: 'center' }}>
+                      <ActivityIndicator size="small" color="#1E5BAC" />
+                    </View>
+                  ) : (
+                    (clientSearchResults ?? clients).map(c => (
+                      <TouchableOpacity
+                        key={c.id}
+                        style={styles.pickerOption}
+                        onPress={() => {
+                          setValue('clientId', c.id, { shouldValidate: true });
+                          closeClientPicker();
+                        }}
+                      >
+                        <Text style={[styles.pickerOptionText, watchedClientId === c.id && styles.pickerOptionSelected]}>{c.name}</Text>
+                        {watchedClientId === c.id && <Text style={styles.pickerCheck}>✓</Text>}
+                      </TouchableOpacity>
+                    ))
+                  )}
+                  {!clientSearchLoading && clientSearchResults?.length === 0 && (
+                    <View style={{ padding: 16, alignItems: 'center' }}>
+                      <Text style={{ fontSize: 13, color: '#9CA3AF' }}>{t('text_no_clients_found')}</Text>
+                    </View>
+                  )}
+                </ScrollView>
+              </View>
+            </TouchableOpacity>
           </TouchableOpacity>
         </Modal>
 
@@ -539,11 +1010,18 @@ const CreateInvoiceModal: React.FC<{
         <Modal visible={showAccountPicker} transparent animationType="fade" onRequestClose={() => setShowAccountPicker(false)}>
           <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowAccountPicker(false)}>
             <View style={styles.pickerSheet}>
-              <Text style={styles.pickerSheetTitle}>Mode de paiement</Text>
+              <Text style={styles.pickerSheetTitle}>{t('modal_title_payment_method')}</Text>
               {accounts.map(a => (
-                <TouchableOpacity key={a.id} style={styles.pickerOption} onPress={() => { setSelectedAccount(a); setShowAccountPicker(false); }}>
-                  <Text style={[styles.pickerOptionText, selectedAccount?.id === a.id && styles.pickerOptionSelected]}>{a.name}</Text>
-                  {selectedAccount?.id === a.id && <Text style={styles.pickerCheck}>✓</Text>}
+                <TouchableOpacity
+                  key={a.id}
+                  style={styles.pickerOption}
+                  onPress={() => {
+                    setValue('accountId', a.id, { shouldValidate: true });
+                    setShowAccountPicker(false);
+                  }}
+                >
+                  <Text style={[styles.pickerOptionText, watchedAccountId === a.id && styles.pickerOptionSelected]}>{a.name}</Text>
+                  {watchedAccountId === a.id && <Text style={styles.pickerCheck}>✓</Text>}
                 </TouchableOpacity>
               ))}
             </View>
@@ -554,11 +1032,18 @@ const CreateInvoiceModal: React.FC<{
         <Modal visible={showStatusPicker} transparent animationType="fade" onRequestClose={() => setShowStatusPicker(false)}>
           <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowStatusPicker(false)}>
             <View style={styles.pickerSheet}>
-              <Text style={styles.pickerSheetTitle}>Statut</Text>
+              <Text style={styles.pickerSheetTitle}>{t('modal_title_status')}</Text>
               {STATUT_OPTIONS.map(s => (
-                <TouchableOpacity key={s} style={styles.pickerOption} onPress={() => { setSelectedStatus(s); setShowStatusPicker(false); }}>
-                  <Text style={[styles.pickerOptionText, selectedStatus === s && styles.pickerOptionSelected]}>{s}</Text>
-                  {selectedStatus === s && <Text style={styles.pickerCheck}>✓</Text>}
+                <TouchableOpacity
+                  key={s}
+                  style={styles.pickerOption}
+                  onPress={() => {
+                    setValue('status', s, { shouldValidate: true });
+                    setShowStatusPicker(false);
+                  }}
+                >
+                  <Text style={[styles.pickerOptionText, watchedStatus === s && styles.pickerOptionSelected]}>{s}</Text>
+                  {watchedStatus === s && <Text style={styles.pickerCheck}>✓</Text>}
                 </TouchableOpacity>
               ))}
             </View>
@@ -571,11 +1056,11 @@ const CreateInvoiceModal: React.FC<{
             <View style={styles.datePickerSheet}>
               <View style={styles.datePickerHeader}>
                 <TouchableOpacity onPress={() => setShowDatePicker(false)} activeOpacity={0.7}>
-                  <Text style={styles.datePickerCancel}>Annuler</Text>
+                  <Text style={styles.datePickerCancel}>{t('modal_cancel_text')}</Text>
                 </TouchableOpacity>
-                <Text style={styles.datePickerTitle}>Date</Text>
+                <Text style={styles.datePickerTitle}>{t('modal_title_date')}</Text>
                 <TouchableOpacity onPress={confirmDate} activeOpacity={0.7}>
-                  <Text style={styles.datePickerOk}>OK</Text>
+                  <Text style={styles.datePickerOk}>{t('button_confirm')}</Text>
                 </TouchableOpacity>
               </View>
               <DateTimePicker
@@ -583,13 +1068,43 @@ const CreateInvoiceModal: React.FC<{
                 mode="date"
                 display="spinner"
                 onChange={handleDateChange}
-                style={{ width: '100%' }}
+                style={{ width: '100%', height: 216 }}
               />
             </View>
           </View>
         </Modal>
 
-        <ArticleModal visible={showArticleModal} onClose={() => setShowArticleModal(false)} onConfirm={a => { setArticles([...articles, a]); setShowArticleModal(false); }} />
+        <ArticleModal
+          visible={showArticleModal}
+          onClose={() => setShowArticleModal(false)}
+          onConfirm={a => {
+            setValue('articles', [...watchedArticles, a], { shouldValidate: true });
+            setShowArticleModal(false);
+          }}
+        />
+
+        <Modal visible={showImagePreview} transparent animationType="fade" onRequestClose={() => setShowImagePreview(false)}>
+          <View style={styles.imagePreviewOverlay}>
+            <TouchableOpacity style={styles.imagePreviewClose} onPress={() => setShowImagePreview(false)} activeOpacity={0.7}>
+              <X size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            <Image
+              source={{ uri: document?.uri ?? document?.fileCopyUri }}
+              style={styles.imagePreviewFull}
+              resizeMode="contain"
+            />
+          </View>
+        </Modal>
+
+        <CreateClientModal
+          visible={showCreateClientModal}
+          onClose={() => setShowCreateClientModal(false)}
+          onCreated={() => {
+            onClientsRefresh?.();
+            setShowCreateClientModal(false);
+            setShowClientPicker(true);
+          }}
+        />
       </View>
     </Modal>
   );
@@ -603,6 +1118,7 @@ const DetailModal: React.FC<{
   onEdit: () => void;
   onUpdate: (id: number, payload: any) => Promise<{ success: boolean; error?: string }>;
 }> = ({ item, onClose, onDelete, onEdit, onUpdate }) => {
+  const { t } = useTranslation();
   const totalHT = item.articles.reduce((s, a) => s + parseFloat(a.total_price_ht), 0);
   const totalTVA = item.articles.reduce((s, a) => s + (parseFloat(a.total_price_ht) * parseFloat(a.tva_percentage)) / 100, 0);
   const totalTTC = totalHT + totalTVA;
@@ -610,9 +1126,14 @@ const DetailModal: React.FC<{
     const rawFileName = item.document_path?.split('/').pop() || 'Document';
   const attachmentName = rawFileName.length > 24 ? `${rawFileName.slice(0, 24)}...` : rawFileName;
   const [deleting, setDeleting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [currentStatus, setCurrentStatus] = useState(item.status);
+  const token = useSelector((state: any) => state.user.token);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+  const { getPdfDownloadUrl } = useInvoice();
 
   const handleStatusChange = async (newStatus: string) => {
     if (newStatus === currentStatus) { setShowStatusPicker(false); return; }
@@ -627,6 +1148,7 @@ const DetailModal: React.FC<{
         invoice_number: item.invoice_number,
         payment_method: item.payment_method,
         status: newStatus,
+        notes: item.notes || null,
         document: null,
         articles: item.articles.map(a => ({
           designation: a.designation,
@@ -640,10 +1162,10 @@ const DetailModal: React.FC<{
       if (result.success) {
         setCurrentStatus(newStatus);
       } else {
-        Alert.alert('Erreur', result.error ?? 'Impossible de mettre à jour le statut.');
+        Alert.alert(t('error_title'), result.error ?? t('error_update_status'));
       }
     } catch {
-      Alert.alert('Erreur', 'Impossible de mettre à jour le statut.');
+      Alert.alert(t('error_title'), t('error_update_status'));
     } finally {
       setUpdatingStatus(false);
     }
@@ -651,12 +1173,12 @@ const DetailModal: React.FC<{
 
   const handleDelete = () => {
     Alert.alert(
-      'Supprimer la facture',
-      `Voulez-vous vraiment supprimer la facture ${item.invoice_number} ?`,
+      t('alert_delete_invoice'),
+      t('message_confirm_delete').replace('{invoice_number}', item.invoice_number),
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('button_cancel'), style: 'cancel' },
         {
-          text: 'Supprimer',
+          text: t('button_delete'),
           style: 'destructive',
           onPress: async () => {
             setDeleting(true);
@@ -672,9 +1194,148 @@ const DetailModal: React.FC<{
     );
   };
 
-    const handleDownload = () => {
-    if (!item.invoice_url) return;
-    Linking.openURL(item.invoice_url).catch(() => Alert.alert('Erreur', "Impossible d'ouvrir le document."));
+    const handleDownload = async () => {
+        if (!item.invoice_url) return;
+
+        setDownloading(true);
+
+        try {
+            const { fs, config } = ReactNativeBlobUtil;
+            const filePath = `${fs.dirs.CacheDir}/invoice_${item.id}`;
+
+            const res = await config({
+                fileCache: true,
+                path: filePath
+            }).fetch('GET', item.invoice_url, {
+                Authorization: `Bearer ${token}`,
+                Accept: 'application/octet-stream', // Requesting raw binary data
+            });
+
+            const headers = res.respInfo.headers;
+            const mime = (headers['Content-Type'] || headers['content-type'] || 'application/pdf').split(';')[0];
+
+            const extensionMap: any = {
+                'application/pdf': 'pdf',
+                'image/jpeg': 'jpg',
+                'image/png': 'png',
+                'image/jpg': 'jpg',
+            };
+            const ext = extensionMap[mime] || 'pdf'; // default to pdf if unknown
+
+            const finalPath = `${res.path()}.${ext}`;
+
+            if (await fs.exists(finalPath)) await fs.unlink(finalPath);
+            await fs.mv(res.path(), finalPath);
+
+            console.log('Document saved to:', finalPath);
+
+            if (Platform.OS === 'ios') {
+                await Share.share({
+                    url: `file://${finalPath}`,
+                    // type: mime
+                });
+            } else {
+                await ReactNativeBlobUtil.android.actionViewIntent(finalPath, mime);
+            }
+
+        } catch (e) {
+            console.error('Download error:', e);
+            Alert.alert(t('error_title'), t('error_document_not_found'));
+        } finally {
+            setDownloading(false);
+        }
+    };
+
+  const handleShare = async () => {
+    const url = getPdfDownloadUrl(item.id);
+    setSharing(true);
+    try {
+      const { fs, config } = ReactNativeBlobUtil;
+      const safeNumber = item.invoice_number.replace(/[^a-zA-Z0-9]/g, '_');
+      const filePath = `${fs.dirs.CacheDir}/invoice_pdf_${safeNumber}.pdf`;
+
+      if (await fs.exists(filePath)) await fs.unlink(filePath);
+
+      const res = await config({ fileCache: true, path: filePath }).fetch('GET', url, {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/pdf',
+      });
+
+      const headers = res.respInfo.headers;
+      const contentType = (headers['Content-Type'] || headers['content-type'] || 'application/pdf').split(';')[0].trim();
+
+      if (contentType.includes('text/html')) {
+        await fs.unlink(filePath).catch(() => {});
+        Alert.alert(t('error_title'), t('error_pdf_expired'));
+        return;
+      }
+
+      const message = t('message_share_invoice').replace('{invoice_number}', item.invoice_number);
+
+      if (Platform.OS === 'ios') {
+        await Share.share({
+          url: `file://${filePath}`,
+          message,
+        });
+      } else {
+        await ReactNativeBlobUtil.android.actionViewIntent(filePath, contentType || 'application/pdf');
+      }
+    } catch (e: any) {
+      if (e?.message !== 'User did not share') {
+        console.error('Share error:', e);
+        Alert.alert(t('error_title'), t('error_unable_to_share'));
+      }
+    } finally {
+      setSharing(false);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    setDownloadingPdf(true);
+    let pdfPath: string | null = null;
+    try {
+      const url = getPdfDownloadUrl(item.id);
+      const { fs, config } = ReactNativeBlobUtil;
+      const safeNumber = item.invoice_number.replace(/[^a-zA-Z0-9]/g, '_');
+      const filePath = Platform.OS === 'ios'
+        ? `${fs.dirs.DocumentDir}/invoice_pdf_${safeNumber}.pdf`
+        : `${fs.dirs.DownloadDir}/invoice_pdf_${safeNumber}.pdf`;
+
+      if (await fs.exists(filePath)) await fs.unlink(filePath);
+
+      const res = await config({ fileCache: true, path: filePath }).fetch('GET', url, {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/pdf',
+      });
+
+      const headers = res.respInfo.headers;
+      const contentType = (headers['Content-Type'] || headers['content-type'] || 'application/pdf').split(';')[0].trim();
+
+      if (contentType.includes('text/html')) {
+        await fs.unlink(filePath).catch(() => {});
+        Alert.alert(t('error_title'), t('error_pdf_expired'));
+        return;
+      }
+
+      pdfPath = res.path();
+    } catch (e: any) {
+      console.error('PDF download error:', e);
+      Alert.alert(t('error_title'), t('error_unable_to_download_pdf'));
+    } finally {
+      setDownloadingPdf(false);
+    }
+
+    if (pdfPath) {
+      onClose(); // Dismiss modal first
+      const path = pdfPath;
+      setTimeout(() => {
+        if (Platform.OS === 'ios') {
+          ReactNativeBlobUtil.ios.openDocument(path);
+        } else {
+          ReactNativeBlobUtil.android.actionViewIntent(path, 'application/pdf');
+        }
+      }, 400); // Wait for pageSheet dismiss animation to finish
+    }
   };
 
   return (
@@ -682,7 +1343,7 @@ const DetailModal: React.FC<{
       <SafeAreaView style={styles.modalContainer} edges={['top']}>
         {/* Header */}
         <View style={styles.detailModalHeader}>
-          <Text style={styles.detailModalTitle}>Détails de la facture</Text>
+          <Text style={styles.detailModalTitle}>{t('title_invoice_details')}</Text>
           <TouchableOpacity onPress={onClose} style={styles.detailCloseBtn} activeOpacity={0.7}>
             <X size={20} color="#6B7280" />
           </TouchableOpacity>
@@ -716,13 +1377,14 @@ const DetailModal: React.FC<{
           {/* Detail rows */}
           <View style={styles.detailCard}>
             {[
-              { label: 'Numéro de facture', value: item.invoice_number },
-              { label: 'Client', value: item.client?.client_name ?? '—' },
-              { label: 'Mode de paiement', value: item.payment_method },
-              { label: 'Statut', value: currentStatus },
-              { label: 'Total H.T.', value: `${totalHT.toLocaleString('fr-FR')} MAD` },
-              { label: 'Total TVA', value: `${totalTVA.toLocaleString('fr-FR')} MAD` },
-              { label: 'Total TTC', value: `${totalTTC.toLocaleString('fr-FR')} MAD` },
+              { label: t('label_invoice_number'), value: item.invoice_number },
+              { label: t('label_client'), value: item.client?.client_name ?? '—' },
+              { label: t('label_payment_method'), value: item.payment_method },
+              { label: t('label_status'), value: currentStatus },
+              { label: t('label_total_ht'), value: `${totalHT.toLocaleString('fr-FR')} MAD` },
+              { label: t('label_total_tva'), value: `${totalTVA.toLocaleString('fr-FR')} MAD` },
+              { label: t('label_total_ttc'), value: `${totalTTC.toLocaleString('fr-FR')} MAD` },
+              { label: t('label_notes'), value: item.notes || '-' },
             ].map(row => (
               <View key={row.label} style={styles.detailRow}>
                 <Text style={styles.detailRowLabel}>{row.label}</Text>
@@ -735,7 +1397,7 @@ const DetailModal: React.FC<{
           {item.articles.length > 0 && (
             <View style={styles.detailCard}>
               <View style={[styles.detailRow, { borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }]}>
-                <Text style={[styles.detailRowLabel, { fontWeight: '700', color: '#1F2937' }]}>Articles</Text>
+                <Text style={[styles.detailRowLabel, { fontWeight: '700', color: '#1F2937' }]}>{t('label_articles')}</Text>
               </View>
               {item.articles.map(a => (
                 <View key={a.id} style={styles.detailRow}>
@@ -753,7 +1415,7 @@ const DetailModal: React.FC<{
 
           {/* Attachment */}
           {item.document_path ? (
-            <TouchableOpacity style={styles.attachmentCard} onPress={handleDownload} activeOpacity={0.8}>
+            <TouchableOpacity style={styles.attachmentCard} onPress={handleDownload} activeOpacity={0.8} disabled={downloading}>
               <View style={styles.attachmentLeft}>
                 <View style={styles.attachmentIconBox}>
                   <FileText size={20} color="#1E5BAC" />
@@ -761,38 +1423,75 @@ const DetailModal: React.FC<{
                 <View>
                   {/* <Text style={styles.attachmentName}>{item.document_path.split('/').pop()}</Text> */}
                   <Text style={styles.attachmentName}>{attachmentName}</Text>
-                  <Text style={styles.attachmentSub}>Document joint</Text>
+                  <Text style={styles.attachmentSub}>{t('label_document_attached')}</Text>
                 </View>
               </View>
-              <TouchableOpacity style={styles.attachmentDownload} activeOpacity={0.7}>
-                <Download size={18} color="#1E5BAC" />
-              </TouchableOpacity>
+              <View style={styles.attachmentDownload}>
+                {downloading
+                  ? <ActivityIndicator size="small" color="#1E5BAC" />
+                  : <Download size={18} color="#1E5BAC" />}
+              </View>
             </TouchableOpacity>
           ) : (
             <View style={styles.noAttachment}>
               <CloudUpload size={28} color="#D1D5DB" />
-              <Text style={styles.noAttachmentText}>Aucun document joint</Text>
+              <Text style={styles.noAttachmentText}>{t('text_no_documents')}</Text>
               <TouchableOpacity activeOpacity={0.7}>
-                <Text style={styles.noAttachmentLink}>Ajouter un document</Text>
+                <Text style={styles.noAttachmentLink}>{t('label_add_document')}</Text>
               </TouchableOpacity>
             </View>
           )}
-        </ScrollView>
 
-        {/* Footer */}
-        <View style={styles.detailFooter}>
-          <TouchableOpacity style={styles.detailDeleteBtn} onPress={handleDelete} disabled={deleting} activeOpacity={0.8}>
+          {/* Supprimer — inline below attachment */}
+          <TouchableOpacity
+            style={styles.inlineDeleteBtn}
+            onPress={handleDelete}
+            disabled={deleting}
+            activeOpacity={0.7}
+          >
             {deleting
               ? <ActivityIndicator size="small" color="#DC2626" />
               : <>
                   <Trash2 size={16} color="#DC2626" />
-                  <Text style={styles.detailDeleteText}>Supprimer</Text>
+                  <Text style={styles.inlineDeleteText}>{t('alert_delete_invoice')}</Text>
+                </>
+            }
+          </TouchableOpacity>
+        </ScrollView>
+
+        {/* Footer */}
+        <View style={styles.detailFooter}>
+          <TouchableOpacity
+            style={[styles.detailDownloadPdfBtn, downloadingPdf && { opacity: 0.5 }]}
+            onPress={handleDownloadPdf}
+            disabled={downloadingPdf}
+            activeOpacity={0.8}
+          >
+            {downloadingPdf
+              ? <ActivityIndicator size="small" color="#16A34A" />
+              : <>
+                  <Download size={16} color="#16A34A" />
+                  <Text style={styles.detailDownloadPdfText}>PDF</Text>
+                </>
+            }
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.detailShareBtn, (!item.invoice_url || sharing) && { opacity: 0.5 }]}
+            onPress={handleShare}
+            disabled={!item.invoice_url || sharing}
+            activeOpacity={0.8}
+          >
+            {sharing
+              ? <ActivityIndicator size="small" color="#1E5BAC" />
+              : <>
+                  <Share2 size={16} color="#1E5BAC" />
+                  <Text style={styles.detailShareText}>{t('button_share')}</Text>
                 </>
             }
           </TouchableOpacity>
           <TouchableOpacity style={styles.detailEditBtn} onPress={onEdit} activeOpacity={0.8}>
             <Upload size={16} color="#FFFFFF" />
-            <Text style={styles.detailEditText}>Modifier</Text>
+            <Text style={styles.detailEditText}>{t('button_edit')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -800,7 +1499,7 @@ const DetailModal: React.FC<{
         <Modal visible={showStatusPicker} transparent animationType="slide" onRequestClose={() => setShowStatusPicker(false)}>
           <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowStatusPicker(false)}>
             <View style={styles.pickerSheet}>
-              <Text style={styles.pickerSheetTitle}>Changer le statut</Text>
+              <Text style={styles.pickerSheetTitle}>{t('modal_title_change_status')}</Text>
               {STATUT_OPTIONS.map(s => (
                 <TouchableOpacity
                   key={s}
@@ -822,18 +1521,20 @@ const DetailModal: React.FC<{
 
 // Main Invoice Screen
 const Invoice: React.FC = ({ navigation: navProp }: any) => {
+  const { t } = useTranslation();
   const navigation = useNavigation<StackNavigation>();
   const nav = navProp ?? navigation;
   const route = useRoute<any>();
   const { getInvoices, getInvoiceResources, createInvoice, updateInvoice, exportInvoices, deleteInvoice } = useInvoice();
+  const token = useSelector((state: any) => state.user.token);
   const user = useSelector((state: any) => state.user.customer);
 
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMonth, setSelectedMonth] = useState('Mois');
-  const [selectedYear, setSelectedYear] = useState('Année');
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
+  const [selectedYear, setSelectedYear] = useState<string | null>(null);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showYearPicker, setShowYearPicker] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -845,13 +1546,13 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
 
-  const MONTHS = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+  const MONTHS = [t('month_january'), t('month_february'), t('month_march'), t('month_april'), t('month_may'), t('month_june'), t('month_july'), t('month_august'), t('month_september'), t('month_october'), t('month_november'), t('month_december')];
   const YEARS = ['2026', '2025', '2024'];
   const isFilterMount = useRef(false);
 
   const getFilterParams = () => {
-    const monthNum = selectedMonth !== 'Mois' ? MONTHS.indexOf(selectedMonth) + 1 : undefined;
-    const yearNum = selectedYear !== 'Année' ? parseInt(selectedYear) : undefined;
+    const monthNum = selectedMonth !== null ? MONTHS.indexOf(selectedMonth) + 1 : undefined;
+    const yearNum = selectedYear !== null ? parseInt(selectedYear) : undefined;
     return (monthNum || yearNum) ? { month: monthNum, year: yearNum } : undefined;
   };
 
@@ -873,7 +1574,7 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
         );
       }
     } catch {
-      Alert.alert('Erreur', 'Impossible de charger les factures.');
+      Alert.alert(t('error_title'), t('error_generic'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -881,6 +1582,20 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  const refreshClients = async () => {
+    try {
+      const resourcesResult = await getInvoiceResources();
+      if (resourcesResult.success) {
+        setClients(
+          (resourcesResult.resources?.clients ?? []).map((c: any) => ({
+            id: c.id,
+            name: c.client_name,
+          }))
+        );
+      }
+    } catch {}
+  };
 
   useEffect(() => {
     if (!isFilterMount.current) { isFilterMount.current = true; return; }
@@ -898,9 +1613,9 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
     if (result.success) {
       setSelectedItem(null);
       fetchData();
-      Alert.alert('Succès', 'Facture supprimée avec succès.');
+      Alert.alert(t('success_title'), t('success_invoice_deleted'));
     } else {
-      Alert.alert('Erreur', result.error ?? 'Impossible de supprimer la facture.');
+      Alert.alert(t('error_title'), result.error ?? t('error_delete_invoice'));
     }
   };
 
@@ -909,13 +1624,28 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
     setExporting(true);
     try {
       const result = await exportInvoices();
-      if (result.success && result.fileUrl) {
-        Linking.openURL(result.fileUrl).catch(() =>
-          Alert.alert('Erreur', 'Impossible d\'ouvrir le fichier CSV.')
-        );
+      if (result.success && result.csvData) {
+        const { fs } = ReactNativeBlobUtil;
+        const fileName = result.fileName || 'invoices_export.csv';
+        const filePath = `${fs.dirs.CacheDir}/${fileName}`;
+
+        // Remove stale cached file if present
+        if (await fs.exists(filePath)) await fs.unlink(filePath);
+
+        // Write CSV string directly to file — no second network request needed
+        await fs.writeFile(filePath, result.csvData, 'utf8');
+
+        if (Platform.OS === 'ios') {
+          await Share.share({ url: `file://${filePath}` });
+        } else {
+          await ReactNativeBlobUtil.android.actionViewIntent(filePath, 'text/csv');
+        }
       } else {
-        Alert.alert('Erreur', result.error ?? 'Impossible d\'exporter les factures.');
+        Alert.alert(t('error_title'), result.error ?? t('error_generic'));
       }
+    } catch (e) {
+      console.error('Export error:', e);
+      Alert.alert(t('error_title'), t('error_document_not_found'));
     } finally {
       setExporting(false);
     }
@@ -935,6 +1665,7 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
   });
 
   const renderItem = ({ item }: { item: InvoiceItem }) => {
+    console.log('rennnndddiii444', item)
     const totalHT = item.articles.reduce((s, a) => s + parseFloat(a.total_price_ht), 0);
     const totalTVA = item.articles.reduce((s, a) => s + (parseFloat(a.total_price_ht) * parseFloat(a.tva_percentage)) / 100, 0);
     const totalTTC = totalHT + totalTVA;
@@ -958,6 +1689,7 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
         <View style={styles.invoiceCardRight}>
           <Text style={styles.invoiceAmount}>+{totalTTC.toLocaleString('fr-FR')} MAD</Text>
           {/* <StatusBadge status={item.status} /> */}
+          <ReviewBadge reviewStatus={item.review_status} />
         </View>
       </TouchableOpacity>
     );
@@ -975,14 +1707,14 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
                 <TouchableOpacity style={styles.backButton} onPress={() => nav.goBack()} activeOpacity={0.7}>
                   <ArrowLeft size={20} color="#1F2937" />
                 </TouchableOpacity>
-                <Text style={styles.titleText}>Factures</Text>
+                <Text style={styles.titleText}>{t('title_invoices')}</Text>
                 <View style={{ flex: 1 }} />
                 <TouchableOpacity style={styles.exportBtn} onPress={handleExport} disabled={exporting} activeOpacity={0.8}>
                   {exporting
                     ? <ActivityIndicator size="small" color="#4B5563" />
                     : <Upload size={15} color="#4B5563" />
                   }
-                  <Text style={styles.exportBtnText}>Exporter</Text>
+                  <Text style={styles.exportBtnText}>{t('button_export')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -992,17 +1724,17 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
         {/* Month */}
         <View style={{ position: 'relative' }}>
           <TouchableOpacity
-            style={[styles.filterBtn, selectedMonth !== 'Mois' && styles.filterBtnActive]}
+            style={[styles.filterBtn, selectedMonth !== null && styles.filterBtnActive]}
             onPress={() => { setShowMonthPicker(!showMonthPicker); setShowYearPicker(false); }}
             activeOpacity={0.8}
           >
-            <Text style={[styles.filterBtnText, selectedMonth !== 'Mois' && styles.filterBtnTextActive]}>{selectedMonth}</Text>
-            <ChevronDown size={14} color={selectedMonth !== 'Mois' ? '#1E5BAC' : '#6B7280'} />
+            <Text style={[styles.filterBtnText, selectedMonth !== null && styles.filterBtnTextActive]}>{selectedMonth ?? t('filter_month')}</Text>
+            <ChevronDown size={14} color={selectedMonth !== null ? '#1E5BAC' : '#6B7280'} />
           </TouchableOpacity>
           {showMonthPicker && (
             <View style={styles.dropdown}>
-              <TouchableOpacity style={styles.dropdownItem} onPress={() => { setSelectedMonth('Mois'); setShowMonthPicker(false); }}>
-                <Text style={styles.dropdownItemText}>Tous les mois</Text>
+              <TouchableOpacity style={styles.dropdownItem} onPress={() => { setSelectedMonth(null); setShowMonthPicker(false); }}>
+                <Text style={styles.dropdownItemText}>{t('filter_all_months')}</Text>
               </TouchableOpacity>
               {MONTHS.map(m => (
                 <TouchableOpacity key={m} style={styles.dropdownItem} onPress={() => { setSelectedMonth(m); setShowMonthPicker(false); }}>
@@ -1017,17 +1749,17 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
         {/* Year */}
         <View style={{ position: 'relative' }}>
           <TouchableOpacity
-            style={[styles.filterBtn, selectedYear !== 'Année' && styles.filterBtnActive]}
+            style={[styles.filterBtn, selectedYear !== null && styles.filterBtnActive]}
             onPress={() => { setShowYearPicker(!showYearPicker); setShowMonthPicker(false); }}
             activeOpacity={0.8}
           >
-            <Text style={[styles.filterBtnText, selectedYear !== 'Année' && styles.filterBtnTextActive]}>{selectedYear}</Text>
-            <ChevronDown size={14} color={selectedYear !== 'Année' ? '#1E5BAC' : '#6B7280'} />
+            <Text style={[styles.filterBtnText, selectedYear !== null && styles.filterBtnTextActive]}>{selectedYear ?? t('filter_year')}</Text>
+            <ChevronDown size={14} color={selectedYear !== null ? '#1E5BAC' : '#6B7280'} />
           </TouchableOpacity>
           {showYearPicker && (
             <View style={styles.dropdown}>
-              <TouchableOpacity style={styles.dropdownItem} onPress={() => { setSelectedYear('Année'); setShowYearPicker(false); }}>
-                <Text style={styles.dropdownItemText}>Toutes</Text>
+              <TouchableOpacity style={styles.dropdownItem} onPress={() => { setSelectedYear(null); setShowYearPicker(false); }}>
+                <Text style={styles.dropdownItemText}>{t('filter_all_years')}</Text>
               </TouchableOpacity>
               {YEARS.map(y => (
                 <TouchableOpacity key={y} style={styles.dropdownItem} onPress={() => { setSelectedYear(y); setShowYearPicker(false); }}>
@@ -1079,7 +1811,7 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
           ListEmptyComponent={
             <View style={styles.emptyBox}>
               <Receipt size={40} color="#D1D5DB" />
-              <Text style={styles.emptyText}>Aucune facture trouvée</Text>
+              <Text style={styles.emptyText}>{t('empty_no_invoices')}</Text>
             </View>
           }
         />
@@ -1099,6 +1831,7 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
         customerId={user?.id ?? 0}
         onCreated={fetchData}
         onSave={createInvoice}
+        onClientsRefresh={refreshClients}
       />
 
       {/* Detail Modal */}
@@ -1124,6 +1857,7 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
           onSave={createInvoice}
           editItem={editingItem}
           onUpdate={updateInvoice}
+          onClientsRefresh={refreshClients}
         />
       )}
     </SafeAreaView>
@@ -1308,6 +2042,8 @@ const styles = StyleSheet.create({
   badgeTextOrange: { color: '#EA580C' },
   badgeRed: { backgroundColor: '#FEE2E2' },
   badgeTextRed: { color: '#DC2626' },
+  badgeBlue: { backgroundColor: '#DBEAFE' },
+  badgeTextBlue: { color: '#1D4ED8' },
 
   // FAB
   fab: {
@@ -1381,6 +2117,59 @@ const styles = StyleSheet.create({
   },
   uploadText: { fontSize: 14, color: '#4B5563', fontWeight: '500' },
   uploadTextDone: { color: '#16A34A', flex: 1 },
+  uploadArea: { flexDirection: 'row', gap: 12 },
+  uploadBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, backgroundColor: '#F9FAFB',
+    borderWidth: 1, borderColor: '#E0E7FF', borderRadius: 12,
+    paddingVertical: 14,
+  },
+  uploadBtnText: { fontSize: 12, fontWeight: '500', color: '#374151' },
+
+  // Attachment preview card
+  attachmentPreview: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#F0F4FF', borderRadius: 12,
+    borderWidth: 1, borderColor: '#C7D2FE',
+    padding: 10, gap: 10,
+  },
+  attachmentThumbWrapper: {
+    width: 56, height: 56, borderRadius: 8,
+    overflow: 'hidden', flexShrink: 0,
+  },
+  attachmentThumb: { width: 56, height: 56 },
+  attachmentThumbOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.28)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  attachmentFileIconBox: {
+    width: 56, height: 56, borderRadius: 8,
+    backgroundColor: '#E0E7FF',
+    justifyContent: 'center', alignItems: 'center', flexShrink: 0,
+  },
+  attachmentInfo: { flex: 1 },
+  attachmentFileName: { fontSize: 13, fontWeight: '600', color: '#1F2937' },
+  attachmentFileMeta: { fontSize: 11, color: '#6B7280', marginTop: 2 },
+  attachmentRemoveBtn: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: '#FEE2E2',
+    justifyContent: 'center', alignItems: 'center', flexShrink: 0,
+  },
+
+  // Full-screen image preview
+  imagePreviewOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.92)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  imagePreviewClose: {
+    position: 'absolute', top: 56, right: 20,
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    justifyContent: 'center', alignItems: 'center',
+    zIndex: 10,
+  },
+  imagePreviewFull: { width: '100%', height: '80%' },
 
   // Articles inside form
   addArticleRowBtn: {
@@ -1436,6 +2225,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 20, borderTopRightRadius: 20,
     paddingBottom: 24,
+    overflow: 'hidden',
   },
   datePickerHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -1454,6 +2244,17 @@ const styles = StyleSheet.create({
     fontSize: 14, fontWeight: '700', color: '#374151',
     paddingHorizontal: 12, paddingBottom: 8, marginBottom: 4,
     borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+  },
+  pickerSheetTitleRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 12, paddingBottom: 8, marginBottom: 4,
+    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+  },
+  pickerSheetTitleText: { fontSize: 14, fontWeight: '700', color: '#374151' },
+  pickerSheetAddBtn: {
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: '#EEF2FF',
+    justifyContent: 'center', alignItems: 'center',
   },
   pickerOption: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -1544,12 +2345,126 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
   },
   detailDeleteText: { fontSize: 14, fontWeight: '600', color: '#DC2626' },
+  detailShareBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, paddingVertical: 13, borderRadius: 12,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1, borderColor: '#C7D2FE',
+  },
+  detailShareText: { fontSize: 14, fontWeight: '600', color: '#1E5BAC' },
   detailEditBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, paddingVertical: 13, borderRadius: 12,
     backgroundColor: '#1E5BAC',
   },
   detailEditText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
+  detailDownloadPdfBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, paddingVertical: 13, borderRadius: 12,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1, borderColor: '#BBF7D0',
+  },
+  detailDownloadPdfText: { fontSize: 14, fontWeight: '600', color: '#16A34A' },
+  inlineDeleteBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 8, paddingVertical: 14,
+  },
+  inlineDeleteText: { fontSize: 14, fontWeight: '600', color: '#DC2626' },
+
+  // Autocomplete suggestions
+  suggestionsContainer: {
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.09,
+    shadowRadius: 8,
+    elevation: 5,
+    overflow: 'hidden',
+    zIndex: 99,
+  },
+  suggestionLoadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  suggestionLoadingText: { fontSize: 13, color: '#6B7280' },
+  suggestionItem: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+  },
+  suggestionItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  suggestionDesignation: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  suggestionMeta: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  notesInput: {
+  height: 100,
+  paddingTop: 12,
+  paddingBottom: 12,
+  lineHeight: 20,
+},
+
+  // Validation error
+  fieldError: {
+    fontSize: 12,
+    color: '#DC2626',
+    marginTop: 3,
+    fontWeight: '500',
+  },
+  fieldInputError: {
+    borderColor: '#DC2626',
+    backgroundColor: '#FFF5F5',
+  },
+
+  // Disabled confirm button
+  modalConfirmBtnDisabled: {
+    backgroundColor: '#93C5FD',
+  },
+  addArticleBtnDisabled: {
+    backgroundColor: '#93C5FD',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+
+  // Client search inside picker
+  pickerSheetAddBtnActive: {
+    backgroundColor: '#1E5BAC',
+  },
+  clientSearchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginHorizontal: 8,
+    marginBottom: 8,
+  },
+  clientSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#1F2937',
+    paddingVertical: 0,
+  },
 });
 
 export default Invoice;
