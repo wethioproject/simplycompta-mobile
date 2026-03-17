@@ -18,10 +18,14 @@ import {
 import { ArrowLeft, Plus, Search, X, ChevronRight } from 'lucide-react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { appLogoIcon } from '../../assets/icons';
 import api from '../../api';
 import { Api_Endpoints } from '../../services/endpoints';
+import { useForm, Controller } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
 
 type StackNavigation = StackNavigationProp<any>;
 
@@ -42,52 +46,81 @@ interface ClientItem {
 
 
 
-const CreateClientModal: React.FC<{
+// ─── Yup schema (Client) ─────────────────────────────────────────────────────
+const clientSchema = yup.object({
+  companyName: yup.string().required('Company name is required'),
+  clientName: yup.string().required('Client name is required'),
+  email: yup.string().test('email-format', 'Invalid email address', v => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)).required('Email is required'),
+  telephone: yup.string().optional(),
+  postalCode: yup.string().required('Postal code is required'),
+  city: yup.string().required('City is required'),
+  commercialRegister: yup.string().optional(),
+  ice: yup.string().optional(),
+});
+
+type ClientFormValues = {
+  companyName: string;
+  clientName: string;
+  email: string;
+  telephone?: string;
+  postalCode: string;
+  city: string;
+  commercialRegister?: string;
+  ice?: string;
+};
+
+export const CreateClientModal: React.FC<{
   visible: boolean;
   onClose: () => void;
   onCreated: () => void;
 }> = ({ visible, onClose, onCreated }) => {
   const insets = useSafeAreaInsets();
-  const [companyName, setCompanyName] = useState('');
-  const [clientName, setClientName] = useState('');
-  const [email, setEmail] = useState('');
-  const [telephone, setTelephone] = useState('');
-  const [postalCode, setPostalCode] = useState('');
-  const [city, setCity] = useState('');
-  const [commercialRegister, setCommercialRegister] = useState('');
-  const [ice, setIce] = useState('');
+  const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
 
   const today = new Date().toLocaleDateString('fr-FR');
 
-  const resetForm = () => {
-    setCompanyName(''); setClientName(''); setEmail('');
-    setTelephone(''); setPostalCode(''); setCity('');
-    setCommercialRegister(''); setIce('');
-  };
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors, isValid },
+  } = useForm<ClientFormValues>({
+    resolver: yupResolver(clientSchema) as any,
+    mode: 'onChange',
+    defaultValues: {
+      companyName: '',
+      clientName: '',
+      email: '',
+      telephone: '',
+      postalCode: '',
+      city: '',
+      commercialRegister: '',
+      ice: '',
+    },
+  });
 
-  useEffect(() => { if (!visible) resetForm(); }, [visible]);
+  useEffect(() => { if (!visible) reset(); }, [visible]);
 
-  const handleSave = async () => {
-    if (!companyName) { Alert.alert('Requis', 'Veuillez saisir le nom de la société.'); return; }
+  const onSubmit = async (data: ClientFormValues) => {
     setSaving(true);
     try {
       await api.post(Api_Endpoints.createCustomerClient, {
-        company_name: companyName,
-        client_name: clientName,
-        email,
-        telephone,
-        postal_code: postalCode,
-        city,
-        commercial_register: commercialRegister,
-        ice,
+        company_name: data.companyName,
+        client_name: data.clientName,
+        email: data.email,
+        telephone: data.telephone ?? '',
+        postal_code: data.postalCode,
+        city: data.city,
+        commercial_register: data.commercialRegister ?? '',
+        ice: data.ice ?? '',
       });
-      Alert.alert('Succès', 'Client créé avec succès.');
+      Alert.alert(t('success_title'), t('success_client_created'));
       onCreated();
       onClose();
     } catch (e: any) {
       const msg = e?.response?.data?.message ?? 'Erreur lors de la création du client.';
-      Alert.alert('Erreur', msg);
+      Alert.alert(t('error_title'), msg);
     } finally {
       setSaving(false);
     }
@@ -102,16 +135,16 @@ const CreateClientModal: React.FC<{
           <TouchableOpacity onPress={onClose} style={styles.modalBackBtn} activeOpacity={0.7}>
             <ArrowLeft size={22} color="#1E5BAC" />
           </TouchableOpacity>
-          <Text style={styles.modalTitle}>Création d'un client</Text>
+          <Text style={styles.modalTitle}>{t('title_create_client')}</Text>
           <TouchableOpacity
-            style={[styles.modalConfirmBtn, saving && { opacity: 0.7 }]}
-            onPress={handleSave}
+            style={[styles.modalConfirmBtn, !isValid && styles.modalConfirmBtnDisabled]}
+            onPress={handleSubmit(onSubmit as any)}
             disabled={saving}
             activeOpacity={0.85}
           >
             {saving
               ? <ActivityIndicator size="small" color="#FFFFFF" />
-              : <Text style={styles.modalConfirmText}>Confirmer</Text>}
+              : <Text style={styles.modalConfirmText}>{t('modal_confirm_text')}</Text>}
           </TouchableOpacity>
         </View>
 
@@ -119,90 +152,155 @@ const CreateClientModal: React.FC<{
           <ScrollView contentContainerStyle={styles.modalContent} showsVerticalScrollIndicator={false}>
 
             {/* Date subtitle */}
-            <Text style={styles.createDateText}>Date de création : {today}</Text>
+            <Text style={styles.createDateText}>{t('text_creation_date')}{today}</Text>
 
             {/* Form fields */}
             <View style={styles.formCard}>
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Nom de la société</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  value={companyName}
-                  onChangeText={setCompanyName}
+                <Text style={styles.fieldLabel}>{t('label_company_name')} <Text style={styles.required}>*</Text></Text>
+                <Controller
+                  control={control}
+                  name="companyName"
+                  render={({ field: { value, onChange, onBlur } }) => (
+                    <TextInput
+                      style={[styles.fieldInput, errors.companyName && styles.fieldInputError]}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                    />
+                  )}
+                />
+                {errors.companyName && <Text style={styles.fieldError}>{errors.companyName.message}</Text>}
+              </View>
+
+              <View style={styles.fieldBlock}>
+                <Text style={styles.fieldLabel}>{t('label_contact_name')} <Text style={styles.required}>*</Text></Text>
+                <Controller
+                  control={control}
+                  name="clientName"
+                  render={({ field: { value, onChange, onBlur } }) => (
+                    <TextInput
+                      style={styles.fieldInput}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                    />
+                  )}
                 />
               </View>
+
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Nom et prénom du contact</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  value={clientName}
-                  onChangeText={setClientName}
+                <Text style={styles.fieldLabel}>{t('label_email')} <Text style={styles.required}>*</Text></Text>
+                <Controller
+                  control={control}
+                  name="email"
+                  render={({ field: { value, onChange, onBlur } }) => (
+                    <TextInput
+                      style={[styles.fieldInput, errors.email && styles.fieldInputError]}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                    />
+                  )}
+                />
+                {errors.email && <Text style={styles.fieldError}>{errors.email.message}</Text>}
+              </View>
+
+              <View style={styles.fieldBlock}>
+                <Text style={styles.fieldLabel}>{t('label_phone')}</Text>
+                <Controller
+                  control={control}
+                  name="telephone"
+                  render={({ field: { value, onChange, onBlur } }) => (
+                    <TextInput
+                      style={styles.fieldInput}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      keyboardType="phone-pad"
+                    />
+                  )}
                 />
               </View>
+
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Email</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
+                <Text style={styles.fieldLabel}>{t('label_postal_code')} <Text style={styles.required}>*</Text></Text>
+                <Controller
+                  control={control}
+                  name="postalCode"
+                  render={({ field: { value, onChange, onBlur } }) => (
+                    <TextInput
+                      style={styles.fieldInput}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      keyboardType="numeric"
+                    />
+                  )}
                 />
               </View>
+
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Téléphone</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  value={telephone}
-                  onChangeText={setTelephone}
-                  keyboardType="phone-pad"
+                <Text style={styles.fieldLabel}>{t('label_city')} <Text style={styles.required}>*</Text></Text>
+                <Controller
+                  control={control}
+                  name="city"
+                  render={({ field: { value, onChange, onBlur } }) => (
+                    <TextInput
+                      style={styles.fieldInput}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                    />
+                  )}
                 />
               </View>
+
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Code postal</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  value={postalCode}
-                  onChangeText={setPostalCode}
-                  keyboardType="numeric"
+                <Text style={styles.fieldLabel}>{t('label_commercial_register')}</Text>
+                <Controller
+                  control={control}
+                  name="commercialRegister"
+                  render={({ field: { value, onChange, onBlur } }) => (
+                    <TextInput
+                      style={styles.fieldInput}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                    />
+                  )}
                 />
               </View>
+
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Ville</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  value={city}
-                  onChangeText={setCity}
-                />
-              </View>
-              <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Registre du commerce</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  value={commercialRegister}
-                  onChangeText={setCommercialRegister}
-                />
-              </View>
-              <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>ICE</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  value={ice}
-                  onChangeText={setIce}
+                <Text style={styles.fieldLabel}>{t('label_ice')}</Text>
+                <Controller
+                  control={control}
+                  name="ice"
+                  render={({ field: { value, onChange, onBlur } }) => (
+                    <TextInput
+                      style={styles.fieldInput}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                    />
+                  )}
                 />
               </View>
             </View>
 
             {/* Bottom confirm button */}
             <TouchableOpacity
-              style={[styles.confirmBtn, saving && { opacity: 0.7 }]}
-              onPress={handleSave}
+              style={[styles.confirmBtn, !isValid && styles.confirmBtnDisabled]}
+              onPress={handleSubmit(onSubmit as any)}
               disabled={saving}
               activeOpacity={0.85}
             >
               {saving
                 ? <ActivityIndicator color="#FFFFFF" />
-                : <Text style={styles.confirmBtnText}>Confirmer</Text>}
+                : <Text style={styles.confirmBtnText}>{t('modal_confirm_text')}</Text>}
             </TouchableOpacity>
 
           </ScrollView>
@@ -216,6 +314,7 @@ const CreateClientModal: React.FC<{
 const Clients: React.FC = ({ navigation: navProp }: any) => {
   const navigation = useNavigation<StackNavigation>();
   const nav = navProp ?? navigation;
+  const { t } = useTranslation();
 
   const [clients, setClients] = useState<ClientItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -230,7 +329,7 @@ const Clients: React.FC = ({ navigation: navProp }: any) => {
       const res = await api.get(Api_Endpoints.customerClients);
       setClients(res.data?.data ?? []);
     } catch (e) {
-      Alert.alert('Erreur', 'Impossible de charger les clients.');
+      Alert.alert(t('error_title'), t('error_load_clients'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -248,7 +347,7 @@ const Clients: React.FC = ({ navigation: navProp }: any) => {
         const res = await api.get(Api_Endpoints.customerClientsSearch, { params: { like: searchQuery.trim() } });
         setClients(res.data?.data ?? []);
       } catch (e) {
-        Alert.alert('Erreur', 'Impossible de charger les clients.');
+        Alert.alert(t('error_title'), t('error_load_clients'));
       } finally {
         setLoading(false);
       }
@@ -286,7 +385,7 @@ const Clients: React.FC = ({ navigation: navProp }: any) => {
           <TouchableOpacity onPress={() => nav.goBack()} style={styles.backButton} activeOpacity={0.7}>
             <ArrowLeft size={22} color="#1F2937" />
           </TouchableOpacity>
-          <Text style={styles.titleText}>Clients</Text>
+          <Text style={styles.titleText}>{t('title_clients')}</Text>
           <View style={{ flex: 1 }} />
         </View>
       </View>
@@ -297,7 +396,7 @@ const Clients: React.FC = ({ navigation: navProp }: any) => {
           <Search size={16} color="#9CA3AF" />
           <TextInput
             style={styles.searchInput}
-            placeholder="Rechercher un client..."
+            placeholder={t('placeholder_search_client')}
             placeholderTextColor="#9CA3AF"
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -331,7 +430,7 @@ const Clients: React.FC = ({ navigation: navProp }: any) => {
           }
           ListEmptyComponent={
             <View style={styles.emptyBox}>
-              <Text style={styles.emptyText}>Aucun client trouvé</Text>
+              <Text style={styles.emptyText}>{t('text_no_clients_found')}</Text>
             </View>
           }
         />
@@ -469,6 +568,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25, shadowRadius: 6, elevation: 4,
   },
   confirmBtnText: { fontSize: 15, fontWeight: '700', color: '#FFFFFF' },
+
+  // Validation
+  required: { color: '#DC2626' },
+  fieldError: { fontSize: 12, color: '#DC2626', marginTop: 3, fontWeight: '500' },
+  fieldInputError: { borderColor: '#DC2626', backgroundColor: '#FFF5F5' },
+  modalConfirmBtnDisabled: { backgroundColor: '#93C5FD' },
+  confirmBtnDisabled: { backgroundColor: '#93C5FD', shadowOpacity: 0, elevation: 0 },
 });
 
 export default Clients;
