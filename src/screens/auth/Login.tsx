@@ -29,13 +29,13 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
     }
     const result = await login({ email, password });
     if (result.success) {
-      navigation.navigate('Home');
+      navigation.replace('Home');
     }
   };
 
   const handleGuestAccess = () => {
     // Navigate to home as guest
-    navigation.navigate('Home');
+    navigation.replace('Home');
   };
 
   useEffect(() => {
