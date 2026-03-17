@@ -55,8 +55,11 @@ import Contact from '../screens/home/Contact';
 import Invoice from '../screens/home/Invoice';
 import PersonalProfile from '../screens/home/PersonalProfile';
 import CompanyProfile from '../screens/home/CompanyProfile';
+import Suppliers from '../screens/home/Suppliers';
+import SupplierDetail from '../screens/home/SupplierDetail';
 import NotificationPreferences from '../screens/home/NotificationPreferences';
 import AccountSecurity from '../screens/home/AccountSecurity';
+import LanguageSettings from '../screens/home/LanguageSettings';
 
 const Stack = createStackNavigator();
 
@@ -120,7 +123,10 @@ const AppNavigator = () => {
         <Stack.Screen name="Personal Profile" component={PersonalProfile} options={{ headerShown: false }} />
         <Stack.Screen name="Company Profile" component={CompanyProfile} options={{ headerShown: false }} />
         <Stack.Screen name="Notification Preferences" component={NotificationPreferences} options={{ headerShown: false }} />
+        <Stack.Screen name="Suppliers" component={Suppliers} options={{ headerShown: false }} />
+        <Stack.Screen name="Supplier Detail" component={SupplierDetail} options={{ headerShown: false }} />
         <Stack.Screen name="Account Security" component={AccountSecurity} options={{ headerShown: false }} />
+        <Stack.Screen name="Language Settings" component={LanguageSettings} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
     <Toast />
