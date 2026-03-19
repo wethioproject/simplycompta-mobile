@@ -10,7 +10,7 @@
   "select_language": "Sélectionner une langue",
   "language_preview_label": "Aperçu de la traduction",
   "search_placeholder": "Rechercher...",
-  "my_profile": "Mon Profil",
+  "my_profile": "Profil et Entreprise",
   "legal_documents": "Documents Juridiques",
   "accounting_documents": "Documents Comptables",
   "my_activity": "Mon Activité",
@@ -466,5 +466,14 @@
   "label_3_factures": "3 factures",
   "label_devis_en_cours": "Devis en cours",
   "label_15_devis": "15 devis",
-  "section_administratif": "Administratif"
+  "section_administratif": "Administratif",
+  "onboarding_title_1": "Créez vos factures facilement",
+  "onboarding_desc_1": "Générez des factures professionnelles en quelques secondes pour vos clients",
+  "onboarding_title_2": "Suivez vos paiements",
+  "onboarding_desc_2": "Restez informé des factures payées et en attente en temps réel",
+  "onboarding_title_3": "Gérez votre activité",
+  "onboarding_desc_3": "Organisez clients, dépenses et rapports en un seul endroit",
+  "onboarding_skip": "Passer",
+  "onboarding_next": "Suivant",
+  "onboarding_get_started": "Commencer"
 }

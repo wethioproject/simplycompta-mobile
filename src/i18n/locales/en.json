@@ -10,7 +10,7 @@
   "select_language": "Select a language",
   "language_preview_label": "Translation preview",
   "search_placeholder": "Search...",
-  "my_profile": "My Profile",
+  "my_profile": "Company Profile",
   "legal_documents": "Legal Documents",
   "accounting_documents": "Accounting Documents",
   "my_activity": "My Activity",
@@ -466,5 +466,14 @@
   "label_3_factures": "3 invoices",
   "label_devis_en_cours": "Ongoing quotes",
   "label_15_devis": "15 quotes",
-  "section_administratif": "Administrative"
+  "section_administratif": "Administrative",
+  "onboarding_title_1": "Create Invoices Easily",
+  "onboarding_desc_1": "Generate professional invoices in seconds for your clients",
+  "onboarding_title_2": "Track Payments",
+  "onboarding_desc_2": "Stay updated with paid and pending invoices in real-time",
+  "onboarding_title_3": "Manage Your Business",
+  "onboarding_desc_3": "Organize clients, expenses, and reports in one place",
+  "onboarding_skip": "Skip",
+  "onboarding_next": "Next",
+  "onboarding_get_started": "Get Started"
 }

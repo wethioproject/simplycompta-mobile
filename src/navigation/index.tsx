@@ -3,6 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import Toast from 'react-native-toast-message';
 import Splash from '../screens/splash/Splash';
+import OnboardingScreen from '../screens/onboarding/OnboardingScreen';
 import Login from '../screens/auth/Login';
 import ForgotPassword from '../screens/auth/ForgotPassword';
 import ChangePassword from '../screens/auth/ChangePassword';
@@ -69,6 +70,7 @@ const AppNavigator = () => {
     <NavigationContainer>
       <Stack.Navigator>
         <Stack.Screen name="Splash" component={Splash} options={{ headerShown: false }} />
+        <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="Login" component={Login} options={{ headerShown: false }} />
         <Stack.Screen name="ForgotPassword" component={ForgotPassword} options={{ headerShown: false }} />
         <Stack.Screen name="Home" component={HomeDrawer} options={{ headerShown: false }} />
