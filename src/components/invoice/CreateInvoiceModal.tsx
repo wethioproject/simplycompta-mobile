@@ -564,7 +564,7 @@ const CreateInvoiceModal: React.FC<{
               </View>
 
               {/* Totals */}
-              {watchedArticles.length > 0 && (
+              {/* {watchedArticles.length > 0 && (
                 <View style={styles.totalsBlock}>
                   <View style={styles.totalRow}>
                     <Text style={styles.totalLabel}>{t('label_total_ht')}</Text>
