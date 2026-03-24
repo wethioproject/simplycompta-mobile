@@ -16,6 +16,8 @@ export const ReviewBadge: React.FC<ReviewBadgeProps> = ({ reviewStatus }) => {
       ? t('review_status_pending')
       : reviewStatus === 'APPROVED'
       ? t('review_status_approved')
+      : reviewStatus === 'VALIDATED'
+      ? t('review_status_validated')
       : t('review_status_rejected');
 
   return (
