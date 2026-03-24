@@ -746,12 +746,12 @@ const CreateExpenseModal: React.FC<{
             <View style={styles.pickerSheet}>
               <Text style={styles.pickerSheetTitle}>{t('label_category')}</Text>
               <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 360 }} showsVerticalScrollIndicator={true}>
-              {(categories as Category[]).map(c => (
-                <TouchableOpacity key={c.id} style={styles.pickerOption} onPress={() => { setValue('categoryId', c.id, { shouldValidate: true }); setShowCategoryPicker(false); }}>
-                  <Text style={[styles.pickerOptionText, watchedCategoryId === c.id && styles.pickerOptionSelected]}>{c.name}</Text>
-                  {watchedCategoryId === c.id && <Text style={styles.pickerCheck}>✓</Text>}
-                </TouchableOpacity>
-              ))}
+                {(categories as Category[]).map(c => (
+                  <TouchableOpacity key={c.id} style={styles.pickerOption} onPress={() => { setValue('categoryId', c.id, { shouldValidate: true }); setShowCategoryPicker(false); }}>
+                    <Text style={[styles.pickerOptionText, watchedCategoryId === c.id && styles.pickerOptionSelected]}>{c.name}</Text>
+                    {watchedCategoryId === c.id && <Text style={styles.pickerCheck}>✓</Text>}
+                  </TouchableOpacity>
+                ))}
               </ScrollView>
             </View>
           </TouchableOpacity>
@@ -867,12 +867,12 @@ const CreateExpenseModal: React.FC<{
                 </TouchableOpacity>
               </View>
               <View style={{ alignItems: 'center', paddingBottom: 8 }}>
-              <DateTimePicker
-                value={tempDate}
-                mode="date"
+                <DateTimePicker
+                  value={tempDate}
+                  mode="date"
                   display="inline"
-                onChange={handleDateChange}
-              />
+                  onChange={handleDateChange}
+                />
               </View>
             </View>
           </View>
@@ -1638,7 +1638,7 @@ const styles = StyleSheet.create({
   detailEditText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
 
     // Date Picker bottom sheet
-  datePickerOverlay: {
+    datePickerOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
