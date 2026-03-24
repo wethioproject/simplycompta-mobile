@@ -6,6 +6,24 @@ import { invoiceStyles as styles } from '../../styles/invoice.styles';
 import { calculateInvoiceTotals } from '../../utils/invoiceCalculations';
 import { ReviewBadge } from './ReviewBadge';
 
+const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
+  Quotes:    { bg: '#4FA3D1', text: '#FFFFFF' },
+  Paid:      { bg: '#6FB13F', text: '#FFFFFF' },
+  Issued:    { bg: '#8d3fb1', text: '#FFFFFF' },
+  Cancelled: { bg: '#FF0000', text: '#FFFFFF' },
+  Canceled:  { bg: '#FF0000', text: '#FFFFFF' },
+};
+const DEFAULT_STATUS = { bg: '#E5E7EB', text: '#6B7280' };
+
+const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
+  const { bg, text } = STATUS_COLORS[status] ?? DEFAULT_STATUS;
+  return (
+    <View style={[styles.badge, { backgroundColor: bg, alignSelf: 'flex-start' }]}>
+      <Text style={[styles.badgeText, { color: text }]}>{status}</Text>
+    </View>
+  );
+};
+
 interface InvoiceCardProps {
   item: InvoiceItem;
   onPress: (item: InvoiceItem) => void;
@@ -29,9 +47,10 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({ item, onPress }) => {
           <Text style={styles.invoiceDesc} numberOfLines={1}>
             {item.invoice_number}
           </Text>
-          <Text style={styles.invoiceMeta}>
-            {formattedDate} • {item.status}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={styles.invoiceMeta}>{formattedDate}</Text>
+            <StatusBadge status={item.status} />
+          </View>
           {item.client && (
             <Text style={styles.invoiceRef}>{item.client.client_name}</Text>
           )}
