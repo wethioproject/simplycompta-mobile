@@ -495,7 +495,7 @@ const CreateInvoiceModal: React.FC<{
                 <Text style={styles.fieldLabel}>{t('label_status')} <Text style={styles.required}>*</Text></Text>
                 <TouchableOpacity
                   style={[styles.pickerRow, errors.status && styles.fieldInputError]}
-                  disabled={!editItem}
+                  // disabled={!editItem}
                   onPress={() => setShowStatusPicker(true)}
                   activeOpacity={0.7}
                 >
