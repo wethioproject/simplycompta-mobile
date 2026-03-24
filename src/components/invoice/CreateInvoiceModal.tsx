@@ -744,6 +744,7 @@ const CreateInvoiceModal: React.FC<{
                   mode="date"
                   display="inline"
                   onChange={handleDateChange}
+                  themeVariant="light"
                 />
               </View>
             </View>

@@ -27,7 +27,6 @@ import {
   FileText,
   Download,
   Upload,
-  CheckCircle2,
   Headphones,
   Camera,
 } from 'lucide-react-native';
@@ -68,6 +67,25 @@ const formatMonthYear = (monthYear: string, monthNames: string[]): string => {
 
 const CURRENT_YEAR = new Date().getFullYear();
 const LAST_YEAR = CURRENT_YEAR - 1;
+
+const STATEMENT_STATUS_COLORS: Record<string, { bg: string; text: string }> = {
+  TRANSMITTED: { bg: '#DBEAFE', text: '#1D4ED8' },
+  IN_REVIEW:   { bg: '#FEF3C7', text: '#D97706' },
+  APPROVED:    { bg: '#DCFCE7', text: '#16A34A' },
+  VALIDATED:   { bg: '#DCFCE7', text: '#16A34A' },
+  REJECTED:    { bg: '#FEE2E2', text: '#DC2626' },
+  NOT_AVAILABLE: { bg: '#F3F4F6', text: '#6B7280' },
+};
+const DEFAULT_STMT_STATUS = { bg: '#F3F4F6', text: '#6B7280' };
+
+const STATEMENT_STATUS_KEYS: Record<string, string> = {
+  TRANSMITTED: 'badge_transmitted',
+  IN_REVIEW:   'status_in_review',
+  APPROVED:    'review_status_approved',
+  VALIDATED:   'review_status_validated',
+  REJECTED:    'review_status_rejected',
+  NOT_AVAILABLE: 'status_not_available',
+};
 
 const BankStatements: React.FC = () => {
   const { t } = useTranslation();
@@ -118,7 +136,7 @@ const BankStatements: React.FC = () => {
 
   const handleUpload = async (slot: string) => {
     try {
-      const [file] = await pick({ type: [types.pdf] });
+      const [file] = await pick({ type: [types.pdf, types.images] });
       setUploadingSlot(slot);
       const result = await createBankStatement({
         customer_id: String(user?.id ?? ''),
@@ -367,6 +385,7 @@ const handleDocOpen = async (doc: any) => {
             const label = formatMonthYear(slot, monthNames);
             const [monthName, yearStr] = label.split(' ');
             const isTransmitted = !!item;
+            const isRejected = item?.status === 'REJECTED';
 
             return (
               <View key={slot} style={styles.statementCard}>
@@ -380,10 +399,18 @@ const handleDocOpen = async (doc: any) => {
                       {t('label_statement_prefix')} {monthName} {yearStr}
                     </Text>
                     {isTransmitted ? (
-                      <View style={styles.transmittedRow}>
-                        <CheckCircle2 size={14} color="#16A34A" />
-                        <Text style={styles.transmittedText}>{t('badge_transmitted')}</Text>
-                      </View>
+                      (() => {
+                        const colors = STATEMENT_STATUS_COLORS[item!.status] ?? DEFAULT_STMT_STATUS;
+                        const labelKey = STATEMENT_STATUS_KEYS[item!.status];
+                        return (
+                          <View style={[styles.statusBadge, { backgroundColor: colors.bg }]}>
+                            <Text style={[styles.statusBadgeText, { color: colors.text }]}>
+                              {/* {labelKey ? t(labelKey) : item!.status} */}
+                              {labelKey ? t(labelKey) : t('status_missing')}
+                            </Text>
+                          </View>
+                        );
+                      })()
                     ) : (
                       <Text style={styles.missingText}>{t('label_no_document')}</Text>
                     )}
@@ -391,17 +418,11 @@ const handleDocOpen = async (doc: any) => {
                 </View>
 
                 {/* Right: action button */}
-                {isTransmitted ? (
+                {isTransmitted && !isRejected ? (
                   <TouchableOpacity
                     style={styles.pdfButton}
                     activeOpacity={0.8}
-                    onPress={() => {
-                        handleDocOpen(item)
-                    //   if (!item?.file_url) return;
-                    //   Linking.openURL(item.file_url).catch(() =>
-                    //     Alert.alert('Erreur', "Impossible d'ouvrir le fichier PDF.")
-                    //   );
-                    }}
+                    onPress={() => handleDocOpen(item)}
                   >
                     <Text style={styles.pdfButtonText}>PDF</Text>
                     <Download size={15} color="#FFFFFF" />
@@ -666,6 +687,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     color: '#16A34A',
+  },
+  statusBadge: {
+    alignSelf: 'flex-start',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginTop: 2,
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   missingText: {
     fontSize: 13,
