@@ -1,260 +1,447 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  Animated,
+  AppState,
+  AppStateStatus,
+  ActivityIndicator,
+  RefreshControl,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
-import { 
-  Bell, 
-  Search, 
-  Home as HomeIcon, 
-  ChevronRight, 
-  Headphones,
+import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
+import { useSelector } from 'react-redux';
+import {
+  Bell,
+  FileText,
+  Building2,
+  Scale,
+  Briefcase,
+  CreditCard,
+  TrendingDown,
+  ArrowUpRight,
+  Percent,
+  RotateCw,
+  Users,
+  Plus,
 } from 'lucide-react-native';
 import { appLogoIcon } from '../../assets/icons';
-import LinearGradient from 'react-native-linear-gradient';
 import notificationService from '../../services/notificationService';
+import dashboardService from '../../services/dashboardService';
 
 type DrawerNavigation = DrawerNavigationProp<any>;
 
 const Home: React.FC = () => {
+  const [isFabOpen, setIsFabOpen] = useState(false);
   const navigation = useNavigation<DrawerNavigation>();
-  const [searchQuery, setSearchQuery] = useState('');
+  const { t, i18n } = useTranslation();
+  const customer = useSelector((state: any) => state.user.customer);
   const [hasUnread, setHasUnread] = useState(false);
-  console.log('hasUnread', hasUnread)
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [stats, setStats] = useState({
+    total_paid_sum: 0,
+    total_expenses_sum: 0,
+    total_vat_payable: 0,
+    total_issued_sum: 0,
+    total_quote_sum: 0,
+    total_issued_count: 0,
+    total_quote_count: 0,
+  });
+
+
+    // Animation values
+    const fabRotation = useState(new Animated.Value(0))[0];
+    const fabButton1Scale = useState(new Animated.Value(0))[0];
+    const fabButton2Scale = useState(new Animated.Value(0))[0];
+    const fabButton3Scale = useState(new Animated.Value(0))[0];
+    const fabButton1Opacity = useState(new Animated.Value(0))[0];
+    const fabButton2Opacity = useState(new Animated.Value(0))[0];
+    const fabButton3Opacity = useState(new Animated.Value(0))[0];
+
+    const rotation = fabRotation.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '45deg'] });
+  
+    const toggleFab = () => {
+      const toValue = isFabOpen ? 0 : 1;
+      setIsFabOpen(!isFabOpen);
+      Animated.parallel([
+        Animated.timing(fabRotation, { toValue, duration: 300, useNativeDriver: true }),
+        Animated.stagger(50, [
+          Animated.parallel([
+            Animated.spring(fabButton1Scale, { toValue, friction: 5, useNativeDriver: true }),
+            Animated.timing(fabButton1Opacity, { toValue, duration: 200, useNativeDriver: true }),
+          ]),
+          Animated.parallel([
+            Animated.spring(fabButton2Scale, { toValue, friction: 5, useNativeDriver: true }),
+            Animated.timing(fabButton2Opacity, { toValue, duration: 200, useNativeDriver: true }),
+          ]),
+          Animated.parallel([
+            Animated.spring(fabButton3Scale, { toValue, friction: 5, useNativeDriver: true }),
+            Animated.timing(fabButton3Opacity, { toValue, duration: 200, useNativeDriver: true }),
+          ]),
+        ]),
+      ]).start();
+    };
+  
+    const handleNavigateToInvoice = () => {
+      toggleFab();
+      setTimeout(() => { navigation.navigate('Invoice', { openCreateModal: true }); }, 300);
+    };
+  
+    const handleNavigateToQuote = () => {
+      toggleFab();
+      setTimeout(() => { navigation.navigate('Expenses', { openCreateModal: true }); }, 300);
+    };
+  
+    const handleOpenAddClient = () => {
+      toggleFab();
+      setTimeout(() => { navigation.navigate('Clients', { openCreateModal: true }); }, 300);
+    };
+
+  
+
+  const fetchStats = useCallback(async () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+    const date_from = `${year}-${month}-01`;
+    const date_to = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+
+    try {
+      const res = await dashboardService.getActivityData(date_from, date_to);
+      if (res.success && res.data) {
+        setStats({
+          total_paid_sum: res.data.total_paid_sum ?? 0,
+          total_expenses_sum: res.data.total_expenses_sum ?? 0,
+          total_vat_payable: res.data.total_vat_payable ?? 0,
+          total_issued_sum: res.data.total_issued_sum ?? 0,
+          total_quote_sum: res.data.total_quote_sum ?? 0,
+          total_issued_count: res.data.total_issued_count ?? 0,
+          total_quote_count: res.data.total_quote_count ?? 0,
+        });
+      }
+    } catch {}
+    finally { setStatsLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchStats(); }, [fetchStats]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await new Promise<void>(resolve => setTimeout(resolve, 300));
+    await fetchStats();
+    setRefreshing(false);
+  }, [fetchStats]);
+
+  const checkUnread = useCallback(() => {
+    notificationService.hasUnreadNotifications().then(setHasUnread).catch(() => {});
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      checkUnread();
+      pollIntervalRef.current = setInterval(checkUnread, 30_000);
+      return () => {
+        if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+      };
+    }, [checkUnread])
+  );
 
   useEffect(() => {
-    notificationService.hasUnreadNotifications().then(setHasUnread);
-  }, []);
+    const subscription = AppState.addEventListener('change', (state: AppStateStatus) => {
+      if (state === 'active') checkUnread();
+    });
+    return () => subscription.remove();
+  }, [checkUnread]);
 
   const handleNavigate = (page: string) => {
     const routes: { [key: string]: string } = {
-      'profile': 'Profile',
-      'legal': 'Legal Documents',
-      'accounting': 'Accounting Documents',
-      'activity': 'Activity',
-      'bank': 'Bank Statements',
-      'notifications': 'Notifications',
-      'contact-comptable': 'Contact'
+      profile: 'Profile',
+      legal: 'Legal Documents',
+      accounting: 'Accounting Documents',
+      activity: 'Activity',
+      bank: 'Bank Statements',
+      notifications: 'Notifications',
+      invoices: 'Accounting Documents',
+      'contact-comptable': 'Contact',
     };
-    
     const route = routes[page];
-    if (route) {
-      navigation.navigate(route);
-    }
+    if (route) navigation.navigate(route);
   };
+
+  const userName =
+    customer?.first_name || customer?.client_name || customer?.name || 'Youssef';
+
+  const currentMonth = new Date().toLocaleString(i18n.language, {
+    month: 'long',
+    year: 'numeric',
+  });
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
+      {/* ── Logo Header ─────────────────────────────────────────────── */}
       <View style={styles.header}>
-        <View style={styles.logoContainer}>
-          <Image source={appLogoIcon} style={styles.logo} resizeMode="contain" />
-        </View>
+        <View style={styles.headerSpacer} />
+        <Image source={appLogoIcon} style={styles.logo} resizeMode="contain" />
+        <TouchableOpacity
+          style={[styles.refreshButton, (refreshing || statsLoading) && { opacity: 0.35 }]}
+          onPress={handleRefresh}
+          disabled={refreshing || statsLoading}
+          activeOpacity={0.7}
+        >
+          <RotateCw size={22} color="#374151" />
+        </TouchableOpacity>
+      </View>
 
-        <View style={styles.searchRow}>
-          <View style={styles.searchContainer}>
-            <Search
-              size={20}
-              color="#9CA3AF"
-              style={styles.searchIcon}
-            />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Rechercher..."
-              placeholderTextColor="#9CA3AF"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#1E5BAC']}
+            tintColor="#1E5BAC"
+          />
+        }
+      >
+        {/* Greeting */}
+        <Text style={styles.greeting}>
+          {t('greeting_hello')} {userName}
+        </Text>
+
+        {/* ── Activity Summary ──────────────────────────────────── */}
+        <Text style={styles.sectionSubtitle}>
+          {t('activity_summary_title')} {currentMonth}
+        </Text>
+
+        <View style={styles.summaryRow}>
+          {/* Revenus */}
+          <View style={[styles.summaryCard, { backgroundColor: '#C9F29A' }]}>
+            <View style={[styles.summaryIconBox, { backgroundColor: 'rgba(255,255,255,0.35)' }]}>
+              <TrendingDown size={16} color="#0D9488" />
+            </View>
+            <Text style={styles.summaryLabel}>{t('label_revenus')}</Text>
+            {statsLoading ? (
+              <ActivityIndicator size="small" color="#0D9488" style={{ marginTop: 4 }} />
+            ) : (
+              <Text style={[styles.summaryAmount, { color: '#0D9488' }]}>
+                {stats.total_paid_sum.toLocaleString('fr-FR')}{' '}
+                <Text style={styles.summaryUnit}>MAD</Text>
+              </Text>
+            )}
           </View>
 
-          <TouchableOpacity style={styles.notificationButton} onPress={() => handleNavigate('notifications')}>
-            <Bell size={24} color="#4B5563" />
-            {hasUnread && (
-              <View style={styles.notificationBadge}>
-                <View style={styles.notificationBadgeDot} />
-              </View>
+          {/* Dépenses */}
+          <View style={[styles.summaryCard, { backgroundColor: '#FFF1EE' }]}>
+            <View style={[styles.summaryIconBox, { backgroundColor: '#FFE0D9' }]}>
+              <ArrowUpRight size={16} color="#E8795A" />
+            </View>
+            <Text style={styles.summaryLabel}>{t('label_depenses')}</Text>
+            {statsLoading ? (
+              <ActivityIndicator size="small" color="#E8795A" style={{ marginTop: 4 }} />
+            ) : (
+              <Text style={[styles.summaryAmount, { color: '#E8795A' }]}>
+                {stats.total_expenses_sum.toLocaleString('fr-FR')}{' '}
+                <Text style={styles.summaryUnit}>MAD</Text>
+              </Text>
+            )}
+          </View>
+
+          {/* TVA */}
+          <View style={[styles.summaryCard, { backgroundColor: '#E8F4F8' }]}>
+            <View style={[styles.summaryIconBox, { backgroundColor: '#D1EAF0' }]}>
+              <Percent size={16} color="#0E7490" />
+            </View>
+            <Text style={styles.summaryLabel}>{t('label_tva')}</Text>
+            {statsLoading ? (
+              <ActivityIndicator size="small" color="#0E7490" style={{ marginTop: 4 }} />
+            ) : (
+              <Text style={[styles.summaryAmount, { color: '#111827' }]}>
+                {stats.total_vat_payable.toLocaleString('fr-FR')}{' '}
+                <Text style={styles.summaryUnit}>MAD</Text>
+              </Text>
+            )}
+          </View>
+        </View>
+
+        {/* ── Activités en cours ───────────────────────────────── */}
+        <Text style={styles.sectionTitle}>{t('section_activites_en_cours')}</Text>
+
+        <View style={styles.activitiesContainer}>
+          <TouchableOpacity
+            style={styles.activityRow}
+            onPress={() => handleNavigate('invoices')}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.activityIcon, { backgroundColor: '#E6F7F1' }]}>
+              <FileText size={18} color="#6FB13F" />
+            </View>
+            <View style={styles.activityInfo}>
+              <Text style={styles.activityTitle}>{t('label_factures_impayees')}</Text>
+              <Text style={styles.activitySubtitle}>{t('label_3_factures', { count: stats.total_issued_count })}</Text>
+            </View>
+            {statsLoading ? (
+              <ActivityIndicator size="small" color="#6FB13F" />
+            ) : (
+              <Text style={styles.activityAmount}>
+                {stats.total_issued_sum.toLocaleString('fr-FR')}{' '}
+                <Text style={styles.summaryUnit}>MAD</Text>
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.activityRow}
+            onPress={() => handleNavigate('invoices')}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.activityIcon, { backgroundColor: '#E0EDFB' }]}>
+              <FileText size={18} color="#4FA3D1" />
+            </View>
+            <View style={styles.activityInfo}>
+              <Text style={styles.activityTitle}>{t('label_devis_en_cours')}</Text>
+              <Text style={styles.activitySubtitle}>{t('label_15_devis', { count: stats.total_quote_count })}</Text>
+            </View>
+            {statsLoading ? (
+              <ActivityIndicator size="small" color="#4FA3D1" />
+            ) : (
+              <Text style={styles.activityAmount}>
+                {stats.total_quote_sum.toLocaleString('fr-FR')}{' '}
+                <Text style={styles.summaryUnit}>MAD</Text>
+              </Text>
             )}
           </TouchableOpacity>
         </View>
-      </View>
 
-      {/* Main Content */}
-      <ScrollView 
-        style={styles.mainContent} 
-        contentContainerStyle={styles.mainContentContainer}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.gridContainer}>
-          {/* Mon Profil */}
+        {/* ── Administratif ───────────────────────────────────────── */}
+        <Text style={styles.sectionTitle}>{t('section_administratif')}</Text>
+
+        <View style={styles.adminGrid}>
           <TouchableOpacity
-            style={styles.cardButton}
+            style={[styles.adminCard, { backgroundColor: '#329ED2' }]}
             onPress={() => handleNavigate('profile')}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
           >
-            <LinearGradient
-              colors={['#2563EB', '#1E5BAC']}
-              style={styles.card}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <View style={styles.cardInner}>
-                <View style={styles.cardIconContainer}>
-                  <View style={styles.cardIconWhiteBg}>
-                    <HomeIcon size={36} color="#1E5BAC" />
-                  </View>
-                </View>
-                <Text style={styles.cardText}>Mon Profil</Text>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* Documents Juridiques */}
-          <TouchableOpacity
-            style={styles.cardButton}
-            onPress={() => handleNavigate('legal')}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={['#22D3EE', '#0891B2']}
-              style={styles.card}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <View style={styles.cardInner}>
-                <View style={styles.cardIconContainer}>
-                  <View style={styles.cardIconBg}>
-                    <HomeIcon size={36} color="#FFFFFF" />
-                  </View>
-                </View>
-                <Text style={styles.cardText}>Documents Juridiques</Text>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* Documents Comptables */}
-          <TouchableOpacity
-            style={styles.cardButton}
-            onPress={() => handleNavigate('accounting')}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={['#9333EA', '#6B21A8']}
-              style={styles.card}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <View style={styles.cardInner}>
-                <View style={styles.cardIconContainer}>
-                  <View style={styles.cardIconBg}>
-                    <HomeIcon size={36} color="#FFFFFF" />
-                  </View>
-                </View>
-                <Text style={styles.cardText}>Documents Comptables</Text>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* Mon Activité */}
-          <TouchableOpacity
-            style={styles.cardButton}
-            onPress={() => handleNavigate('activity')}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={['#FB923C', '#EA580C']}
-              style={styles.card}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <View style={styles.cardInner}>
-                <View style={styles.cardIconContainer}>
-                  <View style={styles.cardIconBg}>
-                    <HomeIcon size={36} color="#FFFFFF" />
-                  </View>
-                </View>
-                <Text style={styles.cardText}>Mon Activité</Text>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* Mes Relevés Bancaires */}
-          <TouchableOpacity
-            style={styles.cardButton}
-            onPress={() => handleNavigate('bank')}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={['#10B981', '#047857']}
-              style={styles.card}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <View style={styles.cardInner}>
-                <View style={styles.cardIconContainer}>
-                  <View style={styles.cardIconBg}>
-                    <HomeIcon size={36} color="#FFFFFF" />
-                  </View>
-                </View>
-                <Text style={styles.cardText}>Mes Relevés Bancaires</Text>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* Mes Notifications */}
-          <TouchableOpacity
-            style={styles.cardButton}
-            onPress={() => handleNavigate('notifications')}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={['#1E5BAC', '#14407A']}
-              style={styles.card}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            >
-              <View style={styles.cardInner}>
-                {hasUnread && (
-                  <View style={styles.cardBadge}>
-                    <View style={styles.cardBadgeDot} />
-                  </View>
-                )}
-                <View style={styles.cardIconContainer}>
-                  <View style={styles.cardIconBg}>
-                    <HomeIcon size={36} color="#FFFFFF" />
-                  </View>
-                </View>
-                <Text style={styles.cardText}>Mes Notifications</Text>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-        </View>
-
-        {/* Contact Section */}
-        <View style={styles.contactSection}>
-          <View style={styles.contactHeader}>
-            <View style={styles.contactHeaderLeft}>
-              <View style={styles.contactIconCircle}>
-                <Headphones size={24} color="#10B981" />
-              </View>
-              <View style={styles.contactTextContainer}>
-                <Text style={styles.contactText}>
-                  Une question ou un document à{'\n'}transmettre à votre cabinet ?
-                </Text>
-              </View>
+            <View style={styles.adminIconBox}>
+              <Building2 size={20} color="#FFFFFF" />
             </View>
-            <ChevronRight size={20} color="#9CA3AF" />
-          </View>
+            <Text style={styles.adminCardText}>{t('my_profile')}</Text>
+          </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.contactButton}
-            onPress={() => handleNavigate('contact-comptable')}
-            activeOpacity={0.8}
+            style={[styles.adminCard, { backgroundColor: '#579529' }]}
+            onPress={() => handleNavigate('legal')}
+            activeOpacity={0.85}
           >
-            <Text style={styles.contactButtonText}>Contacter mon comptable</Text>
-            <Text style={styles.contactButtonArrow}>→</Text>
+            <View style={styles.adminIconBox}>
+              <Scale size={20} color="#FFFFFF" />
+            </View>
+            <Text style={styles.adminCardText}>{t('legal_documents')}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.adminCard, { backgroundColor: '#4FA3D1' }]}
+            
+            onPress={() => handleNavigate('activity')}
+            activeOpacity={0.85}
+          >
+            <View style={styles.adminIconBox}>
+              
+              <Briefcase size={20} color="#FFFFFF" />
+            </View>
+            
+            <Text style={styles.adminCardText}>{t('my_activity')}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.adminCard, { backgroundColor: '#6FB13F' }]}
+            onPress={() => handleNavigate('accounting')}
+            activeOpacity={0.85}
+          >
+            <View style={styles.adminIconBox}>
+              <FileText size={20} color="#FFFFFF" />
+            </View>
+            <Text style={styles.adminCardText}>{t('accounting_documents')}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.adminCard, { backgroundColor: '#6DA6C4' }]}
+            onPress={() => handleNavigate('bank')}
+            activeOpacity={0.85}
+          >
+            <View style={styles.adminIconBox}>
+              <CreditCard size={20} color="#FFFFFF" />
+            </View>
+            <Text style={styles.adminCardText}>{t('my_bank_statements')}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.adminCard, { backgroundColor: '#9BD25B' }]}
+            onPress={() => handleNavigate('notifications')}
+            activeOpacity={0.85}
+          >
+            {hasUnread && (
+              <View style={styles.cardBadge}>
+                <View style={styles.cardBadgeDot} />
+              </View>
+            )}
+            <View style={styles.adminIconBox}>
+              <Bell size={20} color="#FFFFFF" />
+            </View>
+            <Text style={styles.adminCardText}>{t('my_notifications')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* FAB */}
+      <View style={styles.fabContainer}>
+        <Animated.View style={[styles.subFab, { transform: [{ scale: fabButton3Scale }], opacity: fabButton3Opacity, bottom: 176 }]}>
+          <TouchableOpacity style={[styles.subFabButton, styles.subFabButton3]} onPress={handleNavigateToInvoice} activeOpacity={0.8}>
+            {/* <Image source={fileIcon} style={styles.fabIconImage} resizeMode="contain" /> */}
+          <FileText
+          size={24}
+          color="#FFFFFF"
+          strokeWidth={2}
+          />
+          </TouchableOpacity>
+        </Animated.View>
+        <Animated.View style={[styles.subFab, { transform: [{ scale: fabButton2Scale }], opacity: fabButton2Opacity, bottom: 120 }]}>
+          <TouchableOpacity style={[styles.subFabButton, styles.subFabButton2]} onPress={handleNavigateToQuote} activeOpacity={0.8}>
+            {/* <Image source={fileIcon} style={styles.fabIconImage} resizeMode="contain" /> */}
+          <TrendingDown
+          size={24}
+          color="#FFFFFF"
+          strokeWidth={2}
+          />
+          </TouchableOpacity>
+        </Animated.View>
+        <Animated.View style={[styles.subFab, { transform: [{ scale: fabButton1Scale }], opacity: fabButton1Opacity, bottom: 64 }]}>
+          <TouchableOpacity style={[styles.subFabButton, styles.subFabButton1]} onPress={handleOpenAddClient} activeOpacity={0.8}>
+            {/* <Image source={fileIcon} style={styles.fabIconImage} resizeMode="contain" /> */}
+          <Users
+          size={24}
+          color="#FFFFFF"
+          strokeWidth={2}
+          />
+          </TouchableOpacity>
+        </Animated.View>
+        <TouchableOpacity style={styles.fab} onPress={toggleFab} activeOpacity={0.8}>
+          <Animated.Text style={[styles.fabIcon, { transform: [{ rotate: rotation }] }]}><Plus size={28} color="#FFFFFF" strokeWidth={2.5}/></Animated.Text>
+          {/* <Plus size={28} color="#FFFFFF" strokeWidth={2.5} style={{ transform: [{ rotate: rotation }] }} /> */}
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 };
@@ -262,220 +449,291 @@ const Home: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
-  },
-  header: {
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
   },
-  logoContainer: {
+
+  // ── Header
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    justifyContent: 'space-between',
+    paddingTop: 12,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
+  },
+  headerSpacer: {
+    width: 40,
+  },
+  refreshButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#F9FAFB',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   logo: {
     height: 64,
     width: 200,
   },
-  searchRow: {
+
+  // ── Scroll
+  scroll: { flex: 1 },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 32,
+  },
+
+  // ── Greeting
+  greeting: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#111827',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+
+  // ── Section labels
+  sectionSubtitle: {
+    fontSize: 17,
+    fontWeight: '400',
+    color: '#1F2937',
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 12,
+  },
+
+  // ── Summary row (3 cards)
+  summaryRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 20,
+  },
+  summaryCard: {
+    flex: 1,
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'flex-start',
+  },
+  summaryIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 2,
+  },
+  summaryAmount: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  summaryUnit: {
+    fontSize: 10,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+
+  // ── Activités en cours
+  activitiesContainer: {
+    gap: 8,
+    marginBottom: 20,
+  },
+  activityRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-  },
-  searchContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
     paddingHorizontal: 12,
     paddingVertical: 12,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#1F2937',
-    padding: 0,
-  },
-  notificationButton: {
-    position: 'relative',
-    padding: 12,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: 6,
-    right: 6,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#EF4444',
-    borderWidth: 1.5,
-    borderColor: '#F9FAFB',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  notificationBadgeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#EF4444',
-  },
-  mainContent: {
-    flex: 1,
-  },
-  mainContentContainer: {
-    padding: 16,
-    paddingBottom: 24,
-  },
-  gridContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  cardButton: {
-    width: '48%',
-    marginBottom: 16,
-    //     borderWidth: 1,
-    // borderColor: "black",
-  },
-  card: {
-    borderRadius: 16,
-    overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.07,
     shadowRadius: 4,
     elevation: 2,
   },
-  cardInner: {
-    aspectRatio: 1,
+  activityIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 6,
   },
-  cardIconContainer: {
-    marginBottom: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+  activityInfo: { flex: 1 },
+  activityTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
   },
-  cardIconWhiteBg: {
-    backgroundColor: '#FFFFFF',
+  activitySubtitle: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    marginTop: 2,
+  },
+  activityAmount: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+
+  // ── Admin grid (2-column)
+  adminGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: 12,
+  },
+  adminCard: {
+    width: '48.5%',
     borderRadius: 16,
-    width: 64,
-    height: 64,
+    padding: 16,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 12,
+    minHeight: 72,
+    position: 'relative',
   },
-  cardIconBg: {
-    // backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    width: 64,
-    height: 64,
+  adminIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'center',
   },
-  cardText: {
+  adminCardText: {
+    flex: 1,
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
-    textAlign: 'center',
-    lineHeight: 18,
   },
+
+  // ── Notification badge on card
   cardBadge: {
     position: 'absolute',
-    top: 12,
-    right: 12,
+    top: 10,
+    right: 10,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     backgroundColor: '#EF4444',
-    borderRadius: 8,
-    width: 16,
-    height: 16,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 1,
   },
   cardBadgeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: '#FFFFFF',
   },
-  cardBadgeText: {
+
+    // FAB
+  fabSpacer: {
+    height: 16,
+  },
+//   fab: {
+//     position: 'absolute',
+//     bottom: 24,
+//     right: 20,
+//     width: 56,
+//     height: 56,
+//     borderRadius: 28,
+//     backgroundColor: '#1E5BAC',
+//     justifyContent: 'center',
+//     alignItems: 'center',
+//     shadowColor: '#1E5BAC',
+//     shadowOffset: { width: 0, height: 4 },
+//     shadowOpacity: 0.4,
+//     shadowRadius: 8,
+//     elevation: 8,
+//   },
+
+
+  fabContainer: {
+    position: 'absolute',
+    right: 24,
+    bottom: 20,
+  },
+  fab: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#1E5BAC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#1E5BAC',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  //   fab: {
+  //   position: 'absolute',
+  //   bottom: 28,
+  //   right: 20,
+  //   width: 56,
+  //   height: 56,
+  //   borderRadius: 28,
+  //   backgroundColor: '#1E5BAC',
+  //   justifyContent: 'center',
+  //   alignItems: 'center',
+  //   shadowColor: '#1E5BAC',
+  //   shadowOffset: { width: 0, height: 4 },
+  //   shadowOpacity: 0.35,
+  //   shadowRadius: 8,
+  //   elevation: 8,
+  // },
+  fabIcon: {
+    fontSize: 32,
     color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: 'bold',
+    fontWeight: '300',
   },
-  contactSection: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-    marginBottom: 16,
+  subFab: {
+    position: 'absolute',
+    right: 0,
   },
-  contactHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  contactHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    gap: 12,
-  },
-  contactIconCircle: {
+  subFabButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#D1FAE5',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
-  contactTextContainer: {
-    flex: 1,
+  subFabButton1: {
+    backgroundColor: '#1E5BAC',
   },
-  contactText: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 18,
+  subFabButton2: {
+    backgroundColor: '#1E5BAC',
   },
-  contactButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#1E5BAC',
-    borderRadius: 8,
-    paddingVertical: 12,
-    gap: 8,
+  subFabButton3: {
+    backgroundColor: '#1E5BAC',
   },
-  contactButtonText: {
-    color: '#1E5BAC',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  contactButtonArrow: {
-    color: '#1E5BAC',
-    fontSize: 18,
-    fontWeight: '400',
+  fabIconImage: {
+    width: 24,
+    height: 24,
+    tintColor: '#FFFFFF',
   },
 });
 
