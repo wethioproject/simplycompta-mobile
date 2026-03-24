@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Animated,
   Modal,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -23,17 +24,19 @@ import {
   CloudUpload,
   Calendar,
   FileText,
+  TrendingDown,
   ChevronDown,
   FileEdit,
   Users,
   Plus,
   Check,
+  RotateCw,
 } from 'lucide-react-native';
 import { fileIcon } from '../../assets/icons';
 import LinearGradient from 'react-native-linear-gradient';
 import { LineChart, PieChart } from 'react-native-gifted-charts';
 import { appLogoIcon } from '../../assets/icons';
-import dashboardService, { ExpenseCategoryItem } from '../../services/dashboardService';
+import dashboardService from '../../services/dashboardService';
 
 type StackNavigation = StackNavigationProp<any>;
 
@@ -114,8 +117,8 @@ const Activity: React.FC = () => {
   const [selectedPeriodIndex, setSelectedPeriodIndex] = useState(0);
   const [statsLoading, setStatsLoading] = useState(true);
   const [stats, setStats] = useState({
-    total_invoices_sum: 0,
-    total_invoices_issued_sum: 0,
+    total_issued_paid_sum: 0,
+    total_paid_sum: 0,
     total_expenses_sum: 0,
     total_vat_payable: 0,
   });
@@ -138,16 +141,14 @@ const Activity: React.FC = () => {
   const [selectedChartYear, setSelectedChartYear] = useState(CURRENT_YEAR);
   const [showYearPicker, setShowYearPicker] = useState(false);
   const [chartLoading, setChartLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [chartData, setChartData] = useState<{ ca: any[]; expenses: any[] }>({
     ca: EMPTY_MONTHS,
     expenses: EMPTY_MONTHS,
   });
 
-  const [pieLoading, setPieLoading] = useState(true);
-  const [pieCategories, setPieCategories] = useState<ExpenseCategoryItem[]>([]);
-
-  const fetchChartData = async (year: number) => {
-    setChartLoading(true);
+  const fetchChartData = async (year: number, silent = false) => {
+    if (!silent) setChartLoading(true);
     try {
       const res = await dashboardService.getGraphData(year);
       console.log('gdatattttaaa', res)
@@ -163,25 +164,9 @@ const Activity: React.FC = () => {
 
   useEffect(() => { fetchChartData(selectedChartYear); }, [selectedChartYear]);
 
-  const fetchPieData = async () => {
-    setPieLoading(true);
-    try {
-      const res = await dashboardService.getExpenseCategoryChart();
-      if (res?.success && Array.isArray(res.data)) {
-        setPieCategories(res.data);
-      }
-    } catch (e) {
-      console.error('Pie chart data error:', e);
-    } finally {
-      setPieLoading(false);
-    }
-  };
-
-  useEffect(() => { fetchPieData(); }, []);
-
-  const fetchStats = async (periodIndex: number) => {
+  const fetchStats = async (periodIndex: number, silent = false) => {
     const p = PERIODS[periodIndex];
-    setStatsLoading(true);
+    if (!silent) setStatsLoading(true);
     try {
       const res = await dashboardService.getActivityData(p.date_from, p.date_to);
       if (res.success && res.data) {
@@ -195,6 +180,16 @@ const Activity: React.FC = () => {
   };
 
   useEffect(() => { fetchStats(selectedPeriodIndex); }, [selectedPeriodIndex]);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await new Promise<void>(resolve => setTimeout(resolve, 300));
+    await Promise.all([
+      fetchStats(selectedPeriodIndex, true),
+      fetchChartData(selectedChartYear, true),
+    ]);
+    setRefreshing(false);
+  }, [selectedPeriodIndex, selectedChartYear]);
 
   // Animation values
   const fabRotation = useState(new Animated.Value(0))[0];
@@ -234,12 +229,12 @@ const Activity: React.FC = () => {
 
   const handleNavigateToQuote = () => {
     toggleFab();
-    setTimeout(() => { navigation.navigate('Add Quote'); }, 300);
+    setTimeout(() => { navigation.navigate('Expenses', { openCreateModal: true }); }, 300);
   };
 
   const handleOpenAddClient = () => {
     toggleFab();
-    setTimeout(() => { navigation.navigate('Add Client'); }, 300);
+    setTimeout(() => { navigation.navigate('Clients', { openCreateModal: true }); }, 300);
   };
 
   const handleActionButtonClick = (btn: any) => {
@@ -257,13 +252,13 @@ const Activity: React.FC = () => {
   const statsCards = [
     {
       label: t('label_ca'),
-      value: statsLoading ? null : `${stats.total_invoices_sum.toLocaleString('fr-FR')} MAD`,
+      value: statsLoading ? null : `${stats.total_issued_paid_sum.toLocaleString('fr-FR')} MAD`,
       iconColor: '#1E5BAC',
       bg: '#DBEAFE',
     },
     {
       label: t('label_collections'),
-      value: statsLoading ? null : `${stats.total_invoices_issued_sum.toLocaleString('fr-FR')} MAD`,
+      value: statsLoading ? null : `${stats.total_paid_sum.toLocaleString('fr-FR')} MAD`,
       iconColor: '#16A34A',
       bg: '#D1FAE5',
     },
@@ -290,9 +285,16 @@ const Activity: React.FC = () => {
             <ArrowLeft size={24} color="#374151" />
           </TouchableOpacity>
           <Image source={appLogoIcon} style={styles.logo} resizeMode="contain" />
-          <View style={styles.headerSpacer} />
+          <TouchableOpacity
+            style={[styles.refreshButton, (refreshing || statsLoading || chartLoading) && { opacity: 0.35 }]}
+            onPress={handleRefresh}
+            disabled={refreshing || statsLoading || chartLoading}
+            activeOpacity={0.7}
+          >
+            <RotateCw size={24} color="#374151" />
+          </TouchableOpacity>
         </View>
-        <View style={styles.searchRow}>
+        {/* <View style={styles.searchRow}>
           <View style={styles.searchContainer}>
             <Search size={20} color="#9CA3AF" style={styles.searchIcon} />
             <TextInput
@@ -303,11 +305,23 @@ const Activity: React.FC = () => {
               onChangeText={setSearchQuery}
             />
           </View>
-        </View>
+        </View> */}
       </View>
 
       {/* Content */}
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={['#1E5BAC']}
+            tintColor="#1E5BAC"
+          />
+        }
+      >
         {/* Page Title Card */}
         <View style={styles.titleCard}>
           <LinearGradient 
@@ -420,19 +434,29 @@ const Activity: React.FC = () => {
           </View>
         </View>
 
-        {/* Expense Distribution by Category */}
+        {/* Revenue vs Expenses Distribution */}
         {(() => {
-          const total = pieCategories.reduce((sum, c) => sum + parseFloat(c.value), 0);
-          const pieData = pieCategories.map((c, i) => ({
-            value: parseFloat(c.value),
-            color: PIE_COLORS[i % PIE_COLORS.length],
-            label: c.label,
-            percentage: total > 0 ? ((parseFloat(c.value) / total) * 100).toFixed(1) : '0.0',
-          }));
+          const totalCA = chartData.ca.reduce((sum, p) => sum + p.value, 0);
+          const totalExpenses = chartData.expenses.reduce((sum, p) => sum + p.value, 0);
+          const grandTotal = totalCA + totalExpenses;
+          const pieData = [
+            {
+              value: totalCA,
+              color: '#3B82F6',
+              label: t('legend_ca'),
+              percentage: grandTotal > 0 ? ((totalCA / grandTotal) * 100).toFixed(1) : '0.0',
+            },
+            {
+              value: totalExpenses,
+              color: '#16A34A',
+              label: t('legend_expenses'),
+              percentage: grandTotal > 0 ? ((totalExpenses / grandTotal) * 100).toFixed(1) : '0.0',
+            },
+          ].filter(d => d.value > 0);
           return (
             <View style={styles.pieCard}>
               <Text style={styles.pieTitle}>{t('pie_title_distribution')}</Text>
-              {pieLoading ? (
+              {chartLoading ? (
                 <View style={styles.pieLoader}>
                   <ActivityIndicator size="large" color="#1E5BAC" />
                 </View>
@@ -452,7 +476,7 @@ const Activity: React.FC = () => {
                       centerLabelComponent={() => (
                         <View style={{ alignItems: 'center' }}>
                           <Text style={styles.pieCenterValue}>
-                            {total.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}
+                            {grandTotal.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}
                           </Text>
                           <Text style={styles.pieCenterLabel}>{t('currency_mad')}</Text>
                         </View>
@@ -526,26 +550,42 @@ const Activity: React.FC = () => {
       </Modal>
 
       {/* FAB */}
-      {/* <View style={styles.fabContainer}>
+      <View style={styles.fabContainer}>
         <Animated.View style={[styles.subFab, { transform: [{ scale: fabButton3Scale }], opacity: fabButton3Opacity, bottom: 176 }]}>
           <TouchableOpacity style={[styles.subFabButton, styles.subFabButton3]} onPress={handleNavigateToInvoice} activeOpacity={0.8}>
-            <Image source={fileIcon} style={styles.fabIconImage} resizeMode="contain" />
+            {/* <Image source={fileIcon} style={styles.fabIconImage} resizeMode="contain" /> */}
+          <FileText
+          size={24}
+          color="#FFFFFF"
+          strokeWidth={2}
+          />
           </TouchableOpacity>
         </Animated.View>
         <Animated.View style={[styles.subFab, { transform: [{ scale: fabButton2Scale }], opacity: fabButton2Opacity, bottom: 120 }]}>
           <TouchableOpacity style={[styles.subFabButton, styles.subFabButton2]} onPress={handleNavigateToQuote} activeOpacity={0.8}>
-            <Image source={fileIcon} style={styles.fabIconImage} resizeMode="contain" />
+            {/* <Image source={fileIcon} style={styles.fabIconImage} resizeMode="contain" /> */}
+          <TrendingDown
+          size={24}
+          color="#FFFFFF"
+          strokeWidth={2}
+          />
           </TouchableOpacity>
         </Animated.View>
         <Animated.View style={[styles.subFab, { transform: [{ scale: fabButton1Scale }], opacity: fabButton1Opacity, bottom: 64 }]}>
           <TouchableOpacity style={[styles.subFabButton, styles.subFabButton1]} onPress={handleOpenAddClient} activeOpacity={0.8}>
-            <Image source={fileIcon} style={styles.fabIconImage} resizeMode="contain" />
+            {/* <Image source={fileIcon} style={styles.fabIconImage} resizeMode="contain" /> */}
+          <Users
+          size={24}
+          color="#FFFFFF"
+          strokeWidth={2}
+          />
           </TouchableOpacity>
         </Animated.View>
         <TouchableOpacity style={styles.fab} onPress={toggleFab} activeOpacity={0.8}>
-          <Animated.Text style={[styles.fabIcon, { transform: [{ rotate: rotation }] }]}>+</Animated.Text>
+          <Animated.Text style={[styles.fabIcon, { transform: [{ rotate: rotation }] }]}><Plus size={28} color="#FFFFFF" strokeWidth={2.5}/></Animated.Text>
+          {/* <Plus size={28} color="#FFFFFF" strokeWidth={2.5} style={{ transform: [{ rotate: rotation }] }} /> */}
         </TouchableOpacity>
-      </View> */}
+      </View>
     </SafeAreaView>
   );
 };
@@ -582,6 +622,14 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 40,
+  },
+  refreshButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#F9FAFB',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   searchRow: {
     flexDirection: 'row',
@@ -931,6 +979,22 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
+  //   fab: {
+  //   position: 'absolute',
+  //   bottom: 28,
+  //   right: 20,
+  //   width: 56,
+  //   height: 56,
+  //   borderRadius: 28,
+  //   backgroundColor: '#1E5BAC',
+  //   justifyContent: 'center',
+  //   alignItems: 'center',
+  //   shadowColor: '#1E5BAC',
+  //   shadowOffset: { width: 0, height: 4 },
+  //   shadowOpacity: 0.35,
+  //   shadowRadius: 8,
+  //   elevation: 8,
+  // },
   fabIcon: {
     fontSize: 32,
     color: '#FFFFFF',
@@ -956,13 +1020,13 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   subFabButton1: {
-    backgroundColor: 'rgb(55, 75, 163)',
+    backgroundColor: '#1E5BAC',
   },
   subFabButton2: {
-    backgroundColor: 'rgb(55, 75, 163)',
+    backgroundColor: '#1E5BAC',
   },
   subFabButton3: {
-    backgroundColor: 'rgb(55, 75, 163)',
+    backgroundColor: '#1E5BAC',
   },
   fabIconImage: {
     width: 24,
