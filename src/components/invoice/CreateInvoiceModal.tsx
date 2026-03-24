@@ -579,7 +579,7 @@ const CreateInvoiceModal: React.FC<{
                     <Text style={styles.totalValueBold}>{totalTTC.toLocaleString('fr-FR')} MAD</Text>
                   </View>
                 </View>
-              )}
+              )} */}
 
               <TouchableOpacity
                 style={[styles.addArticleBtn, !isValid && styles.addArticleBtnDisabled]}
