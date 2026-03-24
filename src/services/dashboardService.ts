@@ -31,10 +31,14 @@ export interface DashboardResponse {
 }
 
 export interface ActivityStats {
-    total_invoices_sum: number;
-    total_invoices_issued_sum: number;
+    total_issued_paid_sum: number;
+    total_paid_sum: number;
     total_expenses_sum: number;
     total_vat_payable: number;
+    total_issued_sum: number;
+    total_quote_sum: number;
+    total_issued_count: number;
+    total_quote_count: number;
 }
 
 export interface ActivityResponse {
@@ -81,9 +85,9 @@ class DashboardService {
         }
     }
 
-    async getExpenseCategoryChart(): Promise<{ success: boolean; data: ExpenseCategoryItem[] }> {
+    async getExpenseCategoryChart(params?: { month?: number; year?: number}): Promise<{ success: boolean; data: ExpenseCategoryItem[] }> {
         try {
-            const response = await api.get(Api_Endpoints.customerExpenseCategoryChart);
+            const response = await api.get(Api_Endpoints.customerExpenseCategoryChart, { params });
             return response.data;
         } catch (error: any) {
             throw error;

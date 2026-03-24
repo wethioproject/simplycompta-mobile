@@ -43,6 +43,9 @@ import {
   Search,
 } from 'lucide-react-native';
 import { appLogoIcon } from '../../assets/icons';
+import { PieChart } from 'react-native-gifted-charts';
+import dashboardService from '../../services/dashboardService';
+import type { ExpenseCategoryItem } from '../../services/dashboardService';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { pick, types, isErrorWithCode, errorCodes } from '@react-native-documents/picker';
@@ -848,8 +851,8 @@ const CreateExpenseModal: React.FC<{
           </TouchableOpacity>
         </Modal>
 
-        {/* Date Picker */}
-        <Modal visible={showDatePicker} transparent animationType="slide" onRequestClose={() => setShowDatePicker(false)}>
+        {/* Date Picker - iOS */}
+        <Modal visible={Platform.OS === 'ios' && showDatePicker} transparent animationType="fade" onRequestClose={() => setShowDatePicker(false)}>
           <View style={styles.datePickerOverlay}>
             <View style={styles.datePickerSheet}>
               <View style={styles.datePickerHeader}>
@@ -858,19 +861,38 @@ const CreateExpenseModal: React.FC<{
                 </TouchableOpacity>
                 <Text style={styles.datePickerTitle}>{t('label_date')}</Text>
                 <TouchableOpacity onPress={confirmDate} activeOpacity={0.7}>
-                  <Text style={styles.datePickerOk}>OK</Text>
+                  <Text style={styles.datePickerOk}>{t('button_confirm')}</Text>
                 </TouchableOpacity>
               </View>
+              <View style={{ alignItems: 'center', paddingBottom: 8 }}>
               <DateTimePicker
                 value={tempDate}
                 mode="date"
-                display="spinner"
+                  display="inline"
                 onChange={handleDateChange}
-                style={{ width: '100%' }}
               />
+              </View>
             </View>
           </View>
         </Modal>
+
+        {/* Date Picker - Android: */}
+        {Platform.OS === 'android' && showDatePicker && (
+          <DateTimePicker
+            value={tempDate}
+            mode="date"
+            display="default"
+            onChange={(event, selected) => {
+              setShowDatePicker(false);
+              if (event.type === 'set' && selected) {
+                const y = selected.getFullYear();
+                const m = String(selected.getMonth() + 1).padStart(2, '0');
+                const d = String(selected.getDate()).padStart(2, '0');
+                setValue('date', `${y}-${m}-${d}`, { shouldValidate: true });
+              }
+            }}
+          />
+        )}
 
         {/* Image Preview */}
         <Modal visible={showImagePreview} transparent animationType="fade" onRequestClose={() => setShowImagePreview(false)}>
@@ -902,6 +924,11 @@ const CreateExpenseModal: React.FC<{
 };
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
+const PIE_COLORS = [
+  '#3B82F6', '#16A34A', '#10B981', '#EF4444', '#8B5CF6',
+  '#EC4899', '#14B8A6', '#6366F1', '#84CC16', '#F97316',
+];
+
 const Expenses: React.FC = ({ navigation: navProp }: any) => {
   const navigation = useNavigation<StackNavigation>();
   const nav = navProp ?? navigation;
@@ -909,6 +936,7 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
   const user = useSelector((state: any) => state.user.customer);
   const { getExpenses, getExpense, getExpenseResources, createExpense, updateExpense, exportExpenses, deleteExpense } = useExpense();
   const { getSuppliers } = useSupplier();
+  const { getExpenseCategoryChart } = dashboardService;
   const { t } = useTranslation();
 
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
@@ -926,6 +954,8 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
   const [showYearPicker, setShowYearPicker] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<ExpenseItem | null>(null);
+  const [pieLoading, setPieLoading] = useState(true);
+  const [pieCategories, setPieCategories] = useState<ExpenseCategoryItem[]>([]);
 
   const MONTHS = [
     t('month_january'), t('month_february'), t('month_march'), t('month_april'),
@@ -943,10 +973,11 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
 
     const fetchData = async (params?: { month?: number; year?: number }) => {
       try {
-        const [expensesResult, resourcesResult, suppliersResult] = await Promise.all([
+        const [expensesResult, resourcesResult, suppliersResult, pieChartResult] = await Promise.all([
           getExpenses(params),
           getExpenseResources(),
           getSuppliers(),
+          getExpenseCategoryChart(params)
         ]);
         console.log('Expenses Result:', expensesResult);
         console.log('Expenses Resource Result:', resourcesResult);
@@ -959,15 +990,30 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
         if (suppliersResult.success) {
           setSuppliers((suppliersResult.suppliers ?? []).map((s: any) => ({ id: s.id, name: s.supplier_name || s.name })));
         }
+        if(pieChartResult?.success) {
+          setPieCategories(pieChartResult.data ?? []);
+        }
       } catch {
         Alert.alert(t('error_title'), t('error_load_expenses'));
       } finally {
         setLoading(false);
         setRefreshing(false);
+        setPieLoading(false)
       }
     };
   
     useEffect(() => { fetchData(); }, []);
+
+    // useEffect(() => {
+    //   setPieLoading(true);
+    //   dashboardService.getExpenseCategoryChart().then(res => {
+    //     if (res?.success && Array.isArray(res.data)) {
+    //       setPieCategories(res.data);
+    //     }
+    //   })
+    //   .catch(e => console.error('Pie chart error:', e))
+    //   .finally(() => setPieLoading(false)) 
+    // }, [])
 
     const refreshSuppliers = async () => {
     try {
@@ -1048,6 +1094,63 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
     // const matchYear = selectedYear === null || new Date(expense.date).getFullYear().toString() === selectedYear;
     // return matchSearch && matchMonth && matchYear;
   });
+
+  // const renderItem = ({ item }: { item: ExpenseItem }) => (
+  const renderPieChart = () => {
+    const total = pieCategories.reduce((sum, c) => sum + parseFloat(c.value), 0);
+    const pieData = pieCategories.map((c, i) => ({
+      value: parseFloat(c.value),
+      color: PIE_COLORS[i % PIE_COLORS.length],
+      label: c.label,
+      percentage: total > 0 ? ((parseFloat(c.value) / total) * 100).toFixed(1) : '0.0',
+    }));
+    return (
+      <View style={styles.pieCard}>
+        <Text style={styles.pieTitle}>{t('pie_title_distribution')}</Text>
+        {loading ? (
+          <View style={styles.pieLoader}>
+            <ActivityIndicator size="large" color="#1E5BAC" />
+          </View>
+        ) : pieData.length === 0 ? (
+          <View style={styles.pieEmpty}>
+            <Text style={styles.pieEmptyText}>{t('pie_empty_message')}</Text>
+          </View>
+        ) : (
+          <>
+            <View style={styles.pieChartRow}>
+              <PieChart
+                data={pieData}
+                donut
+                radius={80}
+                innerRadius={52}
+                innerCircleColor="#FFFFFF"
+                centerLabelComponent={() => (
+                  <View style={{ alignItems: 'center' }}>
+                    <Text style={styles.pieCenterValue}>
+                      {total.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}
+                    </Text>
+                    <Text style={styles.pieCenterLabel}>{t('currency_mad')}</Text>
+                  </View>
+                )}
+                showText={false}
+                strokeWidth={2}
+                strokeColor="#FFFFFF"
+              />
+            </View>
+            <View style={styles.pieLegend}>
+              {pieData.map((item, i) => (
+                <View key={i} style={styles.pieLegendRow}>
+                  <View style={[styles.pieLegendDot, { backgroundColor: item.color }]} />
+                  <Text style={styles.pieLegendLabel} numberOfLines={1}>{item.label}</Text>
+                  <Text style={styles.pieLegendPct}>{item.percentage}%</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
+      </View>
+    );
+  };
 
   // const renderItem = ({ item }: { item: ExpenseItem }) => (
   const renderItem = ({ item }: { item: any }) => {
@@ -1160,8 +1263,17 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchData(); }} tintColor="#1E5BAC" />
+            <RefreshControl refreshing={refreshing} onRefresh={() => {
+               setRefreshing(true);
+               if( selectedMonth || selectedYear) {
+                fetchData(getFilterParams())
+               } else {
+                fetchData();
+               }
+              //  fetchData(); 
+              }} tintColor="#1E5BAC" />
           }
+          ListFooterComponent={renderPieChart}
           ListEmptyComponent={
             <View style={styles.emptyBox}>
               <Text style={styles.emptyText}>{t('text_no_expenses_found')}</Text>
@@ -1525,18 +1637,25 @@ const styles = StyleSheet.create({
 
     // Date Picker bottom sheet
   datePickerOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
   },
   datePickerSheet: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    paddingBottom: 24,
+    borderRadius: 20,
+    paddingBottom: 16,
+    overflow: 'hidden',
   },
   datePickerHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
   datePickerTitle: { fontSize: 15, fontWeight: '700', color: '#1F2937' },
   datePickerCancel: { fontSize: 15, fontWeight: '500', color: '#6B7280' },
@@ -1587,6 +1706,31 @@ const styles = StyleSheet.create({
     color: '#1F2937',
     paddingVertical: 0,
   },
+
+  // Pie chart
+  pieCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  pieTitle: { fontSize: 15, fontWeight: '700', color: '#1F2937', marginBottom: 16 },
+  pieLoader: { height: 180, justifyContent: 'center', alignItems: 'center' },
+  pieEmpty: { height: 100, justifyContent: 'center', alignItems: 'center' },
+  pieEmptyText: { fontSize: 13, color: '#9CA3AF' },
+  pieChartRow: { alignItems: 'center', marginBottom: 20 },
+  pieCenterValue: { fontSize: 16, fontWeight: '700', color: '#1F2937', textAlign: 'center' },
+  pieCenterLabel: { fontSize: 11, color: '#6B7280', textAlign: 'center' },
+  pieLegend: { gap: 10 },
+  pieLegendRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  pieLegendDot: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
+  pieLegendLabel: { flex: 1, fontSize: 13, color: '#374151' },
+  pieLegendPct: { fontSize: 13, fontWeight: '600', color: '#1F2937' },
 });
 
 export default Expenses;
