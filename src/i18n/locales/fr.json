@@ -255,6 +255,7 @@
   "role_certified_accountant": "Expert-comptable agréé",
   "status_available_today": "Disponible aujourd'hui",
   "status_not_available": "Non disponible",
+  "status_missing": "Introuvable",
   "label_business_hours": "Lun-Ven: 9h00 - 18h00",
   "action_call_directly": "Appeler directement",
   "subtitle_call_directly": "Discutez avec votre comptable maintenant",
@@ -294,6 +295,7 @@
   "empty_no_invoices": "Aucune facture trouvée",
   "button_export": "Exporter",
   "label_invoice_number": "Numéro de facture",
+  "label_client_name": "Nom du client",
   "label_notes": "Notes",
   "placeholder_add_notes": "Ajouter des notes",
   "label_total_tva": "Total TVA",
@@ -341,6 +343,8 @@
   "review_status_pending": "En attente",
   "review_status_approved": "Approuvé",
   "review_status_rejected": "Rejeté",
+  "review_status_validated": "Validé",
+  "status_in_review": "En cours de révision",
   "modal_cancel_text": "Annuler",
   "modal_confirm_text": "Confirmer",
   "text_searching": "Recherche...",
@@ -475,5 +479,15 @@
   "onboarding_desc_3": "Organisez clients, dépenses et rapports en un seul endroit",
   "onboarding_skip": "Passer",
   "onboarding_next": "Suivant",
-  "onboarding_get_started": "Commencer"
+  "onboarding_get_started": "Commencer",
+
+  "title_account_statement": "Historique des factures",
+  "as_invoice_title": "Facture #{{number}}",
+  "as_error_load_invoices": "Impossible de charger les factures.",
+  "as_error_loading": "Erreur lors du chargement.",
+  "as_invoice_singular": "facture",
+  "as_invoices_plural": "factures",
+  "as_detail_created_on": "Créé le",
+  "as_view_download_invoice": "Voir / Télécharger la facture",
+  "as_error_open_document": "Impossible d'ouvrir le document."
 }
