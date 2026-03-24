@@ -745,12 +745,14 @@ const CreateExpenseModal: React.FC<{
           <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowCategoryPicker(false)}>
             <View style={styles.pickerSheet}>
               <Text style={styles.pickerSheetTitle}>{t('label_category')}</Text>
+              <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 360 }} showsVerticalScrollIndicator={true}>
               {(categories as Category[]).map(c => (
                 <TouchableOpacity key={c.id} style={styles.pickerOption} onPress={() => { setValue('categoryId', c.id, { shouldValidate: true }); setShowCategoryPicker(false); }}>
                   <Text style={[styles.pickerOptionText, watchedCategoryId === c.id && styles.pickerOptionSelected]}>{c.name}</Text>
                   {watchedCategoryId === c.id && <Text style={styles.pickerCheck}>✓</Text>}
                 </TouchableOpacity>
               ))}
+              </ScrollView>
             </View>
           </TouchableOpacity>
         </Modal>
