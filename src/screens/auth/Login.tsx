@@ -21,8 +21,8 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
     if (!email || !password) {
       Toast.show({
         type: 'error',
-        text1: 'Champs requis',
-        text2: 'Veuillez remplir tous les champs',
+        text1: 'Required Fields',
+        text2: 'Please fill in all fields',
         position: 'top'
       });
       return;
@@ -64,16 +64,16 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
 
         {/* Login Form Card */}
         <View style={styles.formCard}>
-          <Text style={styles.formTitle}>Se connecter</Text>
+          <Text style={styles.formTitle}>Sign In</Text>
 
           {/* Email Input */}
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>
-              E-mail <Text style={styles.required}>*</Text>
+              Email <Text style={styles.required}>*</Text>
             </Text>
             <TextInput
               style={styles.input}
-              placeholder="E-mail *"
+              placeholder="Email *"
               placeholderTextColor="#9CA3AF"
               value={email}
               onChangeText={setEmail}
@@ -86,12 +86,12 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
           {/* Password Input */}
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>
-              Mot de passe <Text style={styles.required}>*</Text>
+              Password <Text style={styles.required}>*</Text>
             </Text>
             <View style={styles.passwordContainer}>
               <TextInput
                 style={styles.passwordInput}
-                placeholder="Mot de passe *"
+                placeholder="Password *"
                 placeholderTextColor="#9CA3AF"
                 value={password}
                 onChangeText={setPassword}
@@ -118,45 +118,45 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
             {isLoading ? (
               <ActivityIndicator color="#FFFFFF" size="small" />
             ) : (
-              <Text style={styles.loginButtonText}>Me connecter</Text>
+              <Text style={styles.loginButtonText}>Sign In</Text>
             )}
           </TouchableOpacity>
 
           {/* Links Section */}
           <View style={styles.linksContainer}>
             <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
-              <Text style={styles.linkText}>Mot de passe oublié ?</Text>
+              <Text style={styles.linkText}>Forgot password?</Text>
             </TouchableOpacity>
             
-            <TouchableOpacity 
+            {/* <TouchableOpacity 
               style={styles.guestButton}
               onPress={handleGuestAccess}
               activeOpacity={0.7}
             >
               <User size={16} color="#6B7280" />
-              <Text style={styles.guestText}>Accès visiteur</Text>
-            </TouchableOpacity>
+              <Text style={styles.guestText}>Guest Access</Text>
+            </TouchableOpacity> */}
           </View>
 
           {/* Divider */}
           <View style={styles.divider} />
 
           {/* Sign Up Link */}
-          <View style={styles.signupContainer}>
+          {/* <View style={styles.signupContainer}>
             <Text style={styles.signupText}>Pas encore de compte ? </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
               <Text style={styles.signupLink}>S'inscrire</Text>
             </TouchableOpacity>
-          </View>
+          </View> */}
         </View>
 
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            En vous connectant, vous acceptez nos{' '}
-            <Text style={styles.footerLink}>Conditions d'utilisation</Text>
-            {' '}et notre{' '}
-            <Text style={styles.footerLink}>Politique de confidentialité</Text>
+            By signing in, you accept our{' '}
+            <Text style={styles.footerLink}>Terms of Use</Text>
+            {' '}and our{' '}
+            <Text style={styles.footerLink}>Privacy Policy</Text>
           </Text>
         </View>
       </View>
