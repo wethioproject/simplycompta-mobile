@@ -99,25 +99,29 @@ const Profile: React.FC = () => {
       icon: <MapPin size={20} color="#1E5BAC" />,
       label: t('label_address'),
       value: data?.shipping_address,
-      action: t('action_download_rc_extract'),
+      // action: t('action_download_rc_extract'),
+      action: null,
     },
     {
       icon: <Globe size={20} color="#1E5BAC" />,
       label: t('label_ice_number'),
       value: data?.ice_number || t('profile_not_provided'),
-      action: t('action_download_rc_extract'),
+      // action: t('action_download_rc_extract'),
+      action: null,
     },
     {
       icon: <FileText size={20} color="#1E5BAC" />,
       label: t('label_rc_number'),
       value: data?.rc_number  || t('profile_not_provided'),
-      action: t('action_download_if_certificate'),
+      // action: t('action_download_if_certificate'),
+      action: null,
     },
     {
       icon: <Briefcase size={20} color="#1E5BAC" />,
       label: t('label_patent_number'),
       value: data?.patent_number || t('profile_not_provided'),
-      action: t('action_download_patent_certificate'),
+      // action: t('action_download_patent_certificate'),
+      action: null,
     },
   ];
 
@@ -200,7 +204,7 @@ const Profile: React.FC = () => {
             </View>
             <View style={styles.profileHeaderText}>
               <Text style={styles.profileHeaderTitle}>{t('profile_header_title')}</Text>
-              <Text style={styles.profileHeaderSubtitle}>{data?.short_bio || t('profile_na')}</Text>
+              {/* <Text style={styles.profileHeaderSubtitle}>{data?.short_bio || t('profile_na')}</Text> */}
             </View>
           </View>
             </View>
