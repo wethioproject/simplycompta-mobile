@@ -27,6 +27,8 @@ export const getReviewConfig = (reviewStatus: string, styles: any): BadgeConfig 
   switch (reviewStatus) {
     case 'APPROVED':
       return { badge: styles.badgeGreen, text: styles.badgeTextGreen };
+    case 'VALIDATED':
+      return { badge: styles.badgeGreen, text: styles.badgeTextGreen };
     case 'REJECTED':
       return { badge: styles.badgeRed, text: styles.badgeTextRed };
     default:
