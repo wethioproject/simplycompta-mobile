@@ -39,6 +39,7 @@ export interface ActivityStats {
     total_quote_sum: number;
     total_issued_count: number;
     total_quote_count: number;
+    is_enable_login: 0 | 1;
 }
 
 export interface ActivityResponse {

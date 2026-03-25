@@ -2,6 +2,7 @@ import React from 'react';
 import { StatusBar } from 'react-native';
 import './i18n/i18n';
 import AppNavigator from './navigation';
+import RestrictedAccessModal from './components/RestrictedAccessModal';
 
 const App = () => {
   return (
@@ -12,6 +13,7 @@ const App = () => {
         barStyle="dark-content"
       />
       <AppNavigator />
+      <RestrictedAccessModal />
     </>
   );
 };

@@ -17,7 +17,8 @@ import { useNavigation } from '@react-navigation/native';
 import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { setIsEnableLogin } from '../../store/slices/appSlice';
 import {
   Bell,
   FileText,
@@ -43,6 +44,7 @@ const Home: React.FC = () => {
   const navigation = useNavigation<DrawerNavigation>();
   const { t, i18n } = useTranslation();
   const customer = useSelector((state: any) => state.user.customer);
+  const dispatch = useDispatch();
   const [hasUnread, setHasUnread] = useState(false);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -120,6 +122,7 @@ const Home: React.FC = () => {
     try {
       const res = await dashboardService.getActivityData(date_from, date_to);
       if (res.success && res.data) {
+        dispatch(setIsEnableLogin((res.data.is_enable_login ?? 1) as 0 | 1));
         setStats({
           total_paid_sum: res.data.total_paid_sum ?? 0,
           total_expenses_sum: res.data.total_expenses_sum ?? 0,
@@ -280,10 +283,10 @@ const Home: React.FC = () => {
         <Text style={styles.sectionTitle}>{t('section_activites_en_cours')}</Text>
 
         <View style={styles.activitiesContainer}>
-          <TouchableOpacity
+          <View
             style={styles.activityRow}
-            onPress={() => handleNavigate('invoices')}
-            activeOpacity={0.75}
+            // onPress={() => handleNavigate('invoices')}
+            // activeOpacity={0.75}
           >
             <View style={[styles.activityIcon, { backgroundColor: '#E6F7F1' }]}>
               <FileText size={18} color="#6FB13F" />
@@ -300,12 +303,12 @@ const Home: React.FC = () => {
                 <Text style={styles.summaryUnit}>MAD</Text>
               </Text>
             )}
-          </TouchableOpacity>
+          </View>
 
-          <TouchableOpacity
+          <View
             style={styles.activityRow}
-            onPress={() => handleNavigate('invoices')}
-            activeOpacity={0.75}
+            // onPress={() => handleNavigate('invoices')}
+            // activeOpacity={0.75}
           >
             <View style={[styles.activityIcon, { backgroundColor: '#E0EDFB' }]}>
               <FileText size={18} color="#4FA3D1" />
@@ -322,7 +325,7 @@ const Home: React.FC = () => {
                 <Text style={styles.summaryUnit}>MAD</Text>
               </Text>
             )}
-          </TouchableOpacity>
+          </View>
         </View>
 
         {/* ── Administratif ───────────────────────────────────────── */}

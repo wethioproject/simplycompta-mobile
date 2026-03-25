@@ -455,7 +455,7 @@
   "error_delete_supplier": "Error deleting the supplier.",
   "label_total_expenses": "Total expenses",
   "label_nb_expenses": "Nb expenses",
-  "text_expense_or_expenses": "{{count}} expense|{{count}} expenses",
+  "text_expense_or_expenses": "{{count}} expenses",
   "section_expenses": "Associated Expenses",
   "text_no_associated_expenses": "No expenses associated with this supplier.",
   "button_delete_supplier": "Delete supplier",
@@ -489,5 +489,9 @@
   "as_invoices_plural": "invoices",
   "as_detail_created_on": "Created on",
   "as_view_download_invoice": "View / Download Invoice",
-  "as_error_open_document": "Unable to open document."
+  "as_error_open_document": "Unable to open document.",
+  "restricted_title": "Access temporarily limited",
+  "restricted_message": "Your account is currently restricted.\nPlease contact your accounting firm to restore full access.",
+  "restricted_data_safe": "Your data remains secure and accessible.",
+  "restricted_cta": "Contact my accountant"
 }

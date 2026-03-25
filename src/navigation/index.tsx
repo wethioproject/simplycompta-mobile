@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
+import { navigationRef } from './navigationRef';
 import { createStackNavigator } from '@react-navigation/stack';
 import Toast from 'react-native-toast-message';
 import Splash from '../screens/splash/Splash';
@@ -67,7 +68,7 @@ const Stack = createStackNavigator();
 const AppNavigator = () => {
   return (
     <>
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator>
         <Stack.Screen name="Splash" component={Splash} options={{ headerShown: false }} />
         <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false, gestureEnabled: false }} />

@@ -455,7 +455,7 @@
   "error_delete_supplier": "Erreur lors de la suppression du fournisseur.",
   "label_total_expenses": "Total dépenses",
   "label_nb_expenses": "Nb dépenses",
-  "text_expense_or_expenses": "dépense|dépenses",
+  "text_expense_or_expenses": "{{count}} dépenses",
   "section_expenses": "Dépenses associées",
   "text_no_associated_expenses": "Aucune dépense associée à ce fournisseur.",
   "button_delete_supplier": "Supprimer le fournisseur",
@@ -467,9 +467,9 @@
   "label_tva": "TVA",
   "section_activites_en_cours": "Activités en cours",
   "label_factures_impayees": "Factures impayées",
-  "label_3_factures": "3 factures",
+  "label_3_factures": "{{count}} factures",
   "label_devis_en_cours": "Devis en cours",
-  "label_15_devis": "15 devis",
+  "label_15_devis": "{{count}} devis",
   "section_administratif": "Administratif",
   "onboarding_title_1": "Créez vos factures facilement",
   "onboarding_desc_1": "Générez des factures professionnelles en quelques secondes pour vos clients",
@@ -489,5 +489,9 @@
   "as_invoices_plural": "factures",
   "as_detail_created_on": "Créé le",
   "as_view_download_invoice": "Voir / Télécharger la facture",
-  "as_error_open_document": "Impossible d'ouvrir le document."
+  "as_error_open_document": "Impossible d'ouvrir le document.",
+  "restricted_title": "Accès temporairement limité",
+  "restricted_message": "Votre espace est momentanément restreint.\nVeuillez contacter votre cabinet comptable pour réactiver l'accès complet.",
+  "restricted_data_safe": "Vos données restent sécurisées et accessibles.",
+  "restricted_cta": "Contacter mon comptable"
 }
