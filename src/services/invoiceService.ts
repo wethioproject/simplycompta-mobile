@@ -44,6 +44,7 @@ class InvoiceService {
             formData.append('invoice_number', payload.invoice_number);
             formData.append('payment_method', payload.payment_method);
             formData.append('status', payload.status ?? 'Brouillons');
+            formData.append('notes', payload.notes);
 
             if (payload.document) {
                 const file = payload.document;
