@@ -38,6 +38,7 @@ interface AccountantInfo {
   email: string;
   profile: string;
   is_active: number;
+  company_logo: string;
 }
 
 type StackNavigation = StackNavigationProp<any>;
@@ -145,8 +146,8 @@ const ContactForm: React.FC<{ onBack: () => void; accountant?: AccountantInfo | 
         {/* Accountant Info */}
         <View style={styles.card}>
           <View style={styles.accountantRow}>
-            {accountant?.profile ? (
-              <Image source={{ uri: accountant.profile }} style={styles.accountantAvatarImg} />
+            {accountant?.company_logo ? (
+              <Image source={{ uri: accountant.company_logo }} style={styles.accountantAvatarImg} />
             ) : (
               <View style={styles.accountantAvatar}>
                 <User size={24} color="#1E5BAC" />
@@ -297,8 +298,8 @@ const Contact: React.FC = () => {
           ) : (
             <>
               <View style={styles.accountantInfoRow}>
-                {accountant?.profile ? (
-                  <Image source={{ uri: accountant.profile }} style={styles.accountantLargeAvatarImg} />
+                {accountant?.company_logo ? (
+                  <Image source={{ uri: accountant.company_logo }} style={styles.accountantLargeAvatarImg} />
                 ) : (
                   <LinearGradient
                     colors={['#3B82F6', '#2563EB']}
