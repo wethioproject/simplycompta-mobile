@@ -265,8 +265,8 @@ const Activity: React.FC = () => {
     {
       label: t('label_expenses'),
       value: statsLoading ? null : `${stats.total_expenses_sum.toLocaleString('fr-FR')} MAD`,
-      iconColor: '#16A34A',
-      bg: '#DCFCE7',
+      iconColor: '#E8795A',  
+      bg: '#FFF1EE',         
     },
     {
       label: t('label_vat_payable'),
@@ -394,13 +394,13 @@ const Activity: React.FC = () => {
               initialSpacing={12}
               endSpacing={12}
               color1="#3B82F6"
-              color2="#16A34A"
+              color2="#E8795A"
               thickness={2}
               dataPointsColor1="#3B82F6"
-              dataPointsColor2="#16A34A"
+              dataPointsColor2="#E8795A"
               dataPointsRadius={3}
               startFillColor1="#3B82F6"
-              startFillColor2="#16A34A"
+              startFillColor2="#E8795A"
               endFillColor1="#F3F4F6"
               endFillColor2="#F3F4F6"
               startOpacity={0.3}
@@ -428,7 +428,7 @@ const Activity: React.FC = () => {
               <Text style={styles.legendText}>{t('legend_ca')}</Text>
             </View>
             <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: '#16A34A' }]} />
+              <View style={[styles.legendDot, { backgroundColor: '#E8795A' }]} />
               <Text style={styles.legendText}>{t('legend_expenses')}</Text>
             </View>
           </View>
@@ -448,7 +448,7 @@ const Activity: React.FC = () => {
             },
             {
               value: totalExpenses,
-              color: '#16A34A',
+              color: '#E8795A',
               label: t('legend_expenses'),
               percentage: grandTotal > 0 ? ((totalExpenses / grandTotal) * 100).toFixed(1) : '0.0',
             },
