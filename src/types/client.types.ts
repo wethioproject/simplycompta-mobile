@@ -14,6 +14,7 @@ export interface ClientItem {
   commercial_register: string;
   ice: string;
   total_revenue_ht?: number;
+  late_invoices_count?: number;
   created_at?: string;
   updated_at?: string;
 }

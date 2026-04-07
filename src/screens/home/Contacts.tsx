@@ -167,6 +167,7 @@ const Contacts: React.FC = ({ navigation: navProp }: any) => {
 
   const renderClientItem = ({ item }: { item: ClientItem }) => {
     const revenue = item.total_revenue_ht ?? 0;
+    const lateCount = item.late_invoices_count ?? 0;
     return (
       <TouchableOpacity
         style={styles.card}
@@ -180,19 +181,27 @@ const Contacts: React.FC = ({ navigation: navProp }: any) => {
           <Text style={styles.cardName}>{item.company_name}</Text>
           <Text style={styles.cardMeta}>{item.client_name}</Text>
         </View>
-        {revenue > 0 ? (
-          <View style={styles.cardRight}>
-            <Text style={styles.amountGreen}>+{revenue.toLocaleString('fr-FR')} MAD</Text>
-          </View>
-        ) : (
-          <ChevronRight size={18} color="#9CA3AF" />
-        )}
+        <View style={styles.cardRight}>
+          {lateCount > 0 ? (
+            <View style={styles.badgeLate}>
+              <Clock size={14} color="#EF4444" />
+              <Text style={styles.badgeLateText}>{lateCount} {t('contacts_pending')}</Text>
+            </View>
+          ) : (
+            <View style={styles.badgeSettled}>
+              <CheckCircle2 size={14} color="#16A34A" />
+              <Text style={styles.badgeSettledText}>{t('contacts_settle')}</Text>
+            </View>
+          )}
+          {revenue > 0 && <Text style={styles.amountGreen}>+{revenue.toLocaleString('fr-FR')} MAD</Text>}
+        </View>
       </TouchableOpacity>
     );
   };
 
   const renderSupplierItem = ({ item }: { item: SupplierItem }) => {
     const total = item.total_ttc ?? 0;
+    const lateCount = item.late_expenses_count ?? 0;
     return (
       <TouchableOpacity
         style={styles.card}
@@ -206,13 +215,20 @@ const Contacts: React.FC = ({ navigation: navProp }: any) => {
           <Text style={styles.cardName}>{item.company_name}</Text>
           <Text style={styles.cardMeta}>{item.supplier_name}</Text>
         </View>
-        {total > 0 ? (
-          <View style={styles.cardRight}>
-            <Text style={styles.amountRed}>-{total.toLocaleString('fr-FR')} MAD</Text>
-          </View>
-        ) : (
-          <ChevronRight size={18} color="#9CA3AF" />
-        )}
+        <View style={styles.cardRight}>
+          {lateCount > 0 ? (
+            <View style={styles.badgePending}>
+              <Clock size={14} color="#EA580C" />
+              <Text style={styles.badgePendingText}>{lateCount} {t('contacts_pending')}</Text>
+            </View>
+          ) : (
+            <View style={styles.badgePaid}>
+              <CheckCircle2 size={14} color="#16A34A" />
+              <Text style={styles.badgePaidText}>{t('contacts_settle')}</Text>
+            </View>
+          )}
+          {total > 0 && <Text style={styles.amountRed}>-{total.toLocaleString('fr-FR')} MAD</Text>}
+        </View>
       </TouchableOpacity>
     );
   };
@@ -642,30 +658,30 @@ const styles = StyleSheet.create({
 
   badgePaid: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 10, paddingVertical: 6,
+    paddingHorizontal: 8, paddingVertical: 4,
     backgroundColor: '#F0FDF4', borderRadius: 8,
   },
-  badgePaidText: { fontSize: 12, fontWeight: '600', color: '#16A34A' },
+  badgePaidText: { fontSize: 11, fontWeight: '600', color: '#16A34A' },
 
 
   badgePending: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 10, paddingVertical: 6,
+    paddingHorizontal: 8, paddingVertical: 4,
     backgroundColor: '#FFF7ED', borderRadius: 8,
   },
-  badgePendingText: { fontSize: 12, fontWeight: '600', color: '#EA580C' },
+  badgePendingText: { fontSize: 11, fontWeight: '600', color: '#EA580C' },
 
 
   badgeLate: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 10, paddingVertical: 5,
+    paddingHorizontal: 8, paddingVertical: 4,
     backgroundColor: '#FEF2F2', borderRadius: 8,
   },
   badgeLateText: { fontSize: 11, fontWeight: '600', color: '#EF4444' },
 
   badgeSettled: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 10, paddingVertical: 5,
+    paddingHorizontal: 8, paddingVertical: 4,
     backgroundColor: '#F0FDF4', borderRadius: 8,
   },
   badgeSettledText: { fontSize: 11, fontWeight: '600', color: '#16A34A' },
