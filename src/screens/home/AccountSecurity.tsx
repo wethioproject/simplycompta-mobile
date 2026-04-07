@@ -82,7 +82,7 @@ const AccountSecurity: React.FC = ({ navigation }: any) => {
             setDeleting(true);
             try {
               await api.delete(Api_Endpoints.customerProfile);
-              navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+              navigation.reset({ index: 0, routes: [{ name: 'Splash' }] });
             } catch (e: any) {
               const msg = e?.response?.data?.message ?? t('error_delete_account');
               Alert.alert(t('error_title'), msg);

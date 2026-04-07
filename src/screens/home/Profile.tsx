@@ -119,7 +119,7 @@ const Profile: React.FC = () => {
       await logout();
       navigation.reset({
         index: 0,
-        routes: [{ name: 'Login' }],
+        routes: [{ name: 'Splash' }],
       });
     } catch (e: any) {
       Alert.alert(t('error_title'), t('error_logout_failed'));

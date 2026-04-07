@@ -33,7 +33,7 @@ const DrawerContent: React.FC<DrawerContentProps> = ({ navigation }) => {
     await logout();
     navigation.getParent()?.reset({
       index: 0,
-      routes: [{ name: 'Login' }],
+      routes: [{ name: 'Splash' }],
     });
   };
 

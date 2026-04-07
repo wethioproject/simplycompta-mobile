@@ -21,18 +21,15 @@ const Splash = ({ navigation }: any) => {
         ),
       ]);
 
-      // Navigate based on onboarding + auth status
-      if (!hasSeenOnboarding) {
-        navigation.replace('Onboarding');
-      } else if (isAuthenticated) {
+      if (isAuthenticated) {
         navigation.replace('Home');
       } else {
-        navigation.replace('Login');
+        navigation.replace('Onboarding');
       }
     };
 
     initializeAuth();
-  }, [hasSeenOnboarding]);
+  }, [checkAuth, hasSeenOnboarding, navigation]);
 
   return (
     <View style={styles.container}>

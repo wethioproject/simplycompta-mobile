@@ -61,7 +61,7 @@ const Plus: React.FC = ({ navigation }: any) => {
     setLoggingOut(true);
     try {
       await logout();
-      nav.reset({ index: 0, routes: [{ name: 'Login' }] });
+      nav.reset({ index: 0, routes: [{ name: 'Splash' }] });
     } catch (e: any) {
       Alert.alert(t('error_title'), t('error_logout_message'));
     } finally {
