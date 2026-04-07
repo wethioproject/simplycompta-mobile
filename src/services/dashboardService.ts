@@ -33,12 +33,21 @@ export interface DashboardResponse {
 export interface ActivityStats {
     total_issued_paid_sum: number;
     total_paid_sum: number;
+    total_paid_percentage_change: number;
     total_expenses_sum: number;
+    total_expenses_percentage_change: number;
     total_vat_payable: number;
+    total_vat_payable_percentage_change: number;
     total_issued_sum: number;
     total_quote_sum: number;
     total_issued_count: number;
     total_quote_count: number;
+    total_pending_actions: number;
+    unpaidInvoicesCount: number;
+    unpaidInvoiceSum: number;
+    unreadDocumentsCount: number;
+    total_progress_score: number;
+    hasStatement: boolean;
     is_enable_login: 0 | 1;
 }
 
