@@ -1,77 +1,252 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState } from 'react';
 import {
-  View,
+  Animated,
+  Dimensions,
+  PanResponder,
+  StyleSheet,
   Text,
-  FlatList,
   TouchableOpacity,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
-  ViewToken,
+  View,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import OnboardingSlide from '../../components/onboarding/OnboardingSlide';
-import { onboardingStyles as styles } from '../../styles/onboarding.styles';
+import { ChevronLeft, ChevronRight, Check, LayoutDashboard } from 'lucide-react-native';
 import { useOnboarding } from '../../hooks/useOnboarding';
-import type { OnboardingSlideData } from '../../types/onboarding.types';
 
-const SLIDES: OnboardingSlideData[] = [
-  {
-    id: '1',
-    titleKey: 'onboarding_title_1',
-    descriptionKey: 'onboarding_desc_1',
-    icon: 'fileText',
-    accentColor: '#1E5BAC',
-    // Replace with: require('../../assets/images/onboarding1.png')
-    screenshotSource: require('../../assets/images/onboarding4.png'),
-  },
-  {
-    id: '2',
-    titleKey: 'onboarding_title_2',
-    descriptionKey: 'onboarding_desc_2',
-    icon: 'creditCard',
-    accentColor: '#16A34A',
-    // Replace with: require('../../assets/images/onboarding2.png')
-    screenshotSource: require('../../assets/images/onboarding1.png'),
-  },
-  {
-    id: '3',
-    titleKey: 'onboarding_title_3',
-    descriptionKey: 'onboarding_desc_3',
-    icon: 'barChart',
-    accentColor: '#7C3AED',
-    // Replace with: require('../../assets/images/onboarding3.png')
-    screenshotSource: require('../../assets/images/onboarding3.png'),
-  },
+const { width: W } = Dimensions.get('window');
+const CARD_W = W - 48; // slide paddingHorizontal 24 × 2
+
+// ─── Illustrations ────────────────────────────────────────────────────────────
+
+const PaymentsIllustration = () => {
+  const items = [
+    { name: 'Facture #2401', amount: '2 450 MAD', paid: true },
+    { name: 'Facture #2402', amount: '1 890 MAD', paid: true },
+    { name: 'Facture #2403', amount: '3 200 MAD', paid: false },
+  ];
+  return (
+    <View style={il.card}>
+      {items.map((inv, i) => (
+        <View key={i} style={[il.invoiceRow, i < items.length - 1 && { marginBottom: 10 }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={il.invoiceName}>{inv.name}</Text>
+            <Text style={il.invoiceAmount}>{inv.amount}</Text>
+          </View>
+          <View style={[il.badge, inv.paid ? il.badgePaid : il.badgePending]}>
+            {inv.paid && <Check size={9} color="#16A34A" strokeWidth={3} />}
+            <Text style={[il.badgeText, inv.paid ? il.badgeTextPaid : il.badgeTextPending]}>
+              {inv.paid ? 'Payée' : 'En attente'}
+            </Text>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+};
+
+const InvoiceIllustration = () => (
+  <View style={{ position: 'relative', alignItems: 'center' }}>
+    <View style={[il.card, { overflow: 'visible' }]}>
+      <View style={il.invoiceHeader}>
+        <LinearGradient colors={['#8B5CF6', '#3B82F6']} style={il.invoiceLogoBox} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={{ fontSize: 11, fontWeight: '700', color: '#111827' }}>FACTURE</Text>
+          <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>#FAC-2024-001</Text>
+        </View>
+      </View>
+      <View style={{ gap: 6, marginBottom: 14 }}>
+        {[0.75, 1, 0.65].map((w, i) => (
+          <View key={i} style={[il.line, { width: CARD_W * 0.7 * w }]} />
+        ))}
+      </View>
+      <View style={{ gap: 6, marginBottom: 14 }}>
+        {[0, 1].map(i => (
+          <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <View style={[il.line, { width: CARD_W * 0.38, backgroundColor: '#D1D5DB' }]} />
+            <View style={[il.line, { width: 52, backgroundColor: '#D1D5DB' }]} />
+          </View>
+        ))}
+      </View>
+      <View style={il.totalRow}>
+        <Text style={{ fontSize: 11, fontWeight: '700', color: '#111827' }}>TOTAL</Text>
+        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }}>2 450 MAD</Text>
+      </View>
+    </View>
+    {/* Check badge */}
+    <View style={il.checkBadge}>
+      <Check size={18} color="#FFFFFF" strokeWidth={3} />
+    </View>
+  </View>
+);
+
+const CustomizationIllustration = () => (
+  <View style={il.card}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 18 }}>
+      <Text style={{ fontSize: 18 }}>🎨</Text>
+      <Text style={{ fontSize: 13, fontWeight: '700', color: '#111827' }}>Personnalisation</Text>
+    </View>
+    <Text style={il.subLabel}>Logo de l'entreprise</Text>
+    <LinearGradient colors={['#8B5CF6', '#3B82F6']} style={il.logoBox} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+      <Text style={{ fontSize: 18, fontWeight: '700', color: '#FFF' }}>SC</Text>
+    </LinearGradient>
+    <Text style={[il.subLabel, { marginTop: 16, marginBottom: 10 }]}>Couleurs principales</Text>
+    <View style={{ flexDirection: 'row', gap: 8 }}>
+      {['#6D5EF5', '#22C55E', '#EF4444', '#F59E0B', '#3B82F6'].map((color, i) => (
+        <View key={i} style={{ position: 'relative' }}>
+          <View style={[il.colorSwatch, { backgroundColor: color }]} />
+          {i === 0 && (
+            <View style={il.colorCheck}>
+              <Check size={7} color="#6D5EF5" strokeWidth={3} />
+            </View>
+          )}
+        </View>
+      ))}
+    </View>
+    <View style={il.previewBox}>
+      {[0.75, 1, 0.5].map((w, i) => (
+        <View key={i} style={[il.line, { width: CARD_W * 0.62 * w, backgroundColor: '#D1D5DB', marginBottom: i < 2 ? 6 : 0 }]} />
+      ))}
+    </View>
+  </View>
+);
+
+const SpeedIllustration = () => (
+  <View style={il.phoneFrame}>
+    <View style={il.phoneScreen}>
+      <View style={il.phoneStatusBar}>
+        <Text style={{ fontSize: 8, fontWeight: '600', color: '#374151' }}>9:41</Text>
+        <View style={{ flexDirection: 'row', gap: 3 }}>
+          {[0, 1, 2].map(i => <View key={i} style={il.signalDot} />)}
+        </View>
+      </View>
+      <View style={{ padding: 14, flex: 1 }}>
+        <Text style={{ fontSize: 11, fontWeight: '700', color: '#111827', marginBottom: 14 }}>Nouvelle facture</Text>
+        <View style={{ gap: 10 }}>
+          <View>
+            <Text style={{ fontSize: 9, color: '#6B7280', marginBottom: 4 }}>Client</Text>
+            <View style={il.inputField}>
+              <View style={[il.line, { width: 72, backgroundColor: '#9CA3AF' }]} />
+            </View>
+          </View>
+          <View>
+            <Text style={{ fontSize: 9, color: '#6B7280', marginBottom: 4 }}>Montant</Text>
+            <View style={il.inputField}>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: '#111827' }}>2 450 MAD</Text>
+            </View>
+          </View>
+        </View>
+        <LinearGradient colors={['#7C3AED', '#2563EB']} style={il.sendBtn} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+          <Text style={{ fontSize: 9, fontWeight: '700', color: '#FFF' }}>⚡ Envoyer</Text>
+        </LinearGradient>
+        <View style={il.speedBadge}>
+          <Text style={{ fontSize: 9, fontWeight: '700', color: '#FFF' }}>30s ⚡</Text>
+        </View>
+      </View>
+    </View>
+  </View>
+);
+
+const DashboardIllustration = () => {
+  const kpis = [
+    { label: 'CA mensuel', value: '12,5K', colors: ['#8B5CF6', '#7C3AED'] },
+    { label: 'Factures', value: '24', colors: ['#3B82F6', '#2563EB'] },
+    { label: 'Clients', value: '18', colors: ['#22C55E', '#16A34A'] },
+    { label: 'Dépenses', value: '3,2K', colors: ['#F97316', '#EA580C'] },
+  ];
+  const bars = [40, 70, 45, 85, 60, 90, 75];
+  const BAR_MAX = 52;
+  return (
+    <View style={il.card}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+        <LayoutDashboard size={18} color="#6D5EF5" />
+        <Text style={{ fontSize: 13, fontWeight: '700', color: '#111827' }}>Tableau de bord</Text>
+      </View>
+      <View style={il.kpiGrid}>
+        {kpis.map((k, i) => (
+          <LinearGradient key={i} colors={k.colors} style={il.kpiCard} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+            <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.85)', marginBottom: 3 }}>{k.label}</Text>
+            <Text style={{ fontSize: 15, fontWeight: '700', color: '#FFF' }}>{k.value}</Text>
+          </LinearGradient>
+        ))}
+      </View>
+      <View style={il.chartArea}>
+        {bars.map((h, i) => (
+          <View key={i} style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
+            <LinearGradient colors={['#8B5CF6', '#3B82F6']} style={[il.bar, { height: BAR_MAX * h / 100 }]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} />
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+};
+
+// ─── Slides ────────────────────────────────────────────────────────────────────
+
+type SlideData = {
+  id: string;
+  titleKey: string;
+  descriptionKey: string;
+  Illustration: React.ComponentType;
+};
+
+const SLIDES: SlideData[] = [
+  { id: '1', titleKey: 'onboarding_title_1', descriptionKey: 'onboarding_desc_1', Illustration: PaymentsIllustration },
+  { id: '2', titleKey: 'onboarding_title_2', descriptionKey: 'onboarding_desc_2', Illustration: InvoiceIllustration },
+  { id: '3', titleKey: 'onboarding_title_3', descriptionKey: 'onboarding_desc_3', Illustration: CustomizationIllustration },
+  { id: '4', titleKey: 'onboarding_title_4', descriptionKey: 'onboarding_desc_4', Illustration: SpeedIllustration },
+  { id: '5', titleKey: 'onboarding_title_5', descriptionKey: 'onboarding_desc_5', Illustration: DashboardIllustration },
 ];
+
+// ─── Screen ────────────────────────────────────────────────────────────────────
 
 const OnboardingScreen = ({ navigation }: any) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { completeOnboarding } = useOnboarding();
-  const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const currentIndexRef = useRef(0);
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const startXRef = useRef(0);
 
   const isLastSlide = currentIndex === SLIDES.length - 1;
 
-  const onViewableItemsChanged = useCallback(
-    ({ viewableItems }: { viewableItems: ViewToken[] }) => {
-      if (viewableItems.length > 0 && viewableItems[0].index != null) {
-        setCurrentIndex(viewableItems[0].index);
-      }
-    },
-    [],
-  );
-
-  const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
-
-  const handleNext = () => {
-    if (isLastSlide) {
-      handleGetStarted();
-    } else {
-      flatListRef.current?.scrollToIndex({ index: currentIndex + 1, animated: true });
-    }
+  const goTo = (index: number) => {
+    const clamped = Math.max(0, Math.min(index, SLIDES.length - 1));
+    currentIndexRef.current = clamped;
+    setCurrentIndex(clamped);
+    Animated.timing(slideAnim, {
+      toValue: -clamped * W,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
   };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, g) =>
+        Math.abs(g.dx) > 8 && Math.abs(g.dx) > Math.abs(g.dy),
+      onPanResponderGrant: () => {
+        startXRef.current = -(currentIndexRef.current * W);
+      },
+      onPanResponderMove: (_, g) => {
+        slideAnim.setValue(startXRef.current + g.dx);
+      },
+      onPanResponderRelease: (_, g) => {
+        const idx = currentIndexRef.current;
+        if (g.dx < -50 && idx < SLIDES.length - 1) {
+          goTo(idx + 1);
+        } else if (g.dx > 50 && idx > 0) {
+          goTo(idx - 1);
+        } else {
+          Animated.spring(slideAnim, {
+            toValue: -(idx * W),
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    }),
+  ).current;
 
   const handleSkip = async () => {
     await completeOnboarding();
@@ -83,67 +258,184 @@ const OnboardingScreen = ({ navigation }: any) => {
     navigation.replace('Login');
   };
 
-  const renderItem = ({ item }: { item: OnboardingSlideData }) => (
-    <OnboardingSlide slide={item} />
-  );
+  const handleNext = () => {
+    if (isLastSlide) { handleGetStarted(); return; }
+    goTo(currentIndex + 1);
+  };
+
+  const handlePrev = () => { goTo(currentIndex - 1); };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      {/* Skip button */}
-      {!isLastSlide && (
-        <TouchableOpacity
-          style={[styles.skipButton, { top: insets.top + 16 }]}
-          onPress={handleSkip}
-          activeOpacity={0.7}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <Text style={styles.skipText}>{t('onboarding_skip')}</Text>
-        </TouchableOpacity>
-      )}
+    <LinearGradient
+      colors={['#6D5EF5', '#4F7CF7']}
+      style={styles.root}
+      start={{ x: 0.1, y: 0 }}
+      end={{ x: 0.9, y: 1 }}
+    >
+      {/* Blobs */}
+      <View style={styles.blobTopRight} />
+      <View style={styles.blobBottomLeft} />
 
-      {/* Slides */}
-      <FlatList
-        ref={flatListRef}
-        data={SLIDES}
-        renderItem={renderItem}
-        keyExtractor={item => item.id}
-        horizontal
-        pagingEnabled
-        bounces={false}
-        showsHorizontalScrollIndicator={false}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig}
-        style={styles.flatList}
-      />
-
-      {/* Bottom section */}
-      <View style={styles.bottomSection}>
-        {/* Pagination dots */}
-        <View style={styles.pagination}>
-          {SLIDES.map((_, index) => (
-            <View
-              key={index}
-              style={[
-                styles.dot,
-                currentIndex === index ? styles.dotActive : styles.dotInactive,
-              ]}
-            />
+      {/* ── Top: progress + welcome ──────────────────────────── */}
+      <View style={[styles.topSection, { paddingTop: insets.top + 16 }]}>
+        <View style={styles.progressRow}>
+          {SLIDES.map((_, i) => (
+            <View key={i} style={styles.progressTrack}>
+              <View style={[styles.progressFill, i <= currentIndex && styles.progressFillActive]} />
+            </View>
           ))}
         </View>
-
-        {/* CTA button */}
-        <TouchableOpacity
-          style={styles.ctaButton}
-          onPress={handleNext}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.ctaText}>
-            {isLastSlide ? t('onboarding_get_started') : t('onboarding_next')}
-          </Text>
-        </TouchableOpacity>
+        <Text style={styles.welcomeText}>{t('onboarding_welcome')}</Text>
       </View>
-    </View>
+
+      {/* ── Middle: swipeable slides ─────────────────────────── */}
+      <View style={styles.slideContainer} {...panResponder.panHandlers}>
+        <Animated.View
+          style={[styles.slideRow, { width: W * SLIDES.length, transform: [{ translateX: slideAnim }] }]}
+        >
+          {SLIDES.map((slide) => (
+            <View key={slide.id} style={styles.slide}>
+              <Text style={styles.slideTitle}>{t(slide.titleKey)}</Text>
+              <Text style={styles.slideSubtitle}>{t(slide.descriptionKey)}</Text>
+              <View style={styles.illustrationArea}>
+                <slide.Illustration />
+              </View>
+            </View>
+          ))}
+        </Animated.View>
+      </View>
+
+      {/* ── Bottom: nav dots + CTAs ──────────────────────────── */}
+      <View style={styles.bottomSection}>
+        <View style={styles.navRow}>
+          {currentIndex > 0 ? (
+            <TouchableOpacity style={styles.arrowBtn} onPress={handlePrev} activeOpacity={0.7}>
+              <ChevronLeft size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.arrowPlaceholder} />
+          )}
+          <View style={styles.dotsRow}>
+            {SLIDES.map((_, i) => (
+              <View key={i} style={[styles.dot, i === currentIndex ? styles.dotActive : styles.dotInactive]} />
+            ))}
+          </View>
+          {!isLastSlide ? (
+            <TouchableOpacity style={styles.arrowBtn} onPress={handleNext} activeOpacity={0.7}>
+              <ChevronRight size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.arrowPlaceholder} />
+          )}
+        </View>
+
+        <View style={[styles.ctaSection, { paddingBottom: Math.max(20, insets.bottom + 8) }]}>
+          <TouchableOpacity style={styles.ctaPrimary} onPress={handleGetStarted} activeOpacity={0.9}>
+            <Text style={styles.ctaPrimaryText}>{t('onboarding_cta_signup')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.ctaSecondary} onPress={handleSkip} activeOpacity={0.8}>
+            <Text style={styles.ctaSecondaryText}>{t('onboarding_cta_login')}</Text>
+          </TouchableOpacity>
+          {!isLastSlide && (
+            <TouchableOpacity onPress={handleSkip} activeOpacity={0.7} style={styles.skipBtn}>
+              <Text style={styles.skipText}>{t('onboarding_skip_intro')}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    </LinearGradient>
   );
 };
+
+// ─── Illustration styles ──────────────────────────────────────────────────────
+const il = StyleSheet.create({
+  card: {
+    backgroundColor: 'rgba(255,255,255,0.97)',
+    borderRadius: 24,
+    padding: 20,
+    width: CARD_W,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  invoiceRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', borderRadius: 12, padding: 10 },
+  invoiceName: { fontSize: 12, fontWeight: '600', color: '#111827' },
+  invoiceAmount: { fontSize: 11, color: '#6B7280', marginTop: 2 },
+  badge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 20 },
+  badgePaid: { backgroundColor: '#DCFCE7' },
+  badgePending: { backgroundColor: '#FFEDD5' },
+  badgeText: { fontSize: 10, fontWeight: '600' },
+  badgeTextPaid: { color: '#16A34A' },
+  badgeTextPending: { color: '#EA580C' },
+  invoiceHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 },
+  invoiceLogoBox: { width: 44, height: 44, borderRadius: 10 },
+  line: { height: 7, backgroundColor: '#E5E7EB', borderRadius: 4 },
+  totalRow: { borderTopWidth: 2, borderTopColor: '#E5E7EB', paddingTop: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  checkBadge: { position: 'absolute', top: -10, right: -10, width: 44, height: 44, borderRadius: 22, backgroundColor: '#22C55E', justifyContent: 'center', alignItems: 'center', shadowColor: '#22C55E', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 6 },
+  subLabel: { fontSize: 11, color: '#6B7280', marginBottom: 8 },
+  logoBox: { width: 64, height: 64, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 4 },
+  colorSwatch: { width: 34, height: 34, borderRadius: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 4, elevation: 2 },
+  colorCheck: { position: 'absolute', top: -4, right: -4, width: 16, height: 16, borderRadius: 8, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 },
+  previewBox: { marginTop: 16, backgroundColor: '#F9FAFB', borderRadius: 12, padding: 14 },
+  phoneFrame: { backgroundColor: '#1F2937', borderRadius: 36, padding: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 10 },
+  phoneScreen: { backgroundColor: '#FFFFFF', borderRadius: 28, overflow: 'hidden', height: 280, width: CARD_W - 40 },
+  phoneStatusBar: { height: 24, backgroundColor: '#F9FAFB', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16 },
+  signalDot: { width: 10, height: 7, backgroundColor: '#9CA3AF', borderRadius: 2 },
+  inputField: { height: 32, backgroundColor: '#F3F4F6', borderRadius: 8, justifyContent: 'center', paddingHorizontal: 10 },
+  sendBtn: { marginTop: 16, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  speedBadge: { position: 'absolute', top: 14, right: 14, backgroundColor: '#22C55E', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20 },
+  kpiGrid: { flexDirection: 'row',
+     flexWrap: 'wrap', 
+     gap: 8, 
+     marginBottom: 12, 
+    },
+  kpiCard: { width: (CARD_W - 58) / 2, borderRadius: 16, padding: 10, height: 80 },
+  chartArea: { height: 60, backgroundColor: '#F9FAFB', borderRadius: 14, flexDirection: 'row', alignItems: 'flex-end', padding: 8, gap: 4 },
+  bar: { flex: 1, borderRadius: 4 },
+});
+
+// ─── Screen styles ────────────────────────────────────────────────────────────
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+  blobTopRight: { position: 'absolute', top: 60, right: -20, width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(255,255,255,0.08)' },
+  blobBottomLeft: { position: 'absolute', bottom: 60, left: -30, width: 260, height: 260, borderRadius: 130, backgroundColor: 'rgba(255,255,255,0.07)' },
+
+  // Top
+  topSection: { paddingHorizontal: 24, paddingBottom: 14 },
+  progressRow: { flexDirection: 'row', gap: 6, marginBottom: 12 },
+  progressTrack: { flex: 1, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.2)', overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 2, width: '0%', backgroundColor: 'rgba(255,255,255,0.25)' },
+  progressFillActive: { width: '100%', backgroundColor: '#FFFFFF' },
+  welcomeText: { fontSize: 14, fontWeight: '500', color: 'rgba(255,255,255,0.9)', textAlign: 'center' },
+
+  // Slides
+  slideContainer: { flex: 1, overflow: 'hidden' },
+  slideRow: { flex: 1, flexDirection: 'row' },
+  slide: { width: W, paddingHorizontal: 24 },
+  slideTitle: { fontSize: 28, fontWeight: '800', color: '#FFFFFF', lineHeight: 34, marginBottom: 8, letterSpacing: 0.4 },
+  slideSubtitle: { fontSize: 15, color: 'rgba(255,255,255,0.8)', lineHeight: 22, marginBottom: 16 },
+  illustrationArea: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+
+  // Bottom
+  bottomSection: { paddingHorizontal: 24 },
+  navRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10 },
+  arrowBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' },
+  arrowPlaceholder: { width: 40 },
+  dotsRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  dot: { height: 8, borderRadius: 4 },
+  dotActive: { width: 24, backgroundColor: '#FFFFFF' },
+  dotInactive: { width: 8, backgroundColor: 'rgba(255,255,255,0.35)' },
+
+  // CTA
+  ctaSection: { gap: 10 },
+  ctaPrimary: { backgroundColor: '#FFFFFF', borderRadius: 50, paddingVertical: 16, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4 },
+  ctaPrimaryText: { fontSize: 16, fontWeight: '700', color: '#22C55E' },
+  ctaSecondary: { borderRadius: 50, paddingVertical: 15, alignItems: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' },
+  ctaSecondaryText: { fontSize: 15, fontWeight: '500', color: '#FFFFFF' },
+  skipBtn: { alignItems: 'center', paddingVertical: 6 },
+  skipText: { fontSize: 13, fontWeight: '500', color: 'rgba(255,255,255,0.55)' },
+});
 
 export default OnboardingScreen;
