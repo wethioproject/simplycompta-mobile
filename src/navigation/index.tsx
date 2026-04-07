@@ -31,7 +31,7 @@ import ClientDetail from '../screens/home/ClientDetail';
 import AccountStatement from '../screens/home/AccountStatement';
 import Documents from '../screens/home/Documents';
 import DeliveryNotes from '../screens/home/DeliveryNotes';
-import Credits from '../screens/home/Credits';
+// import Credits from '../screens/home/Credits';
 import Products from '../screens/home/Products';
 import Payments from '../screens/home/Payments';
 import Expenses from '../screens/home/Expenses';
@@ -58,10 +58,12 @@ import Invoice from '../screens/home/Invoice';
 import PersonalProfile from '../screens/home/PersonalProfile';
 import CompanyProfile from '../screens/home/CompanyProfile';
 import Suppliers from '../screens/home/Suppliers';
+import Contacts from '../screens/home/Contacts';
 import SupplierDetail from '../screens/home/SupplierDetail';
 import NotificationPreferences from '../screens/home/NotificationPreferences';
 import AccountSecurity from '../screens/home/AccountSecurity';
 import LanguageSettings from '../screens/home/LanguageSettings';
+import DocumentsList from '../screens/home/DocumentsList';
 
 const Stack = createStackNavigator();
 
@@ -100,7 +102,7 @@ const AppNavigator = () => {
         <Stack.Screen name="Account Statement" component={AccountStatement} options={{ headerShown: false }} />
         <Stack.Screen name="Documents" component={Documents} options={{ headerShown: false }} />
         <Stack.Screen name="Delivery Notes" component={DeliveryNotes} options={{ headerShown: false }} />
-        <Stack.Screen name="Credits" component={Credits} options={{ headerShown: false }} />
+        {/* <Stack.Screen name="Credits" component={Credits} options={{ headerShown: false }} /> */}
         <Stack.Screen name="Products" component={Products} options={{ headerShown: false }} />
         <Stack.Screen name="Payments" component={Payments} options={{ headerShown: false }} />
         <Stack.Screen name="Expenses" component={Expenses} options={{ headerShown: false }} />
@@ -127,9 +129,11 @@ const AppNavigator = () => {
         <Stack.Screen name="Company Profile" component={CompanyProfile} options={{ headerShown: false }} />
         <Stack.Screen name="Notification Preferences" component={NotificationPreferences} options={{ headerShown: false }} />
         <Stack.Screen name="Suppliers" component={Suppliers} options={{ headerShown: false }} />
+        <Stack.Screen name="Contacts" component={Contacts} options={{ headerShown: false }} />
         <Stack.Screen name="Supplier Detail" component={SupplierDetail} options={{ headerShown: false }} />
         <Stack.Screen name="Account Security" component={AccountSecurity} options={{ headerShown: false }} />
         <Stack.Screen name="Language Settings" component={LanguageSettings} options={{ headerShown: false }} />
+        <Stack.Screen name="Documents List" component={DocumentsList} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
     <Toast />
