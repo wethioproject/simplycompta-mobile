@@ -13,9 +13,9 @@ import {
   Image,
   Modal,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { Save, Building2, Upload, ChevronDown, X, ImageIcon, PenLine, Camera, ArrowLeft } from 'lucide-react-native';
+import { Save, Building2, Upload, ChevronDown, X, ImageIcon, PenLine, Camera, ArrowLeft, Palette, Check } from 'lucide-react-native';
 import { appLogoIcon } from '../../assets/icons';
 import api from '../../api';
 import { Api_Endpoints } from '../../services/endpoints';
@@ -29,8 +29,16 @@ const COMPANY_TYPES = [
   'Association',
 ];
 
+const PREDEFINED_COLORS = [
+  '#EF4444', '#F87171', '#EC4899', '#A855F7', '#8B5CF6',
+  '#6366F1', '#3B82F6', '#06B6D4', '#14B8A6', '#10B981',
+  '#22C55E', '#84CC16', '#EAB308', '#F59E0B', '#FB923C',
+  '#92400E', '#78350F', '#334155', '#64748B', '#94A3B8',
+];
+
 const CompanyProfile: React.FC = ({ navigation }: any) => {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const [billingName, setBillingName] = useState('');
   const [siret, setSiret] = useState('');
   const [vatNumber, setVatNumber] = useState('');
@@ -46,6 +54,9 @@ const CompanyProfile: React.FC = ({ navigation }: any) => {
   const [cnss, setCnss] = useState('');
   const [companyType, setCompanyType] = useState('');
   const [showCompanyTypePicker, setShowCompanyTypePicker] = useState(false);
+  const [companyColor, setCompanyColor] = useState('#3B6FD4');
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [tempColor, setTempColor] = useState('#3B6FD4');
 
   const [logo, setLogo] = useState<any>(null);
   const [signature, setSignature] = useState<any>(null);
@@ -75,6 +86,7 @@ const CompanyProfile: React.FC = ({ navigation }: any) => {
       setIfField(d.if_number ?? '');
       setCnss(d.cnss ?? '');
       setCompanyType(d.company_type ?? '');
+      setCompanyColor(d.company_color ?? '#3B6FD4');
       setExistingLogoUrl(d.avatar_url ?? null);
       setExistingSignatureUrl(d.signature_url ?? null);
     } catch (e: any) {
@@ -141,6 +153,7 @@ const CompanyProfile: React.FC = ({ navigation }: any) => {
       formData.append('if_number', ifField.trim());
       formData.append('cnss', cnss.trim());
       formData.append('company_type', companyType);
+      formData.append('company_color', companyColor);
 
       if (logo) {
         formData.append('avatar', {
@@ -519,6 +532,24 @@ const CompanyProfile: React.FC = ({ navigation }: any) => {
 
             <View style={styles.divider} />
 
+
+            <Text style={styles.sectionSubtitle}>COULEUR DE MARQUE</Text>
+            <Text style={styles.colorSectionDesc}>Cette couleur sera utilisée sur vos factures</Text>
+            <TouchableOpacity
+              style={styles.colorPickerTrigger}
+              onPress={() => { setTempColor(companyColor); setShowColorPicker(true); }}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.colorSwatch, { backgroundColor: companyColor }]} />
+              <View style={styles.colorSwatchMeta}>
+                <Text style={styles.colorSwatchLabel}>Couleur actuelle</Text>
+                <Text style={styles.colorSwatchHex}>{companyColor.toUpperCase()}</Text>
+              </View>
+              <Palette size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+
+            <View style={styles.divider} />
+
             {/* Action buttons */}
             <View style={styles.actionRow}>
               <TouchableOpacity
@@ -621,6 +652,85 @@ const CompanyProfile: React.FC = ({ navigation }: any) => {
             ))}
           </View>
         </TouchableOpacity>
+      </Modal>
+
+      <Modal
+        visible={showColorPicker}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => { setShowColorPicker(false); setTempColor(companyColor); }}
+      >
+        <SafeAreaView style={styles.colorPickerScreen} edges={['top', 'bottom']}>
+          {/* Header */}
+          <View style={[styles.colorPickerHeader, { paddingTop: 14 + insets.top }]}>
+            <TouchableOpacity
+              style={styles.colorPickerBack}
+              onPress={() => { setShowColorPicker(false); setTempColor(companyColor); }}
+              activeOpacity={0.7}
+            >
+              <ArrowLeft size={20} color="#374151" />
+            </TouchableOpacity>
+            <Text style={styles.colorPickerTitle}>Sélectionner une couleur</Text>
+            <View style={{ width: 36 }} />
+          </View>
+
+          <ScrollView
+            contentContainerStyle={styles.colorPickerContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Color Grid */}
+            <View style={styles.colorGrid}>
+              {PREDEFINED_COLORS.map(color => (
+                <TouchableOpacity
+                  key={color}
+                  style={[
+                    styles.colorCircle,
+                    { backgroundColor: color },
+                    tempColor === color && styles.colorCircleSelected,
+                  ]}
+                  onPress={() => setTempColor(color)}
+                  activeOpacity={0.8}
+                >
+                  {tempColor === color && <Check size={20} color="#FFFFFF" strokeWidth={3} />}
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Hex Input */}
+            <View style={styles.hexInputRow}>
+              <TextInput
+                style={styles.hexInput}
+                value={tempColor}
+                onChangeText={(val) => {
+                  if (val.match(/^#[0-9A-Fa-f]{0,6}$/)) setTempColor(val);
+                }}
+                placeholder="#000000"
+                placeholderTextColor="#AAAAAA"
+                maxLength={7}
+                autoCapitalize="characters"
+              />
+              <TouchableOpacity
+                style={[styles.hexConfirmBtn, { backgroundColor: tempColor.length === 7 ? tempColor : '#3B6FD4' }]}
+                onPress={() => { setCompanyColor(tempColor); setShowColorPicker(false); }}
+                activeOpacity={0.85}
+              >
+                <Check size={24} color="#FFFFFF" strokeWidth={3} />
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+
+          {/* Bottom Validate Button */}
+          <View style={styles.colorPickerFooter}>
+            <TouchableOpacity
+              style={styles.colorValidateBtn}
+              onPress={() => { setCompanyColor(tempColor); setShowColorPicker(false); }}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.colorValidateBtnText}>Valider</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
@@ -888,6 +998,150 @@ const styles = StyleSheet.create({
   },
   saveBtnText: {
     fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+
+  // Brand Color trigger
+  colorSectionDesc: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 12,
+    marginTop: -8,
+  },
+  colorPickerTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    padding: 16,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  colorSwatch: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    flexShrink: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  colorSwatchMeta: { flex: 1 },
+  colorSwatchLabel: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 2 },
+  colorSwatchHex: { fontSize: 12, color: '#6B7280' },
+
+  // Color Picker Full-Screen Modal
+  colorPickerScreen: { flex: 1, backgroundColor: '#F5F5FA' },
+  colorPickerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  colorPickerBack: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  colorPickerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+    flex: 1,
+    textAlign: 'center',
+  },
+  colorPickerContent: {
+    padding: 32,
+    paddingBottom: 24,
+  },
+  colorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 16,
+    marginBottom: 32,
+  },
+  colorCircle: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  colorCircleSelected: {
+    transform: [{ scale: 1.15 }],
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  hexInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  hexInput: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 16,
+    fontSize: 18,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  hexConfirmBtn: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  colorPickerFooter: {
+    paddingHorizontal: 32,
+    paddingBottom: 16,
+    paddingTop: 8,
+    backgroundColor: '#F5F5FA',
+  },
+  colorValidateBtn: {
+    backgroundColor: '#22C55E',
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#22C55E',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  colorValidateBtnText: {
+    fontSize: 17,
     fontWeight: '700',
     color: '#FFFFFF',
   },
