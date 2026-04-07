@@ -1,7 +1,8 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Dimensions,
+  Easing,
   PanResponder,
   StyleSheet,
   Text,
@@ -11,143 +12,451 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeft, ChevronRight, Check, LayoutDashboard } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Check, LayoutDashboard, Palette, Zap } from 'lucide-react-native';
 import { useOnboarding } from '../../hooks/useOnboarding';
 
 const { width: W } = Dimensions.get('window');
 const CARD_W = W - 48; // slide paddingHorizontal 24 × 2
 
+type IllustrationProps = {
+  isActive: boolean;
+};
+
+const resetAnimatedValue = (value: Animated.Value, toValue = 0) => {
+  value.stopAnimation();
+  value.setValue(toValue);
+};
+
+const resetAnimatedValues = (values: Animated.Value[], toValue = 0) => {
+  values.forEach(value => resetAnimatedValue(value, toValue));
+};
+
 // ─── Illustrations ────────────────────────────────────────────────────────────
 
-const PaymentsIllustration = () => {
+const PaymentsIllustration: React.FC<IllustrationProps> = ({ isActive }) => {
   const items = [
     { name: 'Facture #2401', amount: '2 450 MAD', paid: true },
     { name: 'Facture #2402', amount: '1 890 MAD', paid: true },
     { name: 'Facture #2403', amount: '3 200 MAD', paid: false },
   ];
+
+  const cardAnim = useRef(new Animated.Value(0)).current;
+  const rowAnims = useRef(items.map(() => new Animated.Value(0))).current;
+
+  useEffect(() => {
+    if (!isActive) {
+      resetAnimatedValue(cardAnim);
+      resetAnimatedValues(rowAnims);
+      return;
+    }
+
+    resetAnimatedValue(cardAnim);
+    resetAnimatedValues(rowAnims);
+
+    Animated.parallel([
+      Animated.timing(cardAnim, {
+        toValue: 1,
+        duration: 450,
+        delay: 120,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.stagger(
+        90,
+        rowAnims.map(anim =>
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: 320,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: true,
+          }),
+        ),
+      ),
+    ]).start();
+  }, [cardAnim, isActive, rowAnims]);
+
   return (
-    <View style={il.card}>
+    <Animated.View
+      style={[
+        il.card,
+        {
+          opacity: cardAnim,
+          transform: [
+            {
+              translateY: cardAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [20, 0],
+              }),
+            },
+          ],
+        },
+      ]}
+    >
       {items.map((inv, i) => (
-        <View key={i} style={[il.invoiceRow, i < items.length - 1 && { marginBottom: 10 }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={il.invoiceName}>{inv.name}</Text>
-            <Text style={il.invoiceAmount}>{inv.amount}</Text>
+        <Animated.View
+          key={i}
+          style={{
+            opacity: rowAnims[i],
+            transform: [
+              {
+                translateX: rowAnims[i].interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-18, 0],
+                }),
+              },
+            ],
+            marginBottom: i < items.length - 1 ? 10 : 0,
+          }}
+        >
+          <View style={il.invoiceRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={il.invoiceName}>{inv.name}</Text>
+              <Text style={il.invoiceAmount}>{inv.amount}</Text>
+            </View>
+            <View style={[il.badge, inv.paid ? il.badgePaid : il.badgePending]}>
+              {inv.paid && <Check size={9} color="#16A34A" strokeWidth={3} />}
+              <Text style={[il.badgeText, inv.paid ? il.badgeTextPaid : il.badgeTextPending]}>
+                {inv.paid ? 'Payée' : 'En attente'}
+              </Text>
+            </View>
           </View>
-          <View style={[il.badge, inv.paid ? il.badgePaid : il.badgePending]}>
-            {inv.paid && <Check size={9} color="#16A34A" strokeWidth={3} />}
-            <Text style={[il.badgeText, inv.paid ? il.badgeTextPaid : il.badgeTextPending]}>
-              {inv.paid ? 'Payée' : 'En attente'}
-            </Text>
-          </View>
-        </View>
+        </Animated.View>
       ))}
-    </View>
+    </Animated.View>
   );
 };
 
-const InvoiceIllustration = () => (
-  <View style={{ position: 'relative', alignItems: 'center' }}>
-    <View style={[il.card, { overflow: 'visible' }]}>
-      <View style={il.invoiceHeader}>
-        <LinearGradient colors={['#8B5CF6', '#3B82F6']} style={il.invoiceLogoBox} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
-        <View style={{ alignItems: 'flex-end' }}>
-          <Text style={{ fontSize: 11, fontWeight: '700', color: '#111827' }}>FACTURE</Text>
-          <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>#FAC-2024-001</Text>
+const InvoiceIllustration: React.FC<IllustrationProps> = ({ isActive }) => {
+  const cardAnim = useRef(new Animated.Value(0)).current;
+  const badgeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!isActive) {
+      resetAnimatedValue(cardAnim);
+      resetAnimatedValue(badgeAnim);
+      return;
+    }
+
+    resetAnimatedValue(cardAnim);
+    resetAnimatedValue(badgeAnim);
+
+    Animated.sequence([
+      Animated.timing(cardAnim, {
+        toValue: 1,
+        duration: 450,
+        delay: 120,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.spring(badgeAnim, {
+        toValue: 1,
+        friction: 6,
+        tension: 120,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [badgeAnim, cardAnim, isActive]);
+
+  return (
+    <Animated.View
+      style={{
+        position: 'relative',
+        alignItems: 'center',
+        opacity: cardAnim,
+        transform: [
+          {
+            scale: cardAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.9, 1],
+            }),
+          },
+        ],
+      }}
+    >
+      <View style={[il.card, { overflow: 'visible' }]}>
+        <View style={il.invoiceHeader}>
+          <LinearGradient colors={['#8B5CF6', '#3B82F6']} style={il.invoiceLogoBox} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: '#111827' }}>FACTURE</Text>
+            <Text style={{ fontSize: 10, color: '#6B7280', marginTop: 2 }}>#FAC-2024-001</Text>
+          </View>
+        </View>
+        <View style={{ gap: 6, marginBottom: 14 }}>
+          {[0.75, 1, 0.65].map((w, i) => (
+            <View key={i} style={[il.line, { width: CARD_W * 0.7 * w }]} />
+          ))}
+        </View>
+        <View style={{ gap: 6, marginBottom: 14 }}>
+          {[0, 1].map(i => (
+            <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <View style={[il.line, { width: CARD_W * 0.38, backgroundColor: '#D1D5DB' }]} />
+              <View style={[il.line, { width: 52, backgroundColor: '#D1D5DB' }]} />
+            </View>
+          ))}
+        </View>
+        <View style={il.totalRow}>
+          <Text style={{ fontSize: 11, fontWeight: '700', color: '#111827' }}>TOTAL</Text>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }}>2 450 MAD</Text>
         </View>
       </View>
-      <View style={{ gap: 6, marginBottom: 14 }}>
-        {[0.75, 1, 0.65].map((w, i) => (
-          <View key={i} style={[il.line, { width: CARD_W * 0.7 * w }]} />
+      <Animated.View
+        style={[
+          il.checkBadge,
+          {
+            opacity: badgeAnim,
+            transform: [
+              {
+                scale: badgeAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 1],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        <Check size={18} color="#FFFFFF" strokeWidth={3} />
+      </Animated.View>
+    </Animated.View>
+  );
+};
+
+const CustomizationIllustration: React.FC<IllustrationProps> = ({ isActive }) => {
+  const containerAnim = useRef(new Animated.Value(0)).current;
+  const swatchAnims = useRef(
+    ['#6D5EF5', '#22C55E', '#EF4444', '#F59E0B', '#3B82F6'].map(() => new Animated.Value(0)),
+  ).current;
+
+  useEffect(() => {
+    if (!isActive) {
+      resetAnimatedValue(containerAnim);
+      resetAnimatedValues(swatchAnims);
+      return;
+    }
+
+    resetAnimatedValue(containerAnim);
+    resetAnimatedValues(swatchAnims);
+
+    Animated.parallel([
+      Animated.timing(containerAnim, {
+        toValue: 1,
+        duration: 450,
+        delay: 120,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.stagger(
+        80,
+        swatchAnims.map(anim =>
+          Animated.spring(anim, {
+            toValue: 1,
+            friction: 6,
+            tension: 130,
+            useNativeDriver: true,
+          }),
+        ),
+      ),
+    ]).start();
+  }, [containerAnim, isActive, swatchAnims]);
+
+  const colors = ['#6D5EF5', '#22C55E', '#EF4444', '#F59E0B', '#3B82F6'];
+
+  return (
+    <Animated.View
+      style={[
+        il.card,
+        {
+          opacity: containerAnim,
+          transform: [
+            {
+              translateY: containerAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [20, 0],
+              }),
+            },
+          ],
+        },
+      ]}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 18 }}>
+        <Palette size={18} color="#6D5EF5" />
+        <Text style={{ fontSize: 13, fontWeight: '700', color: '#111827' }}>Personnalisation</Text>
+      </View>
+      <Text style={il.subLabel}>Logo de l'entreprise</Text>
+      <LinearGradient colors={['#8B5CF6', '#3B82F6']} style={il.logoBox} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+        <Text style={{ fontSize: 18, fontWeight: '700', color: '#FFF' }}>SC</Text>
+      </LinearGradient>
+      <Text style={[il.subLabel, { marginTop: 16, marginBottom: 10 }]}>Couleurs principales</Text>
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        {colors.map((color, i) => (
+          <Animated.View
+            key={i}
+            style={{
+              position: 'relative',
+              opacity: swatchAnims[i],
+              transform: [
+                {
+                  scale: swatchAnims[i].interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0, 1],
+                  }),
+                },
+              ],
+            }}
+          >
+            <View style={[il.colorSwatch, { backgroundColor: color }]} />
+            {i === 0 && (
+              <View style={il.colorCheck}>
+                <Check size={7} color="#6D5EF5" strokeWidth={3} />
+              </View>
+            )}
+          </Animated.View>
         ))}
       </View>
-      <View style={{ gap: 6, marginBottom: 14 }}>
-        {[0, 1].map(i => (
-          <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <View style={[il.line, { width: CARD_W * 0.38, backgroundColor: '#D1D5DB' }]} />
-            <View style={[il.line, { width: 52, backgroundColor: '#D1D5DB' }]} />
-          </View>
+      <View style={il.previewBox}>
+        {[0.75, 1, 0.5].map((w, i) => (
+          <View key={i} style={[il.line, { width: CARD_W * 0.62 * w, backgroundColor: '#D1D5DB', marginBottom: i < 2 ? 6 : 0 }]} />
         ))}
       </View>
-      <View style={il.totalRow}>
-        <Text style={{ fontSize: 11, fontWeight: '700', color: '#111827' }}>TOTAL</Text>
-        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }}>2 450 MAD</Text>
-      </View>
-    </View>
-    {/* Check badge */}
-    <View style={il.checkBadge}>
-      <Check size={18} color="#FFFFFF" strokeWidth={3} />
-    </View>
-  </View>
-);
+    </Animated.View>
+  );
+};
 
-const CustomizationIllustration = () => (
-  <View style={il.card}>
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 18 }}>
-      <Text style={{ fontSize: 18 }}>🎨</Text>
-      <Text style={{ fontSize: 13, fontWeight: '700', color: '#111827' }}>Personnalisation</Text>
-    </View>
-    <Text style={il.subLabel}>Logo de l'entreprise</Text>
-    <LinearGradient colors={['#8B5CF6', '#3B82F6']} style={il.logoBox} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-      <Text style={{ fontSize: 18, fontWeight: '700', color: '#FFF' }}>SC</Text>
-    </LinearGradient>
-    <Text style={[il.subLabel, { marginTop: 16, marginBottom: 10 }]}>Couleurs principales</Text>
-    <View style={{ flexDirection: 'row', gap: 8 }}>
-      {['#6D5EF5', '#22C55E', '#EF4444', '#F59E0B', '#3B82F6'].map((color, i) => (
-        <View key={i} style={{ position: 'relative' }}>
-          <View style={[il.colorSwatch, { backgroundColor: color }]} />
-          {i === 0 && (
-            <View style={il.colorCheck}>
-              <Check size={7} color="#6D5EF5" strokeWidth={3} />
-            </View>
-          )}
-        </View>
-      ))}
-    </View>
-    <View style={il.previewBox}>
-      {[0.75, 1, 0.5].map((w, i) => (
-        <View key={i} style={[il.line, { width: CARD_W * 0.62 * w, backgroundColor: '#D1D5DB', marginBottom: i < 2 ? 6 : 0 }]} />
-      ))}
-    </View>
-  </View>
-);
+const SpeedIllustration: React.FC<IllustrationProps> = ({ isActive }) => {
+  const frameAnim = useRef(new Animated.Value(0)).current;
+  const badgeAnim = useRef(new Animated.Value(0)).current;
+  const buttonPulse = useRef(new Animated.Value(1)).current;
+  const pulseLoopRef = useRef<Animated.CompositeAnimation | null>(null);
 
-const SpeedIllustration = () => (
-  <View style={il.phoneFrame}>
-    <View style={il.phoneScreen}>
-      <View style={il.phoneStatusBar}>
-        <Text style={{ fontSize: 8, fontWeight: '600', color: '#374151' }}>9:41</Text>
-        <View style={{ flexDirection: 'row', gap: 3 }}>
-          {[0, 1, 2].map(i => <View key={i} style={il.signalDot} />)}
-        </View>
-      </View>
-      <View style={{ padding: 14, flex: 1 }}>
-        <Text style={{ fontSize: 11, fontWeight: '700', color: '#111827', marginBottom: 14 }}>Nouvelle facture</Text>
-        <View style={{ gap: 10 }}>
-          <View>
-            <Text style={{ fontSize: 9, color: '#6B7280', marginBottom: 4 }}>Client</Text>
-            <View style={il.inputField}>
-              <View style={[il.line, { width: 72, backgroundColor: '#9CA3AF' }]} />
+  useEffect(() => {
+    if (!isActive) {
+      pulseLoopRef.current?.stop();
+      resetAnimatedValue(frameAnim);
+      resetAnimatedValue(badgeAnim);
+      resetAnimatedValue(buttonPulse, 1);
+      return;
+    }
+
+    pulseLoopRef.current?.stop();
+    resetAnimatedValue(frameAnim);
+    resetAnimatedValue(badgeAnim);
+    resetAnimatedValue(buttonPulse, 1);
+
+    Animated.parallel([
+      Animated.timing(frameAnim, {
+        toValue: 1,
+        duration: 450,
+        delay: 120,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.sequence([
+        Animated.delay(500),
+        Animated.spring(badgeAnim, {
+          toValue: 1,
+          friction: 6,
+          tension: 120,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+
+    pulseLoopRef.current = Animated.loop(
+      Animated.sequence([
+        Animated.timing(buttonPulse, {
+          toValue: 1.05,
+          duration: 750,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(buttonPulse, {
+          toValue: 1,
+          duration: 750,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    pulseLoopRef.current.start();
+
+    return () => {
+      pulseLoopRef.current?.stop();
+    };
+  }, [badgeAnim, buttonPulse, frameAnim, isActive]);
+
+  return (
+    <Animated.View
+      style={{
+        opacity: frameAnim,
+        transform: [
+          {
+            scale: frameAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.9, 1],
+            }),
+          },
+        ],
+      }}
+    >
+      <View style={il.phoneFrame}>
+        <View style={il.phoneScreen}>
+          <View style={il.phoneStatusBar}>
+            <Text style={{ fontSize: 8, fontWeight: '600', color: '#374151' }}>9:41</Text>
+            <View style={{ flexDirection: 'row', gap: 3 }}>
+              {[0, 1, 2].map(i => <View key={i} style={il.signalDot} />)}
             </View>
           </View>
-          <View>
-            <Text style={{ fontSize: 9, color: '#6B7280', marginBottom: 4 }}>Montant</Text>
-            <View style={il.inputField}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: '#111827' }}>2 450 MAD</Text>
+          <View style={{ padding: 14, flex: 1 }}>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: '#111827', marginBottom: 14 }}>Nouvelle facture</Text>
+            <View style={{ gap: 10 }}>
+              <View>
+                <Text style={{ fontSize: 9, color: '#6B7280', marginBottom: 4 }}>Client</Text>
+                <View style={il.inputField}>
+                  <View style={[il.line, { width: 72, backgroundColor: '#9CA3AF' }]} />
+                </View>
+              </View>
+              <View>
+                <Text style={{ fontSize: 9, color: '#6B7280', marginBottom: 4 }}>Montant</Text>
+                <View style={il.inputField}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#111827' }}>2 450 MAD</Text>
+                </View>
+              </View>
             </View>
+            <Animated.View style={{ transform: [{ scale: buttonPulse }] }}>
+              <LinearGradient colors={['#7C3AED', '#2563EB']} style={il.sendBtn} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                <View style={il.sendBtnContent}>
+                  <Zap size={12} color="#FFFFFF" fill="#FFFFFF" />
+                  <Text style={{ fontSize: 9, fontWeight: '700', color: '#FFF' }}>Envoyer</Text>
+                </View>
+              </LinearGradient>
+            </Animated.View>
+            <Animated.View
+              style={[
+                il.speedBadge,
+                {
+                  opacity: badgeAnim,
+                  transform: [
+                    {
+                      scale: badgeAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, 1],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              <Text style={{ fontSize: 9, fontWeight: '700', color: '#FFF' }}>30s</Text>
+            </Animated.View>
           </View>
         </View>
-        <LinearGradient colors={['#7C3AED', '#2563EB']} style={il.sendBtn} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-          <Text style={{ fontSize: 9, fontWeight: '700', color: '#FFF' }}>⚡ Envoyer</Text>
-        </LinearGradient>
-        <View style={il.speedBadge}>
-          <Text style={{ fontSize: 9, fontWeight: '700', color: '#FFF' }}>30s ⚡</Text>
-        </View>
+        <View style={il.phoneNotch} />
       </View>
-    </View>
-  </View>
-);
+    </Animated.View>
+  );
+};
 
-const DashboardIllustration = () => {
+const DashboardIllustration: React.FC<IllustrationProps> = ({ isActive }) => {
   const kpis = [
     { label: 'CA mensuel', value: '12,5K', colors: ['#8B5CF6', '#7C3AED'] },
     { label: 'Factures', value: '24', colors: ['#3B82F6', '#2563EB'] },
@@ -156,28 +465,118 @@ const DashboardIllustration = () => {
   ];
   const bars = [40, 70, 45, 85, 60, 90, 75];
   const BAR_MAX = 52;
+
+  const containerAnim = useRef(new Animated.Value(0)).current;
+  const kpiAnims = useRef(kpis.map(() => new Animated.Value(0))).current;
+  const barAnims = useRef(bars.map(() => new Animated.Value(0))).current;
+
+  useEffect(() => {
+    if (!isActive) {
+      resetAnimatedValue(containerAnim);
+      resetAnimatedValues(kpiAnims);
+      resetAnimatedValues(barAnims);
+      return;
+    }
+
+    resetAnimatedValue(containerAnim);
+    resetAnimatedValues(kpiAnims);
+    resetAnimatedValues(barAnims);
+
+    Animated.parallel([
+      Animated.timing(containerAnim, {
+        toValue: 1,
+        duration: 450,
+        delay: 120,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.stagger(
+        80,
+        kpiAnims.map(anim =>
+          Animated.spring(anim, {
+            toValue: 1,
+            friction: 6,
+            tension: 120,
+            useNativeDriver: true,
+          }),
+        ),
+      ),
+      Animated.stagger(
+        45,
+        barAnims.map(anim =>
+          Animated.timing(anim, {
+            toValue: 1,
+            duration: 320,
+            easing: Easing.out(Easing.cubic),
+            useNativeDriver: false,
+          }),
+        ),
+      ),
+    ]).start();
+  }, [barAnims, containerAnim, isActive, kpiAnims]);
+
   return (
-    <View style={il.card}>
+    <Animated.View
+      style={[
+        il.card,
+        {
+          opacity: containerAnim,
+          transform: [
+            {
+              translateY: containerAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [20, 0],
+              }),
+            },
+          ],
+        },
+      ]}
+    >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
         <LayoutDashboard size={18} color="#6D5EF5" />
         <Text style={{ fontSize: 13, fontWeight: '700', color: '#111827' }}>Tableau de bord</Text>
       </View>
       <View style={il.kpiGrid}>
         {kpis.map((k, i) => (
-          <LinearGradient key={i} colors={k.colors} style={il.kpiCard} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-            <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.85)', marginBottom: 3 }}>{k.label}</Text>
-            <Text style={{ fontSize: 15, fontWeight: '700', color: '#FFF' }}>{k.value}</Text>
-          </LinearGradient>
+          <Animated.View
+            key={i}
+            style={{
+              opacity: kpiAnims[i],
+              transform: [
+                {
+                  scale: kpiAnims[i].interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.8, 1],
+                  }),
+                },
+              ],
+            }}
+          >
+            <LinearGradient colors={k.colors} style={il.kpiCard} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+              <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.85)', marginBottom: 3 }}>{k.label}</Text>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#FFF' }}>{k.value}</Text>
+            </LinearGradient>
+          </Animated.View>
         ))}
       </View>
       <View style={il.chartArea}>
         {bars.map((h, i) => (
           <View key={i} style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center' }}>
-            <LinearGradient colors={['#8B5CF6', '#3B82F6']} style={[il.bar, { height: BAR_MAX * h / 100 }]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} />
+            <Animated.View
+              style={{
+                width: '100%',
+                height: barAnims[i].interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, BAR_MAX * h / 100],
+                }),
+              }}
+            >
+              <LinearGradient colors={['#8B5CF6', '#3B82F6']} style={il.bar} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} />
+            </Animated.View>
           </View>
         ))}
       </View>
-    </View>
+    </Animated.View>
   );
 };
 
@@ -187,7 +586,7 @@ type SlideData = {
   id: string;
   titleKey: string;
   descriptionKey: string;
-  Illustration: React.ComponentType;
+  Illustration: React.ComponentType<IllustrationProps>;
 };
 
 const SLIDES: SlideData[] = [
@@ -298,7 +697,7 @@ const OnboardingScreen = ({ navigation }: any) => {
               <Text style={styles.slideTitle}>{t(slide.titleKey)}</Text>
               <Text style={styles.slideSubtitle}>{t(slide.descriptionKey)}</Text>
               <View style={styles.illustrationArea}>
-                <slide.Illustration />
+                <slide.Illustration isActive={slide.id === SLIDES[currentIndex].id} />
               </View>
             </View>
           ))}
@@ -385,7 +784,9 @@ const il = StyleSheet.create({
   signalDot: { width: 10, height: 7, backgroundColor: '#9CA3AF', borderRadius: 2 },
   inputField: { height: 32, backgroundColor: '#F3F4F6', borderRadius: 8, justifyContent: 'center', paddingHorizontal: 10 },
   sendBtn: { marginTop: 16, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
+  sendBtnContent: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   speedBadge: { position: 'absolute', top: 14, right: 14, backgroundColor: '#22C55E', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20 },
+  phoneNotch: { position: 'absolute', top: 0, alignSelf: 'center', width: 74, height: 18, borderBottomLeftRadius: 14, borderBottomRightRadius: 14, backgroundColor: '#1F2937' },
   kpiGrid: { flexDirection: 'row',
      flexWrap: 'wrap', 
      gap: 8, 
@@ -393,7 +794,7 @@ const il = StyleSheet.create({
     },
   kpiCard: { width: (CARD_W - 58) / 2, borderRadius: 16, padding: 10, height: 80 },
   chartArea: { height: 60, backgroundColor: '#F9FAFB', borderRadius: 14, flexDirection: 'row', alignItems: 'flex-end', padding: 8, gap: 4 },
-  bar: { flex: 1, borderRadius: 4 },
+  bar: { flex: 1, borderRadius: 4, width: '100%' },
 });
 
 // ─── Screen styles ────────────────────────────────────────────────────────────
