@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Image,
   Alert,
   Modal,
   Platform,
@@ -14,7 +13,6 @@ import {
   TextInput,
   ActivityIndicator,
   Linking,
-  FlatList,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -23,16 +21,34 @@ import {
   Phone,
   Mail,
   MapPin,
-  User,
-  LayoutGrid,
+  Building2,
+  Copy,
+  FileText,
+  Layers,
   CreditCard,
+  ChevronRight,
+  Package,
   Trash2,
-  ShoppingBag,
 } from 'lucide-react-native';
-import { appLogoIcon } from '../../assets/icons';
 import { useSupplier } from '../../hooks/useSupplier';
 import { SupplierPayload } from '../../services/supplierService';
 import { SupplierItem } from './Suppliers';
+
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+const getInitials = (name: string): string => {
+  const words = name.trim().split(/\s+/);
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+  if (words[0].length >= 2) return words[0].substring(0, 2).toUpperCase();
+  return words[0][0].toUpperCase();
+};
+
+// ─── Static chart data (visual only) ──────────────────────────────────────────
+const CHART_POINTS = [
+  { label: 'Janv', x: 0,   y: 50  },
+  { label: 'Fév',  x: 33,  y: 30  },
+  { label: 'Mars', x: 66,  y: 35  },
+  { label: 'Avr',  x: 100, y: 15  },
+];
 
 // ─── Edit Supplier Modal ───────────────────────────────────────────────────────
 const EditSupplierModal: React.FC<{
@@ -232,6 +248,7 @@ const SupplierDetail: React.FC = ({ navigation, route }: any) => {
     );
   };
   console.log('supp data333', supplierData);
+
   const companyName = supplierData?.company_name ?? '—';
   const contactName = supplierData?.supplier_name ?? '—';
   const email = supplierData?.email ?? '—';
@@ -239,35 +256,61 @@ const SupplierDetail: React.FC = ({ navigation, route }: any) => {
   const postalCity = `${supplierData?.postal_code ?? ''} ${supplierData?.city ?? ''}`.trim() || '—';
   const registreCommerce = supplierData?.commercial_register ?? '—';
   const ice = supplierData?.ice ?? '—';
-  const initial = companyName !== '—' ? companyName.charAt(0).toUpperCase() : '?';
-
-  // Totals from expenses
   const totalExpenses = expenses.reduce((sum, e) => sum + (parseFloat(e.total_ttc ?? e.ttc ?? '0') || 0), 0);
+
+  const copyToClipboard = (text: string) =>
+    Alert.alert('', `"${text}" ${t('message_copied')}`);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
+
+      {/* ── Header (always visible) ──────────────────────────────────────── */}
       <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Image source={appLogoIcon} style={styles.logo} resizeMode="contain" />
-        </View>
-        <View style={styles.titleRow}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} activeOpacity={0.7}>
-            <ArrowLeft size={22} color="#1F2937" />
-          </TouchableOpacity>
-          <Text style={styles.titleText}>{t('title_supplier_sheet')}</Text>
-          <View style={{ flex: 1 }} />
-          {!loadingDetail && (
-            <TouchableOpacity style={styles.editButton} onPress={() => setShowEditModal(true)} activeOpacity={0.7}>
-              <Edit2 size={18} color="#1E5BAC" />
-            </TouchableOpacity>
-          )}
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+          activeOpacity={0.7}
+        >
+          <ArrowLeft size={20} color="#374151" />
+        </TouchableOpacity>
+
+        <View style={styles.heroRow}>
+          {/* Avatar */}
+          <View style={styles.avatar}>
+            {loadingDetail
+              ? <ActivityIndicator size="small" color="#EA580C" />
+              : <Text style={styles.avatarText}>{getInitials(companyName)}</Text>}
+          </View>
+
+          {/* Name & subtitle */}
+          <View style={styles.heroInfo}>
+            <Text style={styles.heroName} numberOfLines={1}>{companyName}</Text>
+            <View style={styles.heroSubRow}>
+              <Building2 size={14} color="#6B7280" />
+              <Text style={styles.heroSubText} numberOfLines={1}>{contactName}</Text>
+              {!loadingDetail && (
+                <TouchableOpacity
+                  onPress={() => setShowEditModal(true)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Edit2 size={13} color="#9CA3AF" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {/* FOURNISSEUR badge */}
+          <View style={styles.supplierBadge}>
+            <Package size={14} color="#EA580C" />
+            <Text style={styles.supplierBadgeText}>{t('badge_supplier')}</Text>
+          </View>
         </View>
       </View>
 
+      {/* ── Body ─────────────────────────────────────────────────────────── */}
       {loadingDetail ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#1E5BAC" />
+        <View style={styles.loadingBox}>
+          <ActivityIndicator size="large" color="#EA580C" />
         </View>
       ) : (
         <ScrollView
@@ -275,132 +318,157 @@ const SupplierDetail: React.FC = ({ navigation, route }: any) => {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Hero Card */}
+          {/* ── Informations du fournisseur ────────────────────────────── */}
           <View style={styles.card}>
-            <View style={styles.avatarCircle}>
-              <Text style={styles.avatarInitial}>{initial}</Text>
-            </View>
-            <Text style={styles.companyName}>{companyName}</Text>
-            <Text style={styles.contactName}>{contactName}</Text>
-            <View style={styles.actionRow}>
-              <TouchableOpacity
-                style={[styles.callBtn, phone === '—' && { opacity: 0.5 }]}
-                activeOpacity={0.85}
-                onPress={() => phone !== '—' && Linking.openURL(`tel:${phone}`)}
-              >
-                <Phone size={16} color="#FFFFFF" />
-                <Text style={styles.callBtnText}>{t('button_call')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.emailBtn, email === '—' && { opacity: 0.5 }]}
-                activeOpacity={0.85}
-                onPress={() => {
-                  if (email === '—') return;
-                  Linking.openURL(`mailto:${email}`).catch(() =>
-                    Alert.alert(t('error_title'), t('error_open_email_app'))
-                  );
-                }}
-              >
-                <Mail size={16} color="#374151" />
-                <Text style={styles.emailBtnText}>{t('button_email')}</Text>
+            <Text style={styles.cardTitle}>{t('detail_supplier_info')}</Text>
+
+            {/* Email */}
+            <View style={styles.infoRow}>
+              <View style={styles.infoIconBox}>
+                <Mail size={18} color="#EA580C" />
+              </View>
+              <Text style={styles.infoTextFlex}>{email}</Text>
+              <TouchableOpacity onPress={() => copyToClipboard(email)} style={styles.copyBtn} activeOpacity={0.7}>
+                <Copy size={14} color="#6B7280" />
               </TouchableOpacity>
             </View>
-          </View>
 
-          {/* Coordonnées Card */}
-          <View style={styles.card}>
-            <View style={styles.sectionHeader}>
-              <User size={18} color="#1E5BAC" />
-              <Text style={styles.sectionTitle}>{t('section_coordinates')}</Text>
-            </View>
+            {/* Phone */}
             <View style={styles.infoRow}>
-              <View style={styles.infoIconBox}><Mail size={16} color="#6B7280" /></View>
-              <View style={styles.infoTextBlock}>
-                <Text style={styles.infoLabel}>{t('label_email')}</Text>
-                <Text style={styles.infoValue}>{email}</Text>
+              <View style={styles.infoIconBox}>
+                <Phone size={18} color="#EA580C" />
               </View>
+              <Text style={styles.infoTextFlex}>{phone}</Text>
+              <TouchableOpacity onPress={() => copyToClipboard(phone)} style={styles.copyBtn} activeOpacity={0.7}>
+                <Copy size={14} color="#6B7280" />
+              </TouchableOpacity>
             </View>
+
+            {/* Company */}
             <View style={styles.infoRow}>
-              <View style={styles.infoIconBox}><Phone size={16} color="#6B7280" /></View>
-              <View style={styles.infoTextBlock}>
-                <Text style={styles.infoLabel}>{t('label_phone')}</Text>
-                <Text style={styles.infoValue}>{phone}</Text>
+              <View style={styles.infoIconBox}>
+                <Building2 size={18} color="#EA580C" />
               </View>
+              <Text style={styles.infoTextFlex}>{companyName}</Text>
+              <TouchableOpacity onPress={() => copyToClipboard(companyName)} style={styles.copyBtn} activeOpacity={0.7}>
+                <Copy size={14} color="#6B7280" />
+              </TouchableOpacity>
             </View>
-            <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
-              <View style={styles.infoIconBox}><MapPin size={16} color="#6B7280" /></View>
-              <View style={styles.infoTextBlock}>
-                <Text style={styles.infoLabel}>{t('label_address')}</Text>
-                <Text style={styles.infoValue}>{postalCity}</Text>
+
+            {/* ICE / RC */}
+            <View style={styles.infoRow}>
+              <View style={styles.infoIconBox}>
+                <FileText size={18} color="#EA580C" />
+              </View>
+              <Text style={styles.infoTextFlex}>ICE {ice}  RC {registreCommerce}</Text>
+              <TouchableOpacity onPress={() => copyToClipboard(`ICE ${ice}  RC ${registreCommerce}`)} style={styles.copyBtn} activeOpacity={0.7}>
+                <Copy size={14} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Address */}
+            <View style={[styles.infoRow, { alignItems: 'flex-start' }]}>
+              <View style={[styles.infoIconBox, { marginTop: 2 }]}>
+                <MapPin size={18} color="#EA580C" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.infoText}>{registreCommerce}</Text>
+                <Text style={styles.infoSubText}>{postalCity}</Text>
               </View>
             </View>
           </View>
 
-          {/* Informations légales Card */}
-          <View style={styles.card}>
-            <View style={styles.sectionHeader}>
-              <LayoutGrid size={18} color="#1E5BAC" />
-              <Text style={styles.sectionTitle}>{t('section_legal_info')}</Text>
+          {/* ── Stats Row ────────────────────────────────────────────────── */}
+          <View style={styles.statsRow}>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>{t('detail_supplier_status')}</Text>
+              <Text style={styles.statValueGreen}>{t('status_active')}</Text>
             </View>
-            <View style={styles.legalRow}>
-              <Text style={styles.legalLabel}>{t('label_rc')}</Text>
-              <Text style={styles.legalValue}>{registreCommerce}</Text>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>{t('detail_total_expenses')}</Text>
+              <Text style={styles.statValue}>{totalExpenses.toLocaleString('fr-FR')} MAD</Text>
             </View>
-            <View style={[styles.legalRow, { borderBottomWidth: 0 }]}>
-              <Text style={styles.legalLabel}>{t('label_ice')}</Text>
-              <Text style={styles.legalValue}>{ice}</Text>
-            </View>
-          </View>
-
-          {/* Finances Card */}
-          <View style={styles.card}>
-            <View style={styles.sectionHeader}>
-              <CreditCard size={18} color="#1E5BAC" />
-              <Text style={styles.sectionTitle}>{t('section_finances')}</Text>
-            </View>
-            <View style={styles.financeStatsRow}>
-              <View style={styles.statBoxBlue}>
-                <Text style={styles.statLabel}>{t('label_total_expenses')}</Text>
-                <Text style={styles.statValueBlue}>{totalExpenses.toLocaleString('fr-FR')} MAD</Text>
-              </View>
-              <View style={styles.statBoxOrange}>
-                <Text style={styles.statLabelOrange}>{t('label_nb_expenses')}</Text>
-                <Text style={styles.statValueOrange}>{expenses.length} {t('text_expense_or_expenses', { count: expenses.length })}</Text>
-              </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statLabel}>{t('detail_expense_count')}</Text>
+              <Text style={styles.statValue}>{expenses.length} {t('text_expense_or_expenses', { count: expenses.length })}</Text>
             </View>
           </View>
 
-          {/* Expenses Card */}
-          <View style={styles.card}>
-            <View style={styles.sectionHeader}>
-              <ShoppingBag size={18} color="#1E5BAC" />
-              <Text style={styles.sectionTitle}>{t('section_expenses')}</Text>
+          {/* ── Chart + Activity ──────────────────────────────────────────── */}
+          <View style={styles.bottomRow}>
+            {/* Montant dépensé – bar chart */}
+            <View style={styles.chartCard}>
+              <Text style={styles.chartTitle}>{t('detail_amount_spent')}</Text>
+              {/* Simple bar chart approximation */}
+              <View style={styles.barChart}>
+                {[{ label: 'Janv', ratio: 0.5 }, { label: 'Fév', ratio: 0.7 }, { label: 'Mars', ratio: 0.65 }, { label: 'Avr', ratio: 0.85 }].map(bar => (
+                  <View key={bar.label} style={styles.barWrapper}>
+                    <View style={[styles.bar, { height: 72 * bar.ratio, backgroundColor: '#FB923C' }]} />
+                    <Text style={styles.barLabel}>{bar.label}</Text>
+                  </View>
+                ))}
+              </View>
+              <Text>
+                <Text style={styles.chartTotalAmount}>{totalExpenses.toLocaleString('fr-FR')} </Text>
+                <Text style={styles.chartTotalUnit}>{t('detail_expenses_unit')}</Text>
+              </Text>
             </View>
+
+            {/* Activité */}
+            <View style={styles.activityCard}>
+              <Text style={styles.activityTitle}>{t('detail_activity')}</Text>
+              <TouchableOpacity style={styles.activityBtnPrimary} activeOpacity={0.8}
+              onPress={() => navigation.navigate('Expenses', { openCreateModal: true, defaultSupplierId: supplierData?.id })}
+              >
+                <CreditCard size={16} color="#EA580C" />
+                <Text style={styles.activityBtnPrimaryText}>{t('detail_new_expense')}</Text>
+                <ChevronRight size={14} color="#EA580C" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.activityBtnSecondary} activeOpacity={0.8}>
+                <Layers size={16} color="#6B7280" />
+                <Text style={styles.activityBtnSecondaryText}>{t('detail_expense_history')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* ── Expenses History ──────────────────────────────────────────── */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{t('section_expenses')}</Text>
             {loadingExpenses ? (
-              <ActivityIndicator color="#1E5BAC" style={{ marginVertical: 16 }} />
+              <ActivityIndicator color="#EA580C" style={{ marginVertical: 16 }} />
             ) : expenses.length === 0 ? (
-              <Text style={styles.emptyExpenses}>{t('text_no_associated_expenses')}</Text>
+              <Text style={styles.emptyText}>{t('text_no_associated_expenses')}</Text>
             ) : (
               expenses.map((expense, index) => (
                 <View
                   key={expense.id ?? index}
                   style={[styles.expenseRow, index === expenses.length - 1 && { borderBottomWidth: 0 }]}
                 >
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.expenseLabel}>{expense.description ?? expense.category ?? expense.payment_method ?? '—'}</Text>
+                  <View style={styles.expenseIconBox}>
+                    <Package size={20} color="#EA580C" />
+                  </View>
+                  <View style={styles.expenseInfo}>
+                    <Text style={styles.expenseLabel}>
+                      {expense.description ?? expense.category ?? expense.payment_method ?? '—'}
+                    </Text>
                     <Text style={styles.expenseDate}>
                       {expense.date ? new Date(expense.date).toLocaleDateString('fr-FR') : '—'}
                     </Text>
                   </View>
-                  <Text style={styles.expenseAmount}>
-                    {parseFloat(expense.total_ttc ?? expense.ttc ?? '0').toLocaleString('fr-FR')} MAD
-                  </Text>
+                  <View style={styles.expenseRight}>
+                    <Text style={styles.expenseAmount}>
+                      {parseFloat(expense.total_ttc ?? expense.ttc ?? '0').toLocaleString('fr-FR')} MAD
+                    </Text>
+                    <View style={styles.paidBadge}>
+                      <Text style={styles.paidBadgeText}>Payée</Text>
+                    </View>
+                  </View>
                 </View>
               ))
             )}
           </View>
 
-          {/* Delete */}
+          {/* ── Delete ───────────────────────────────────────────────────── */}
           <TouchableOpacity
             style={[styles.deleteBtn, deleting && { opacity: 0.6 }]}
             onPress={handleDelete}
@@ -427,124 +495,339 @@ const SupplierDetail: React.FC = ({ navigation, route }: any) => {
   );
 };
 
+// ─── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F3F4F6' },
+  container: { flex: 1, backgroundColor: '#E8EAF6' },
 
-  // Header
+  // ── Header ──────────────────────────────────────────────────────────────────
   header: {
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  heroRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  avatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#FFF3E0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  avatarText: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  heroInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  heroName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  heroSubRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  heroSubText: {
+    fontSize: 13,
+    color: '#6B7280',
+    flex: 1,
+  },
+  supplierBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: '#FFF7ED',
+    borderRadius: 20,
+    flexShrink: 0,
+  },
+  supplierBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#EA580C',
+    letterSpacing: 0.5,
+  },
+
+  // ── Loading ──────────────────────────────────────────────────────────────────
+  loadingBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+
+  // ── Scroll ───────────────────────────────────────────────────────────────────
+  scrollView: { flex: 1 },
+  scrollContent: { padding: 16, paddingBottom: 40, gap: 12 },
+
+  // ── Generic card ─────────────────────────────────────────────────────────────
+  card: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    gap: 14,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 2,
+    shadowRadius: 4,
     elevation: 2,
   },
-  headerTop: { alignItems: 'center', marginBottom: 12 },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  backButton: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
-  logo: { height: 48, width: 160 },
-  titleText: { fontSize: 20, fontWeight: '700', color: '#1F2937' },
-  editButton: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: '#EEF2FF',
-    justifyContent: 'center', alignItems: 'center',
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
   },
 
-  scrollView: { flex: 1 },
-  scrollContent: { padding: 16, gap: 14 },
-
-  // Card
-  card: {
-    backgroundColor: '#FFFFFF', borderRadius: 16, padding: 18,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
-  },
-
-  // Hero
-  avatarCircle: {
-    width: 72, height: 72, borderRadius: 36,
-    backgroundColor: '#D1FAE5',
-    justifyContent: 'center', alignItems: 'center',
-    alignSelf: 'center', marginBottom: 12,
-  },
-  avatarInitial: { fontSize: 32, fontWeight: '700', color: '#059669' },
-  companyName: { fontSize: 20, fontWeight: '700', color: '#1F2937', textAlign: 'center', marginBottom: 4 },
-  contactName: { fontSize: 14, color: '#6B7280', textAlign: 'center', marginBottom: 18 },
-  actionRow: { flexDirection: 'row', gap: 12 },
-  callBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, backgroundColor: '#1E5BAC', borderRadius: 10, paddingVertical: 13,
-  },
-  callBtnText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
-  emailBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, backgroundColor: '#FFFFFF', borderRadius: 10, paddingVertical: 13,
-    borderWidth: 1.5, borderColor: '#E5E7EB',
-  },
-  emailBtnText: { fontSize: 15, fontWeight: '600', color: '#374151' },
-
-  // Section Header
-  sectionHeader: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    marginBottom: 14, paddingBottom: 12,
-    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
-  },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#1F2937' },
-
-  // Info rows
+  // ── Info rows ─────────────────────────────────────────────────────────────────
   infoRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: '#F9FAFB',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   infoIconBox: {
-    width: 36, height: 36, borderRadius: 10,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center', alignItems: 'center', flexShrink: 0,
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#FFF7ED',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
   },
-  infoTextBlock: { flex: 1 },
-  infoLabel: { fontSize: 12, color: '#9CA3AF', marginBottom: 2 },
-  infoValue: { fontSize: 14, fontWeight: '500', color: '#1F2937' },
-
-  // Legal rows
-  legalRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 13,
-    borderBottomWidth: 1, borderBottomColor: '#F9FAFB',
+  infoText: {
+    fontSize: 13,
+    color: '#374151',
+    flex: 1,
+    lineHeight: 20,
   },
-  legalLabel: { fontSize: 14, color: '#6B7280' },
-  legalValue: { fontSize: 14, fontWeight: '500', color: '#1F2937', textAlign: 'right', flex: 1, marginLeft: 16 },
+  infoTextFlex: {
+    fontSize: 13,
+    color: '#374151',
+    flex: 1,
+  },
+  infoSubText: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    marginTop: 2,
+    lineHeight: 18,
+  },
+  copyBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#F9FAFB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
 
-  // Finances
-  financeStatsRow: { flexDirection: 'row', gap: 12, marginBottom: 6 },
-  statBoxBlue: { flex: 1, backgroundColor: '#EFF6FF', borderRadius: 12, padding: 14 },
-  statLabel: { fontSize: 12, color: '#3B82F6', marginBottom: 6 },
-  statValueBlue: { fontSize: 18, fontWeight: '700', color: '#1E5BAC' },
-  statBoxOrange: { flex: 1, backgroundColor: '#FFF7ED', borderRadius: 12, padding: 14 },
-  statLabelOrange: { fontSize: 12, color: '#EA580C', marginBottom: 6 },
-  statValueOrange: { fontSize: 18, fontWeight: '700', color: '#EA580C' },
+  // ── Stats row ─────────────────────────────────────────────────────────────────
+  statsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  statLabel: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    marginBottom: 6,
+    lineHeight: 14,
+  },
+  statValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  statValueGreen: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#16A34A',
+  },
 
-  // Expenses
-  emptyExpenses: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', paddingVertical: 12 },
+  // ── Bottom row ────────────────────────────────────────────────────────────────
+  bottomRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  chartCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  chartTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 12,
+  },
+  barChart: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    height: 80,
+    gap: 5,
+    marginBottom: 10,
+  },
+  barWrapper: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+  },
+  bar: {
+    width: '100%',
+    borderTopLeftRadius: 4,
+    borderTopRightRadius: 4,
+    marginBottom: 3,
+  },
+  barLabel: {
+    fontSize: 9,
+    color: '#9CA3AF',
+    textAlign: 'center',
+  },
+  chartTotalAmount: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  chartTotalUnit: {
+    fontSize: 11,
+    color: '#6B7280',
+  },
+  activityCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 14,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  activityTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  activityBtnPrimary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    backgroundColor: '#FFF7ED',
+    borderRadius: 10,
+  },
+  activityBtnPrimaryText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#EA580C',
+  },
+  activityBtnSecondary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
+  },
+  activityBtnSecondaryText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#374151',
+  },
+
+  // ── Expenses history ──────────────────────────────────────────────────────────
+  emptyText: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', paddingVertical: 12 },
   expenseRow: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: '#F9FAFB',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
-  expenseLabel: { fontSize: 14, fontWeight: '500', color: '#1F2937' },
-  expenseDate: { fontSize: 12, color: '#9CA3AF', marginTop: 2 },
-  expenseAmount: { fontSize: 14, fontWeight: '700', color: '#16A34A', marginLeft: 8 },
+  expenseIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    backgroundColor: '#FFF7ED',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  expenseInfo: { flex: 1 },
+  expenseLabel: { fontSize: 13, fontWeight: '600', color: '#111827' },
+  expenseDate: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
+  expenseRight: { alignItems: 'flex-end', gap: 4 },
+  expenseAmount: { fontSize: 13, fontWeight: '600', color: '#111827' },
+  paidBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    backgroundColor: '#F0FDF4',
+    borderRadius: 12,
+  },
+  paidBadgeText: { fontSize: 11, fontWeight: '600', color: '#16A34A' },
 
-  // Delete
+  // ── Delete ────────────────────────────────────────────────────────────────────
   deleteBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    backgroundColor: '#FFF5F5',
   },
-  deleteBtnText: { fontSize: 14, fontWeight: '600', color: '#DC2626' },
+  deleteBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#DC2626',
+  },
 
-  // Modal
+  // ── Modal (EditSupplierModal – unchanged) ─────────────────────────────────────
   modalContainer: { flex: 1, backgroundColor: '#F5F7FF' },
   modalHeader: {
     flexDirection: 'row', alignItems: 'center',

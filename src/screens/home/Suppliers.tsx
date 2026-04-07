@@ -40,6 +40,7 @@ export interface SupplierItem {
   city: string;
   commercial_register: string;
   ice: string;
+  total_ttc?: number;
   created_at?: string;
   updated_at?: string;
 }
