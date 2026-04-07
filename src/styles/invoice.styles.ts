@@ -238,6 +238,244 @@ export const invoiceStyles = StyleSheet.create({
   badgeBlue: { backgroundColor: '#DBEAFE' },
   badgeTextBlue: { color: '#1D4ED8' },
 
+  // ── New pill header ────────────────────────────────────────────────────────
+  newHeader: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerPillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#1E5BAC',
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+  },
+  headerPillBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  headerRightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  exportIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // ── Pill filter tabs ────────────────────────────────────────────────────────
+  pillTabsWrapper: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  pillTabsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  pillTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 9,
+    height: 36,
+  },
+  pillTabActive: {
+    backgroundColor: '#1E5BAC',
+  },
+  pillTabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  pillTabTextActive: {
+    color: '#FFFFFF',
+  },
+  pillTabBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#EF4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  pillTabBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+
+  // ── Summary Card ────────────────────────────────────────────────────────────
+  summaryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  summaryTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  summaryIndicatorsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  summaryIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  summaryDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  summaryIndicatorText: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  summaryIndicatorAmount: {
+    fontWeight: '600',
+    color: '#111827',
+  },
+
+  // ── Overdue Alert Card ──────────────────────────────────────────────────────
+  overdueAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFBEB',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  overdueAlertLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  overdueAlertIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F59E0B',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  overdueAlertText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  overdueAlertBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1E5BAC',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+  },
+  overdueAlertBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+
+  // ── New Invoice Card ────────────────────────────────────────────────────────
+  newInvoiceCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  newInvoiceCardRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  newInvoiceLeft: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  newInvoiceClientName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  newInvoiceMeta: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 10,
+  },
+  newInvoiceRight: {
+    alignItems: 'flex-end',
+    gap: 10,
+  },
+  newInvoiceStatusPill: {
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    alignSelf: 'flex-start',
+  },
+  newInvoiceStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  newInvoiceDotsBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
   // FAB
   fab: {
     position: 'absolute',

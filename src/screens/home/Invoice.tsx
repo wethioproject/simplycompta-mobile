@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  Image,
   FlatList,
   ActivityIndicator,
   Alert,
@@ -17,23 +16,42 @@ import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import {
-  ArrowLeft,
-  Plus,
+  ChevronLeft,
   ChevronDown,
   Upload,
   Receipt,
+  AlertTriangle,
+  Plus,
 } from 'lucide-react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import { appLogoIcon } from '../../assets/icons';
 import { useInvoice } from '../../hooks/useInvoice';
 import { useInvoiceList } from '../../hooks/useInvoiceList';
 import CreateInvoiceModal from '../../components/invoice/CreateInvoiceModal';
 import DetailModal from '../../components/invoice/DetailModal';
 import InvoiceCard from '../../components/invoice/InvoiceCard';
+import { calculateInvoiceTotals } from '../../utils/invoiceCalculations';
 import type { Account, Category, Client, InvoiceItem, InvoiceTabType, StackNavigation } from '../../types/invoice.types';
 import { invoiceStyles as styles } from '../../styles/invoice.styles';
-
 import { INVOICE_TABS } from '../../types/invoice.types';
+import i18n from '../../i18n/i18n';
+
+/** i18n key for each tab */
+const TAB_LABEL_KEYS: Record<InvoiceTabType, string> = {
+  Tous:      'tab_all',
+  Quotes:    'status_quotes',
+  Issued:    'status_issued',
+  Paid:      'status_paid',
+  Cancelled: 'status_cancelled',
+};
+
+/** Active background color for each tab */
+const TAB_COLORS: Record<InvoiceTabType, string> = {
+  Tous:      '#1E5BAC',
+  Quotes:    '#6B7280',
+  Issued:    '#3B82F6',
+  Paid:      '#16A34A',
+  Cancelled: '#EF4444',
+};
 
 const Invoice: React.FC = ({ navigation: navProp }: any) => {
   const { t } = useTranslation();
@@ -62,6 +80,7 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [defaultClientId, setDefaultClientId] = useState<number | undefined>(undefined);
   const [selectedItem, setSelectedItem] = useState<InvoiceItem | null>(null);
   const [editingItem, setEditingItem] = useState<InvoiceItem | null>(null);
   const [exporting, setExporting] = useState(false);
@@ -69,8 +88,26 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+
   const MONTHS = [t('month_january'), t('month_february'), t('month_march'), t('month_april'), t('month_may'), t('month_june'), t('month_july'), t('month_august'), t('month_september'), t('month_october'), t('month_november'), t('month_december')];
   const YEARS = ['2026', '2025', '2024'];
+
+  /* ─── Derived stats ─── */
+  const getTotal = (item: InvoiceItem) => calculateInvoiceTotals(item.articles).totalTTC;
+
+  const totalRevenue   = invoices.reduce((s, i) => s + getTotal(i), 0);
+  const collectedAmt   = invoices.filter(i => i.status === 'Paid').reduce((s, i) => s + getTotal(i), 0);
+  const pendingAmt     = invoices.filter(i => i.status === 'Issued').reduce((s, i) => s + getTotal(i), 0);
+  const overdueAmt     = invoices.filter(i => i.status === 'Cancelled').reduce((s, i) => s + getTotal(i), 0);
+  const overdueCount   = invoices.filter(i => i.status === 'Cancelled').length;
+
+  /* ─── Month button label ─── */
+  const now = new Date();
+  const currentMonthLabel = now.toLocaleString(i18n.language, { month: 'long' });
+  const currentYearLabel  = String(now.getFullYear());
+  const monthBtnLabel = selectedMonth && selectedYear 
+    ? `${selectedMonth} ${selectedYear}` 
+    : t('filter_all_months');
 
   const fetchResources = async () => {
     try {
@@ -133,13 +170,8 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
         const { fs } = ReactNativeBlobUtil;
         const fileName = result.fileName || 'invoices_export.csv';
         const filePath = `${fs.dirs.CacheDir}/${fileName}`;
-
-        // Remove stale cached file if present
         if (await fs.exists(filePath)) await fs.unlink(filePath);
-
-        // Write CSV string directly to file — no second network request needed
         await fs.writeFile(filePath, result.csvData, 'utf8');
-
         if (Platform.OS === 'ios') {
           await Share.share({ url: `file://${filePath}` });
         } else {
@@ -156,16 +188,21 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
     }
   };
 
+  const handleRelancerAll = () => {
+    Alert.alert(t('invoice_relancer_tout'), t('error_generic'));
+  };
+
   useEffect(() => {
     if (!loading && route.params?.openCreateModal) {
+      setDefaultClientId(route.params?.defaultClientId ?? undefined);
       setShowCreateModal(true);
     }
   }, [loading, route.params?.openCreateModal]);
 
-  const filtered = invoices.filter(t => {
+  const filtered = invoices.filter(item => {
     const q = searchQuery.toLowerCase();
-    const matchesSearch = !q || t.invoice_number.toLowerCase().includes(q) || (t.client?.client_name ?? '').toLowerCase().includes(q);
-    const matchesTab = activeTab === 'Tous' || t.status === activeTab;
+    const matchesSearch = !q || item.invoice_number.toLowerCase().includes(q) || (item.client?.client_name ?? '').toLowerCase().includes(q);
+    const matchesTab = activeTab === 'Tous' || item.status === activeTab;
     return matchesSearch && matchesTab;
   });
 
@@ -175,103 +212,133 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
 
-            <View style={styles.header}>
-              <View style={styles.headerTop}>
-                <Image source={appLogoIcon} style={styles.logo} resizeMode="contain" />
-              </View>
-              <View style={styles.titleRow}>
-                <TouchableOpacity style={styles.backButton} onPress={() => nav.goBack()} activeOpacity={0.7}>
-                  <ArrowLeft size={20} color="#1F2937" />
-                </TouchableOpacity>
-                <Text style={styles.titleText}>{t('title_invoices')}</Text>
-                <View style={{ flex: 1 }} />
-                <TouchableOpacity style={styles.exportBtn} onPress={handleExport} disabled={exporting} activeOpacity={0.8}>
-                  {exporting
-                    ? <ActivityIndicator size="small" color="#4B5563" />
-                    : <Upload size={15} color="#4B5563" />
-                  }
-                  <Text style={styles.exportBtnText}>{t('button_export')}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
+      {/* ── Header ─────────────────────────────────────────────────── */}
+      <View style={styles.newHeader}>
+        {/* Back pill */}
+        <TouchableOpacity
+          style={styles.headerPillBtn}
+          onPress={() => nav.goBack()}
+          activeOpacity={0.8}
+        >
+          <ChevronLeft size={16} color="#FFFFFF" />
+          <Text style={styles.headerPillBtnText}>{t('button_retour')}</Text>
+        </TouchableOpacity>
 
-      {/* Filters */}
-      <View style={styles.filtersRow}>
-        {/* Month */}
-        <View style={{ position: 'relative' }}>
+        {/* Title */}
+        <Text style={styles.headerTitle}>{t('title_invoices')}</Text>
+
+        {/* Right: month selector + export icon */}
+        <View style={styles.headerRightRow}>
+          {/* Month picker trigger */}
+          <View style={{ position: 'relative' }}>
+            <TouchableOpacity
+              style={styles.headerPillBtn}
+              onPress={() => { setShowMonthPicker(!showMonthPicker); setShowYearPicker(false); }}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.headerPillBtnText}>{monthBtnLabel}</Text>
+              <ChevronDown size={14} color="#FFFFFF" />
+            </TouchableOpacity>
+
+            {showMonthPicker && (
+              <View style={[styles.dropdown, { top: 46, right: 0, left: undefined, minWidth: 180, maxHeight: 320 }]}>
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  nestedScrollEnabled
+                >
+                  <TouchableOpacity
+                    style={styles.dropdownItem}
+                    onPress={() => { setSelectedMonth(null); setSelectedYear(null); setShowMonthPicker(false); }}
+                  >
+                    <Text style={styles.dropdownItemText}>{t('filter_all_months')}</Text>
+                  </TouchableOpacity>
+                  {YEARS.map(y => (
+                    <View key={y}>
+                      <View style={{ paddingHorizontal: 14, paddingTop: 8, paddingBottom: 2 }}>
+                        <Text style={{ fontSize: 11, fontWeight: '700', color: '#9CA3AF' }}>{y}</Text>
+                      </View>
+                      {MONTHS.map(m => (
+                        <TouchableOpacity
+                          key={`${y}-${m}`}
+                          style={styles.dropdownItem}
+                          onPress={() => {
+                            setSelectedMonth(m);
+                            setSelectedYear(y);
+                            setShowMonthPicker(false);
+                          }}
+                        >
+                          <Text style={[
+                            styles.dropdownItemText,
+                            selectedMonth === m && selectedYear === y && styles.dropdownItemSelected,
+                          ]}>{m}</Text>
+                          {selectedMonth === m && selectedYear === y && (
+                            <Text style={styles.dropdownCheck}>✓</Text>
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+
+          {/* Export icon */}
           <TouchableOpacity
-            style={[styles.filterBtn, selectedMonth !== null && styles.filterBtnActive]}
-            onPress={() => { setShowMonthPicker(!showMonthPicker); setShowYearPicker(false); }}
+            style={styles.exportIconBtn}
+            onPress={handleExport}
+            disabled={exporting}
             activeOpacity={0.8}
           >
-            <Text style={[styles.filterBtnText, selectedMonth !== null && styles.filterBtnTextActive]}>{selectedMonth ?? t('filter_month')}</Text>
-            <ChevronDown size={14} color={selectedMonth !== null ? '#1E5BAC' : '#6B7280'} />
+            {exporting
+              ? <ActivityIndicator size="small" color="#4B5563" />
+              : <Upload size={16} color="#4B5563" />
+            }
           </TouchableOpacity>
-          {showMonthPicker && (
-            <View style={styles.dropdown}>
-              <TouchableOpacity style={styles.dropdownItem} onPress={() => { setSelectedMonth(null); setShowMonthPicker(false); }}>
-                <Text style={styles.dropdownItemText}>{t('filter_all_months')}</Text>
-              </TouchableOpacity>
-              {MONTHS.map(m => (
-                <TouchableOpacity key={m} style={styles.dropdownItem} onPress={() => { setSelectedMonth(m); setShowMonthPicker(false); }}>
-                  <Text style={[styles.dropdownItemText, selectedMonth === m && styles.dropdownItemSelected]}>{m}</Text>
-                  {selectedMonth === m && <Text style={styles.dropdownCheck}>✓</Text>}
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
-
-        {/* Year */}
-        <View style={{ position: 'relative' }}>
-          <TouchableOpacity
-            style={[styles.filterBtn, selectedYear !== null && styles.filterBtnActive]}
-            onPress={() => { setShowYearPicker(!showYearPicker); setShowMonthPicker(false); }}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.filterBtnText, selectedYear !== null && styles.filterBtnTextActive]}>{selectedYear ?? t('filter_year')}</Text>
-            <ChevronDown size={14} color={selectedYear !== null ? '#1E5BAC' : '#6B7280'} />
-          </TouchableOpacity>
-          {showYearPicker && (
-            <View style={styles.dropdown}>
-              <TouchableOpacity style={styles.dropdownItem} onPress={() => { setSelectedYear(null); setShowYearPicker(false); }}>
-                <Text style={styles.dropdownItemText}>{t('filter_all_years')}</Text>
-              </TouchableOpacity>
-              {YEARS.map(y => (
-                <TouchableOpacity key={y} style={styles.dropdownItem} onPress={() => { setSelectedYear(y); setShowYearPicker(false); }}>
-                  <Text style={[styles.dropdownItemText, selectedYear === y && styles.dropdownItemSelected]}>{y}</Text>
-                  {selectedYear === y && <Text style={styles.dropdownCheck}>✓</Text>}
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
         </View>
       </View>
 
-      {/* Status Tabs */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.tabsWrapper}
-        contentContainerStyle={styles.tabsContainer}
-      >
-        {INVOICE_TABS.map(tab => (
-          <TouchableOpacity
-            key={tab}
-            style={styles.tab}
-            onPress={() => setActiveTab(tab)}
-          >
-            <Text style={[styles.tabText, activeTab === tab && styles.activeTabText]}>
-              {tab}
-            </Text>
-            {activeTab === tab && <View style={styles.tabIndicator} />}
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      {/* ── Pill Filter Tabs ────────────────────────────────────────── */}
+      <View style={styles.pillTabsWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.pillTabsContainer}
+        >
+          {INVOICE_TABS.map(tab => {
+            const isActive = activeTab === tab;
+            const isCancelled = tab === 'Cancelled';
+            const tabColor = TAB_COLORS[tab];
+            return (
+              <TouchableOpacity
+                key={tab}
+                style={[
+                  styles.pillTab,
+                  isActive && { backgroundColor: tabColor, borderColor: tabColor },
+                ]}
+                onPress={() => setActiveTab(tab)}
+                activeOpacity={0.8}
+              >
+                <Text style={[
+                  styles.pillTabText,
+                  isActive && styles.pillTabTextActive,
+                ]}>
+                  {t(TAB_LABEL_KEYS[tab])}
+                </Text>
+                {isCancelled && overdueCount > 0 && (
+                  <View style={styles.pillTabBadge}>
+                    <Text style={styles.pillTabBadgeText}>{overdueCount}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
 
-      {/* List + Pie Chart */}
+      {/* ── List ────────────────────────────────────────────────────── */}
       {loading ? (
         <View style={styles.loadingBox}>
           <ActivityIndicator size="large" color="#1E5BAC" />
@@ -281,10 +348,77 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
           data={filtered}
           renderItem={renderItem}
           keyExtractor={item => item.id.toString()}
-          contentContainerStyle={styles.listContent}
+          style={{ flex: 1 }}
+          contentContainerStyle={[styles.listContent, { gap: 12 }]}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => { fetchInvoices(getFilterParams()); }} tintColor="#1E5BAC" />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => fetchInvoices(getFilterParams())}
+              tintColor="#1E5BAC"
+            />
+          }
+          ListHeaderComponent={
+            <View style={{ gap: 12, marginBottom: 4 }}>
+              {/* Summary Card */}
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryTitle}>
+                  {t('invoice_summary_ca', { amount: totalRevenue.toLocaleString('fr-FR') })}
+                </Text>
+                <View style={styles.summaryIndicatorsRow}>
+                  <View style={styles.summaryIndicator}>
+                    <View style={[styles.summaryDot, { backgroundColor: '#1E5BAC' }]} />
+                    <Text style={styles.summaryIndicatorText}>
+                      <Text style={styles.summaryIndicatorAmount}>
+                        {collectedAmt.toLocaleString('fr-FR')}
+                      </Text>
+                      {' '}{t('invoice_summary_encaisse')}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryIndicator}>
+                    <View style={[styles.summaryDot, { backgroundColor: '#3B82F6' }]} />
+                    <Text style={styles.summaryIndicatorText}>
+                      <Text style={styles.summaryIndicatorAmount}>
+                        {pendingAmt.toLocaleString('fr-FR')}
+                      </Text>
+                      {' '}{t('invoice_summary_envoyee')}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryIndicator}>
+                    <View style={[styles.summaryDot, { backgroundColor: '#EF4444' }]} />
+                    <Text style={styles.summaryIndicatorText}>
+                      <Text style={styles.summaryIndicatorAmount}>
+                        {overdueAmt.toLocaleString('fr-FR')}
+                      </Text>
+                      {' '}{t('invoice_summary_retard')}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Overdue Alert */}
+              {overdueCount > 0 && (
+                <View style={styles.overdueAlert}>
+                  <View style={styles.overdueAlertLeft}>
+                    <View style={styles.overdueAlertIcon}>
+                      <AlertTriangle size={20} color="#FFFFFF" />
+                    </View>
+                    <Text style={styles.overdueAlertText}>
+                      {overdueCount > 1
+                        ? t('invoice_overdue_alert_other', { count: overdueCount })
+                        : t('invoice_overdue_alert_one', { count: overdueCount })}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.overdueAlertBtn}
+                    onPress={handleRelancerAll}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.overdueAlertBtnText}>{t('invoice_relancer_tout')}</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
           }
           ListEmptyComponent={
             <View style={styles.emptyBox}>
@@ -303,13 +437,14 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
       {/* Create Modal */}
       <CreateInvoiceModal
         visible={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        onClose={() => { setShowCreateModal(false); setDefaultClientId(undefined); }}
         accounts={accounts}
         clients={clients}
         customerId={user?.id ?? 0}
         onCreated={() => fetchInvoices(getFilterParams())}
         onSave={createInvoice}
         onClientsRefresh={refreshClients}
+        defaultClientId={defaultClientId}
       />
 
       {/* Detail Modal */}
@@ -342,5 +477,5 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
   );
 };
 
-
 export default Invoice;
+

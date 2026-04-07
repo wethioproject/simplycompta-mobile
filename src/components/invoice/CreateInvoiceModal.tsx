@@ -35,11 +35,11 @@ import { launchCamera } from 'react-native-image-picker';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import api from '../../api';
 import { Api_Endpoints } from '../../services/endpoints';
-import { CreateClientModal } from '../../screens/home/Clients';
+import { CreateClientModal } from '../../components/clients/CreateClientModal';
 import ArticleModal from './ArticleModal';
 import { invoiceStyles as styles } from '../../styles/invoice.styles';
 import type { Account, Client, InvoiceArticle, InvoiceItem, Article } from '../../types/invoice.types';
-import { STATUT_OPTIONS } from '../../types/invoice.types';
+import { STATUT_OPTIONS, PAYMENT_METHODS } from '../../types/invoice.types';
 
 const invoiceSchema = yup.object({
   invoiceNumber: yup.string().trim().required('Invoice number is required'),
@@ -49,11 +49,7 @@ const invoiceSchema = yup.object({
     .typeError('Client is required')
     .required('Client is required')
     .positive('Client is required'),
-  accountId: yup
-    .number()
-    .typeError('Payment method is required')
-    .required('Payment method is required')
-    .positive('Payment method is required'),
+  accountId: yup.string().trim().required('Payment method is required'),
   status: yup.string().required('Status is required'),
   articles: yup
     .array()
@@ -87,7 +83,7 @@ type InvoiceFormValues = {
   invoiceNumber: string;
   date: string;
   clientId: number;
-  accountId: number;
+  accountId: string;
   status: string;
   articles: Article[];
   notes: string;
@@ -104,8 +100,9 @@ const CreateInvoiceModal: React.FC<{
   editItem?: InvoiceItem;
   onUpdate?: (id: number, payload: any) => Promise<{ success: boolean; error?: string }>;
   onClientsRefresh?: () => void;
-}> = ({ visible, onClose, accounts, clients, customerId, onCreated, onSave, editItem, onUpdate, onClientsRefresh }) => {
-  const { t } = useTranslation();
+  defaultClientId?: number;
+}> = ({ visible, onClose, accounts, clients, customerId, onCreated, onSave, editItem, onUpdate, onClientsRefresh, defaultClientId }) => {
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
 
   // Non-form UI states
@@ -156,7 +153,9 @@ const CreateInvoiceModal: React.FC<{
 
   // Derived display objects from IDs
   const selectedClient = clients.find(c => c.id === watchedClientId) ?? null;
-  const selectedAccount = accounts.find(a => a.id === watchedAccountId) ?? null;
+  const selectedPaymentMethod = PAYMENT_METHODS.find(p => p.key === watchedAccountId) ?? null;
+  const pmLabel = (pm: { key: string; fr: string; en: string }) =>
+    i18n.language.startsWith('fr') ? pm.fr : pm.en;
 
   // Reset / populate form when modal opens
   React.useEffect(() => {
@@ -170,7 +169,6 @@ const CreateInvoiceModal: React.FC<{
       const [ey, em, ed] = datePart.split('-').map(Number);
       setTempDate(new Date(ey, em - 1, ed));
       const client = clients.find(c => c.id === editItem.client_id) ?? null;
-      const account = accounts.find(a => a.name === editItem.payment_method) ?? null;
       if (editItem.document_path) {
         const fileName = editItem.document_path.split('/').pop() ?? 'document';
         setDocument({ name: fileName, isExisting: true });
@@ -181,7 +179,7 @@ const CreateInvoiceModal: React.FC<{
         invoiceNumber: editItem.invoice_number,
         date: datePart,
         clientId: client?.id ?? undefined,
-        accountId: account?.id ?? undefined,
+        accountId: editItem.payment_method ?? undefined,
         status: editItem.status,
         notes: editItem.notes ?? '',
         articles: editItem.articles.map(a => ({
@@ -202,7 +200,7 @@ const CreateInvoiceModal: React.FC<{
       reset({
         invoiceNumber: '',
         date: `${y}-${mo}-${d}`,
-        clientId: undefined,
+        clientId: defaultClientId ?? undefined,
         accountId: undefined,
         status: 'Quotes',
         notes: '',
@@ -303,6 +301,7 @@ const CreateInvoiceModal: React.FC<{
 
   const totalHT = watchedArticles.reduce((s, a) => s + (a.totalHT ?? 0), 0);
   const totalTVA = watchedArticles.reduce((s, a) => s + ((a.totalHT ?? 0) * (a.tva ?? 0)) / 100, 0);
+  console.log('fsfss333', totalTVA)
   const totalTTC = totalHT + totalTVA;
 
   const onSubmit = async (data: InvoiceFormValues) => {
@@ -313,7 +312,7 @@ const CreateInvoiceModal: React.FC<{
         client_id: data.clientId,
         date: data.date,
         invoice_number: data.invoiceNumber,
-        payment_method: selectedAccount!.name,
+        payment_method: data.accountId,
         status: data.status,
         notes: data.notes || null,
         document: document?.isExisting ? null : document,
@@ -335,6 +334,7 @@ const CreateInvoiceModal: React.FC<{
           Alert.alert(t('error_title'), result.error ?? t('error_generic'));
         }
       } else {
+        console.log('fdfdfdfd333', payload);
         const result = await onSave(payload);
         if (result.success) {
           Alert.alert(t('success_title'), t('success_invoice_created'));
@@ -480,8 +480,8 @@ const CreateInvoiceModal: React.FC<{
                   onPress={() => setShowAccountPicker(true)}
                   activeOpacity={0.7}
                 >
-                  <Text style={selectedAccount ? styles.pickerValueText : styles.pickerPlaceholderText}>
-                    {selectedAccount ? selectedAccount.name : t('placeholder_payment_method')}
+                <Text style={selectedPaymentMethod ? styles.pickerValueText : styles.pickerPlaceholderText}>
+                  {selectedPaymentMethod ? pmLabel(selectedPaymentMethod) : t('placeholder_payment_method')}
                   </Text>
                   <ChevronDown size={18} color="#1E5BAC" />
                 </TouchableOpacity>
@@ -686,19 +686,23 @@ const CreateInvoiceModal: React.FC<{
           <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowAccountPicker(false)}>
             <View style={styles.pickerSheet}>
               <Text style={styles.pickerSheetTitle}>{t('modal_title_payment_method')}</Text>
-              {accounts.map(a => (
-                <TouchableOpacity
-                  key={a.id}
-                  style={styles.pickerOption}
-                  onPress={() => {
-                    setValue('accountId', a.id, { shouldValidate: true });
-                    setShowAccountPicker(false);
-                  }}
-                >
-                  <Text style={[styles.pickerOptionText, watchedAccountId === a.id && styles.pickerOptionSelected]}>{a.name}</Text>
-                  {watchedAccountId === a.id && <Text style={styles.pickerCheck}>✓</Text>}
-                </TouchableOpacity>
-              ))}
+              <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
+                {PAYMENT_METHODS.map(pm => (
+                  <TouchableOpacity
+                    key={pm.key}
+                    style={styles.pickerOption}
+                    onPress={() => {
+                      setValue('accountId', pm.key, { shouldValidate: true });
+                      setShowAccountPicker(false);
+                    }}
+                  >
+                    <Text style={[styles.pickerOptionText, watchedAccountId === pm.key && styles.pickerOptionSelected]}>
+                      {pmLabel(pm)}
+                    </Text>
+                    {watchedAccountId === pm.key && <Text style={styles.pickerCheck}>✓</Text>}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             </View>
           </TouchableOpacity>
         </Modal>

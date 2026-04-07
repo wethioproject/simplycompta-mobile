@@ -27,7 +27,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import { useInvoice } from '../../hooks/useInvoice';
 import { invoiceStyles as styles } from '../../styles/invoice.styles';
 import type { InvoiceArticle, InvoiceItem } from '../../types/invoice.types';
-import { STATUT_OPTIONS } from '../../types/invoice.types';
+import { STATUT_OPTIONS, resolvePaymentMethod } from '../../types/invoice.types';
 import { calculateInvoiceTotals } from '../../utils/invoiceCalculations';
 
 interface DetailModalProps {
@@ -45,8 +45,11 @@ const DetailModal: React.FC<DetailModalProps> = ({
   onEdit,
   onUpdate,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { totalHT, totalTVA, totalTTC } = calculateInvoiceTotals(item.articles);
+  // Aggregate raw backend values from articles
+  const totalPriceHT = item.articles.reduce((s, a) => s + parseFloat(a.total_price_ht ?? '0'), 0);
+  const uniqueVatRates = [...new Set(item.articles.map(a => a.tva_percentage))].join(' / ');
   const formattedDate = new Date(item.date).toLocaleDateString('fr-FR');
   const rawFileName = item.document_path?.split('/').pop() || 'Document';
   const attachmentName = rawFileName.length > 24 ? `${rawFileName.slice(0, 24)}...` : rawFileName;
@@ -309,11 +312,13 @@ const DetailModal: React.FC<DetailModalProps> = ({
             {[
               { label: t('label_invoice_number'), value: item.invoice_number },
               { label: t('label_client'), value: item.client?.client_name ?? '—' },
-              { label: t('label_payment_method'), value: item.payment_method },
+              { label: t('label_payment_method'), value: resolvePaymentMethod(item.payment_method, i18n.language) },
               { label: t('label_status'), value: currentStatus },
-              { label: t('label_total_ht'), value: `${totalHT.toLocaleString('fr-FR')} MAD` },
+              { label: t('label_total_ht'),  value: `${totalHT.toLocaleString('fr-FR')} MAD` },
               { label: t('label_total_tva'), value: `${totalTVA.toLocaleString('fr-FR')} MAD` },
               { label: t('label_total_ttc'), value: `${totalTTC.toLocaleString('fr-FR')} MAD` },
+              // { label: t('label_total_ht'),    value: `${totalPriceHT.toLocaleString('fr-FR')} MAD` },
+              // { label: t('label_tva_percent'), value: uniqueVatRates ? `${uniqueVatRates}%` : '—' },
               { label: t('label_notes'), value: item.notes || '-' },
             ].map(row => (
               <View key={row.label} style={styles.detailRow}>

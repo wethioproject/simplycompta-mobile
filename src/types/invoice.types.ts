@@ -65,3 +65,25 @@ export type InvoiceTabType = 'Tous' | 'Quotes' | 'Issued' | 'Paid' | 'Cancelled'
 
 export const INVOICE_TABS: InvoiceTabType[] = ['Tous', 'Quotes', 'Issued', 'Paid', 'Cancelled'];
 export const STATUT_OPTIONS = ['Quotes', 'Issued', 'Paid', 'Cancelled'];
+
+export const PAYMENT_METHODS = [
+  { key: 'cash',             fr: 'Espèces',                   en: 'Cash' },
+  { key: 'bank_transfer',    fr: 'Virement bancaire',          en: 'Bank Transfer' },
+  { key: 'card',             fr: 'Carte bancaire',             en: 'Credit / Debit Card' },
+  { key: 'cheque',           fr: 'Chèque',                     en: 'Cheque' },
+  { key: 'mobile_payment',   fr: 'Paiement mobile',            en: 'Mobile Payment' },
+  { key: 'online_payment',   fr: 'Paiement en ligne',          en: 'Online Payment' },
+  { key: 'direct_debit',     fr: 'Prélèvement automatique',    en: 'Direct Debit' },
+  { key: 'deferred',         fr: 'Paiement différé',           en: 'Deferred Payment' },
+  { key: 'instant_transfer', fr: 'Virement instantané',        en: 'Instant Bank Transfer' },
+  { key: 'other',            fr: 'Autre',                      en: 'Other' },
+] as const;
+
+/** Resolves a payment_method key (e.g. "mobile_payment") to a display label.
+ *  Falls back to the raw key if not found (handles legacy / unknown values). */
+export const resolvePaymentMethod = (key: string | null | undefined, locale: string): string => {
+  if (!key) return '—';
+  const match = PAYMENT_METHODS.find(p => p.key === key);
+  if (!match) return key;
+  return locale.startsWith('fr') ? match.fr : match.en;
+};
