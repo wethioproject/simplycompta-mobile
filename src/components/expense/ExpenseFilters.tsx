@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { ChevronDown } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { styles } from '../../styles/expenses.styles';
@@ -41,27 +41,33 @@ const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
           activeOpacity={0.8}
         >
           <Text style={[styles.filterBtnText, selectedMonth !== null && styles.filterBtnTextActive]}>
-            {selectedMonth ?? t('filter_month')}
+            {selectedMonth
+              ? selectedYear
+                ? `${selectedMonth} ${selectedYear}`
+                : selectedMonth
+              : t('filter_month')}
           </Text>
-          <ChevronDown size={14} color={selectedMonth !== null ? '#1E5BAC' : '#6B7280'} />
+          <ChevronDown size={14} color={selectedMonth !== null ? '#FFFFFF' : '#6B7280'} />
         </TouchableOpacity>
         {showMonthPicker && (
           <View style={styles.dropdown}>
-            <TouchableOpacity style={styles.dropdownItem} onPress={() => onMonthSelect(null)}>
-              <Text style={styles.dropdownItemText}>{t('filter_all_months')}</Text>
-            </TouchableOpacity>
-            {months.map(m => (
-              <TouchableOpacity
-                key={m}
-                style={styles.dropdownItem}
-                onPress={() => onMonthSelect(m)}
-              >
-                <Text style={[styles.dropdownItemText, selectedMonth === m && styles.dropdownItemSelected]}>
-                  {m}
-                </Text>
-                {selectedMonth === m && <Text style={styles.dropdownCheck}>✓</Text>}
+            <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
+              <TouchableOpacity style={styles.dropdownItem} onPress={() => onMonthSelect(null)}>
+                <Text style={styles.dropdownItemText}>{t('filter_all_months')}</Text>
               </TouchableOpacity>
-            ))}
+              {months.map(m => (
+                <TouchableOpacity
+                  key={m}
+                  style={styles.dropdownItem}
+                  onPress={() => onMonthSelect(m)}
+                >
+                  <Text style={[styles.dropdownItemText, selectedMonth === m && styles.dropdownItemSelected]}>
+                    {m}
+                  </Text>
+                  {selectedMonth === m && <Text style={styles.dropdownCheck}>✓</Text>}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
         )}
       </View>
@@ -76,25 +82,27 @@ const ExpenseFilters: React.FC<ExpenseFiltersProps> = ({
           <Text style={[styles.filterBtnText, selectedYear !== null && styles.filterBtnTextActive]}>
             {selectedYear ?? t('filter_year')}
           </Text>
-          <ChevronDown size={14} color={selectedYear !== null ? '#1E5BAC' : '#6B7280'} />
+          <ChevronDown size={14} color={selectedYear !== null ? '#FFFFFF' : '#6B7280'} />
         </TouchableOpacity>
         {showYearPicker && (
           <View style={styles.dropdown}>
-            <TouchableOpacity style={styles.dropdownItem} onPress={() => onYearSelect(null)}>
-              <Text style={styles.dropdownItemText}>{t('filter_all_years')}</Text>
-            </TouchableOpacity>
-            {years.map(y => (
-              <TouchableOpacity
-                key={y}
-                style={styles.dropdownItem}
-                onPress={() => onYearSelect(y)}
-              >
-                <Text style={[styles.dropdownItemText, selectedYear === y && styles.dropdownItemSelected]}>
-                  {y}
-                </Text>
-                {selectedYear === y && <Text style={styles.dropdownCheck}>✓</Text>}
+            <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled">
+              <TouchableOpacity style={styles.dropdownItem} onPress={() => onYearSelect(null)}>
+                <Text style={styles.dropdownItemText}>{t('filter_all_years')}</Text>
               </TouchableOpacity>
-            ))}
+              {years.map(y => (
+                <TouchableOpacity
+                  key={y}
+                  style={styles.dropdownItem}
+                  onPress={() => onYearSelect(y)}
+                >
+                  <Text style={[styles.dropdownItemText, selectedYear === y && styles.dropdownItemSelected]}>
+                    {y}
+                  </Text>
+                  {selectedYear === y && <Text style={styles.dropdownCheck}>✓</Text>}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
         )}
       </View>

@@ -75,6 +75,7 @@ interface CreateExpenseModalProps {
   editItem?: ExpenseItem;
   onUpdate?: (id: number, payload: any) => Promise<{ success: boolean; error?: string }>;
   onSuppliersRefresh?: () => void;
+  defaultSupplierId?: number;
 }
 
 
@@ -90,6 +91,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   editItem,
   onUpdate,
   onSuppliersRefresh,
+  defaultSupplierId,
 }) => {
   const insets = useSafeAreaInsets();
   const { t, i18n } = useTranslation();
@@ -188,7 +190,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
         amountTVA: '',
         accountId: undefined,
         categoryId: undefined,
-        supplierId: null,
+        supplierId: defaultSupplierId ?? null,
       });
     }
   }, [visible]);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
+  Text,
   FlatList,
   ActivityIndicator,
   Alert,
@@ -14,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Plus } from 'lucide-react-native';
+import { Plus, AlertTriangle } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useExpense } from '../../hooks/useExpense';
@@ -69,6 +70,7 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
   const [editingItem, setEditingItem] = useState<ExpenseItem | null>(null);
   const [pieLoading, setPieLoading] = useState(true);
   const [pieCategories, setPieCategories] = useState<ExpenseCategoryItem[]>([]);
+  const [defaultSupplierId, setDefaultSupplierId] = useState<number | undefined>(undefined);
 
   const MONTHS = [
     t('month_january'), t('month_february'), t('month_march'), t('month_april'),
@@ -127,6 +129,7 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
 
   useEffect(() => {
     if (!loading && route.params?.openCreateModal) {
+      setDefaultSupplierId(route.params?.defaultSupplierId ?? undefined);
       setShowCreateModal(true);
     }
   }, [loading, route.params?.openCreateModal]);
@@ -217,6 +220,26 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
         onYearSelect={y => { setSelectedYear(y); setShowYearPicker(false); }}
       />
 
+      {/* Alert card */}
+      {!loading && expenses.length > 0 && (
+        <View style={[styles.expenseAlertCard, { marginHorizontal: 16, marginBottom: 8 }]}>
+          <View style={styles.expenseAlertLeft}>
+            <View style={styles.expenseAlertIcon}>
+              <AlertTriangle size={18} color="#FFFFFF" strokeWidth={2} />
+            </View>
+            <Text style={styles.expenseAlertText}>
+              {t('expense_alert_count', {
+                count: filtered.length,
+                month: selectedMonth ?? MONTHS[new Date().getMonth()],
+              })}
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.expenseAlertBtn} activeOpacity={0.8} onPress={() => navigation.navigate('Activity')}>
+            <Text style={styles.expenseAlertBtnText}>{t('expense_voir_statistiques')}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {loading ? (
         <View style={styles.loadingBox}>
           <ActivityIndicator size="large" color="#1E5BAC" />
@@ -270,9 +293,10 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
         categories={categories}
         suppliers={suppliers}
         onSave={createExpense}
-        onClose={() => setShowCreateModal(false)}
+        onClose={() => { setShowCreateModal(false); setDefaultSupplierId(undefined); }}
         onCreated={fetchData}
         onSuppliersRefresh={refreshSuppliers}
+        defaultSupplierId={defaultSupplierId}
       />
 
       {/* Edit modal */}

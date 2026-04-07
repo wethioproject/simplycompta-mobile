@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
+import { Minus } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { ExpenseItem } from '../../types/expense.types';
 import { formatDate, formatCurrency, capitalise } from '../../utils/expense.helpers';
@@ -23,7 +24,7 @@ const ExpenseItemCard: React.FC<ExpenseItemCardProps> = ({ item, onPress }) => {
     >
       <View style={styles.expenseCardLeft}>
         <View style={styles.expenseIconBox}>
-          <Text style={styles.expenseIconText}>−</Text>
+          <Minus size={20} color="#DB2777" strokeWidth={2.5} />
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.expenseDesc} numberOfLines={1}>
