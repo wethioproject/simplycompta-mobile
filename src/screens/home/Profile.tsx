@@ -9,6 +9,7 @@ import {
   TextInput,
   Alert,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -27,6 +28,9 @@ import {
   Briefcase,
   ChevronRight,
   Headphones,
+  Plus,
+  TrendingDown,
+  Users,
 } from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { appLogoIcon } from '../../assets/icons';
@@ -44,6 +48,54 @@ const Profile: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
   const [loggingOut, setLoggingOut] = useState(false);
+
+  // ── FAB ────────────────────────────────────────────────────────────────────
+  const [isFabOpen, setIsFabOpen] = useState(false);
+  const fabRotation = useState(new Animated.Value(0))[0];
+  const fabButton1Scale = useState(new Animated.Value(0))[0];
+  const fabButton2Scale = useState(new Animated.Value(0))[0];
+  const fabButton3Scale = useState(new Animated.Value(0))[0];
+  const fabButton1Opacity = useState(new Animated.Value(0))[0];
+  const fabButton2Opacity = useState(new Animated.Value(0))[0];
+  const fabButton3Opacity = useState(new Animated.Value(0))[0];
+  const rotation = fabRotation.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '45deg'] });
+
+  const toggleFab = () => {
+    const toValue = isFabOpen ? 0 : 1;
+    setIsFabOpen(!isFabOpen);
+    Animated.parallel([
+      Animated.timing(fabRotation, { toValue, duration: 300, useNativeDriver: true }),
+      Animated.stagger(50, [
+        Animated.parallel([
+          Animated.spring(fabButton1Scale, { toValue, friction: 5, useNativeDriver: true }),
+          Animated.timing(fabButton1Opacity, { toValue, duration: 200, useNativeDriver: true }),
+        ]),
+        Animated.parallel([
+          Animated.spring(fabButton2Scale, { toValue, friction: 5, useNativeDriver: true }),
+          Animated.timing(fabButton2Opacity, { toValue, duration: 200, useNativeDriver: true }),
+        ]),
+        Animated.parallel([
+          Animated.spring(fabButton3Scale, { toValue, friction: 5, useNativeDriver: true }),
+          Animated.timing(fabButton3Opacity, { toValue, duration: 200, useNativeDriver: true }),
+        ]),
+      ]),
+    ]).start();
+  };
+
+  const handleNavigateToInvoice = () => {
+    toggleFab();
+    setTimeout(() => { navigation.navigate('Invoice', { openCreateModal: true }); }, 300);
+  };
+
+  const handleNavigateToQuote = () => {
+    toggleFab();
+    setTimeout(() => { navigation.navigate('Expenses', { openCreateModal: true }); }, 300);
+  };
+
+  const handleOpenAddClient = () => {
+    toggleFab();
+    setTimeout(() => { navigation.navigate('Contacts') });
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -165,7 +217,7 @@ const Profile: React.FC = () => {
         </View>
 
         <View style={styles.searchRow}>
-          <View style={styles.searchContainer}>
+          {/* <View style={styles.searchContainer}>
             <Search size={20} color="#9CA3AF" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
@@ -174,7 +226,7 @@ const Profile: React.FC = () => {
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
-          </View>
+          </View> */}
           {/* <TouchableOpacity style={styles.notificationButton} activeOpacity={0.7}>
             <Bell size={24} color="#4B5563" />
             <View style={styles.notificationBadge}>
@@ -246,7 +298,7 @@ const Profile: React.FC = () => {
 
         {/* Contact Section */}
         <View style={styles.contactCard}>
-          <TouchableOpacity style={styles.contactRow} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.contactRow} activeOpacity={0.7} onPress={() => navigation.navigate('Contact')}>
             <View style={styles.contactRowLeft}>
               <View style={styles.contactIconCircle}>
                 <Headphones size={24} color="#0D9488" />
@@ -275,6 +327,30 @@ const Profile: React.FC = () => {
           )}
         </TouchableOpacity>
       </ScrollView>
+
+      {/* FAB */}
+      <View style={styles.fabContainer}>
+        <Animated.View style={[styles.subFab, { transform: [{ scale: fabButton3Scale }], opacity: fabButton3Opacity, bottom: 176 }]}>
+          <TouchableOpacity style={[styles.subFabButton, styles.subFabButton3]} onPress={handleNavigateToInvoice} activeOpacity={0.8}>
+            <FileText size={24} color="#FFFFFF" strokeWidth={2} />
+          </TouchableOpacity>
+        </Animated.View>
+        <Animated.View style={[styles.subFab, { transform: [{ scale: fabButton2Scale }], opacity: fabButton2Opacity, bottom: 120 }]}>
+          <TouchableOpacity style={[styles.subFabButton, styles.subFabButton2]} onPress={handleNavigateToQuote} activeOpacity={0.8}>
+            <TrendingDown size={24} color="#FFFFFF" strokeWidth={2} />
+          </TouchableOpacity>
+        </Animated.View>
+        <Animated.View style={[styles.subFab, { transform: [{ scale: fabButton1Scale }], opacity: fabButton1Opacity, bottom: 64 }]}>
+          <TouchableOpacity style={[styles.subFabButton, styles.subFabButton1]} onPress={handleOpenAddClient} activeOpacity={0.8}>
+            <Users size={24} color="#FFFFFF" strokeWidth={2} />
+          </TouchableOpacity>
+        </Animated.View>
+        <TouchableOpacity style={styles.fab} onPress={toggleFab} activeOpacity={0.8}>
+          <Animated.Text style={[styles.fabIcon, { transform: [{ rotate: rotation }] }]}>
+            <Plus size={28} color="#FFFFFF" strokeWidth={2.5} />
+          </Animated.Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 };
@@ -532,6 +608,49 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#DC2626',
   },
+  // ── FAB
+  fabContainer: {
+    position: 'absolute',
+    right: 24,
+    bottom: 20,
+  },
+  fab: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#1E5BAC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#1E5BAC',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  fabIcon: {
+    fontSize: 32,
+    color: '#FFFFFF',
+    fontWeight: '300',
+  },
+  subFab: {
+    position: 'absolute',
+    right: 0,
+  },
+  subFabButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  subFabButton1: { backgroundColor: '#1E5BAC' },
+  subFabButton2: { backgroundColor: '#1E5BAC' },
+  subFabButton3: { backgroundColor: '#1E5BAC' },
 });
 
 export default Profile;
