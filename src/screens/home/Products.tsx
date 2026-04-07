@@ -12,15 +12,20 @@ import {
   KeyboardAvoidingView,
   Platform,
   RefreshControl,
+  ScrollView,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
-import { ArrowLeft, Plus, Pencil, Trash2, Package, X } from 'lucide-react-native';
+import { ArrowLeft, Plus, Edit2, Trash2, Package, X, Search, ChevronDown, Check } from 'lucide-react-native';
 import { useProducts } from '../../hooks/useProduct';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+
+const CATEGORY_OPTIONS = ['Produit', 'Service'] as const;
+const TVA_OPTIONS = ['0', '7', '10', '14', '20'] as const;
 
 interface Product {
   id: number;
@@ -30,10 +35,16 @@ interface Product {
   tva_percent: string;
   quantity: string;
   total_price_ht: string;
+  description?: string;
+  reference?: string;
+  category?: string;
 }
 
 const productSchema = yup.object({
   designation: yup.string().trim().required('error_designation_required'),
+  description: yup.string().trim().required('error_description_required'),
+  reference: yup.string().trim().optional().default(''),
+  category: yup.string().trim().required('error_category_required'),
   unit_price_ht: yup
     .string()
     .trim()
@@ -54,6 +65,9 @@ const productSchema = yup.object({
 
 interface ProductFormValues {
   designation: string;
+  description: string;
+  reference: string;
+  category: string;
   unit_price_ht: string;
   tva_percent: string;
   quantity: string;
@@ -63,19 +77,23 @@ interface ProductFormValues {
 const Products: React.FC = ({ navigation }: any) => {
   const { t } = useTranslation();
   const customer = useSelector((state: any) => state.user.customer);
-  console.log('added prod100', customer);
   const { getProducts, createProduct, updateProduct, deleteProduct } = useProducts();
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isSearchActive, setIsSearchActive] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Modal state
   const [modalVisible, setModalVisible] = useState(false);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [showTvaPicker, setShowTvaPicker] = useState(false);
 
-  // ── react-hook-form ──────────────────────────────────────────────────────────
   const {
     control,
     handleSubmit,
@@ -88,8 +106,11 @@ const Products: React.FC = ({ navigation }: any) => {
     mode: 'onChange',
     defaultValues: {
       designation: '',
+      description: '',
+      reference: '',
+      category: 'Produit',
       unit_price_ht: '',
-      tva_percent: '',
+      tva_percent: '20',
       quantity: '',
       total_price_ht: '',
     },
@@ -97,8 +118,8 @@ const Products: React.FC = ({ navigation }: any) => {
 
   const watchedUnitPrice = watch('unit_price_ht');
   const watchedQty = watch('quantity');
+  const watchedTva = watch('tva_percent');
 
-  // ── Auto-calculate total_price_ht when qty or unit price changes ────────────
   useEffect(() => {
     const qty = parseFloat(watchedQty) || 0;
     const price = parseFloat(watchedUnitPrice) || 0;
@@ -109,14 +130,10 @@ const Products: React.FC = ({ navigation }: any) => {
 
   const fetchProducts = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
-    console.log('added prod103', silent);
     const result = await getProducts();
-    console.log('added prod104', result);
     if (result.success) {
-      console.log('added prod105', result.success);
       const raw = result.products;
       setProducts(Array.isArray(raw) ? raw : (raw as any)?.data ?? []);
-      console.log('added prod106', raw);
     }
     if (!silent) setLoading(false);
   }, [getProducts]);
@@ -129,10 +146,10 @@ const Products: React.FC = ({ navigation }: any) => {
     setRefreshing(false);
   };
 
-  // ── Open modal ──────────────────────────────────────────────────────────────
+  // Open modal
   const openCreate = () => {
     setEditingProduct(null);
-    reset({ designation: '', unit_price_ht: '', tva_percent: '', quantity: '', total_price_ht: '' });
+    reset({ designation: '', description: '', reference: '', category: 'Produit', unit_price_ht: '', tva_percent: '20', quantity: '', total_price_ht: '' });
     setModalVisible(true);
   };
 
@@ -140,6 +157,9 @@ const Products: React.FC = ({ navigation }: any) => {
     setEditingProduct(item);
     reset({
       designation: item.designation,
+      description: item.description ?? '',
+      reference: item.reference ?? '',
+      category: item.category ?? 'Produit',
       unit_price_ht: item.unit_price_ht,
       tva_percent: item.tva_percent,
       quantity: item.quantity,
@@ -154,7 +174,12 @@ const Products: React.FC = ({ navigation }: any) => {
     reset();
   };
 
-  // ── Save (create or update) ──────────────────────────────────────────────────
+  const closeDetailModal = () => {
+    setDetailModalVisible(false);
+    setSelectedProduct(null);
+  };
+
+  // Save (create or update)
   const onSubmit = async (data: ProductFormValues) => {
     setSaving(true);
     const payload = {
@@ -173,7 +198,6 @@ const Products: React.FC = ({ navigation }: any) => {
     }
   };
 
-  // ── Delete ───────────────────────────────────────────────────────────────────
   const handleDelete = (item: Product) => {
     Alert.alert(
       t('alert_delete_product_title'),
@@ -186,6 +210,7 @@ const Products: React.FC = ({ navigation }: any) => {
           onPress: async () => {
             const result = await deleteProduct(item.id);
             if (result.success) {
+              closeDetailModal();
               fetchProducts(true);
             } else {
               Alert.alert(t('error_title'), (result as any).error || t('error_delete_product'));
@@ -197,52 +222,135 @@ const Products: React.FC = ({ navigation }: any) => {
     );
   };
 
+  const filteredProducts = products.filter(product => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return product.designation.toLowerCase().includes(query);
+  });
+
   // ── Render product card ─────────────────────────────────────────────────────
   const renderProduct = ({ item }: { item: Product }) => (
-    <View style={styles.card}>
-      <View style={styles.cardIconWrapper}>
-        <Package size={22} color="#0B5FA5" />
+    <TouchableOpacity
+      style={styles.productCard}
+      onPress={() => {
+        setSelectedProduct(item);
+        setDetailModalVisible(true);
+      }}
+      activeOpacity={0.7}
+    >
+      {/* Action buttons */}
+      <View style={styles.cardActionButtons}>
+        <TouchableOpacity
+          style={styles.editIconBtn}
+          onPress={() => {
+            openEdit(item);
+            setDetailModalVisible(false);
+          }}
+        >
+          <Edit2 size={16} color="#FFFFFF" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.deleteIconBtn}
+          onPress={() => handleDelete(item)}
+        >
+          <Trash2 size={16} color="#FFFFFF" />
+        </TouchableOpacity>
       </View>
-      <View style={styles.cardBody}>
-        <Text style={styles.cardTitle} numberOfLines={1}>{item.designation}</Text>
-        <View style={styles.cardRow}>
-          <View style={styles.cardPill}>
-            <Text style={styles.cardPillLabel}>{t('label_pill_unit_price')}</Text>
-            <Text style={styles.cardPillValue}>{item.unit_price_ht}</Text>
-          </View>
-          <View style={styles.cardPill}>
-            <Text style={styles.cardPillLabel}>{t('label_pill_vat')}</Text>
-            <Text style={styles.cardPillValue}>{item.tva_percent} %</Text>
-          </View>
-          <View style={styles.cardPill}>
-            <Text style={styles.cardPillLabel}>{t('label_pill_qty')}</Text>
-            <Text style={styles.cardPillValue}>{item.quantity}</Text>
+
+      {/* Icon box */}
+      <View style={styles.productIconBox}>
+        <Package size={24} color="#0B5FA5" />
+      </View>
+
+      {/* Content */}
+      <View style={styles.productContent}>
+        <View style={styles.productHeader}>
+          <View style={styles.productInfo}>
+            <Text style={styles.productName} numberOfLines={1}>{item.designation}</Text>
+            <Text style={styles.productDesc} numberOfLines={1}>{item.total_price_ht}</Text>
           </View>
         </View>
-        <View style={styles.cardFooter}>
-          <Text style={styles.cardTotal}>{t('label_total_ht')} : <Text style={styles.cardTotalValue}>{item.total_price_ht}</Text></Text>
-          <View style={styles.cardActions}>
-            <TouchableOpacity style={styles.editBtn} onPress={() => openEdit(item)}>
-              <Pencil size={16} color="#0B5FA5" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item)}>
-              <Trash2 size={16} color="#DC2626" />
-            </TouchableOpacity>
+
+        <View style={styles.productFooter}>
+          <View style={styles.categoryBadge}>
+            <Text style={styles.categoryText}>{t('label_pill_unit_price')}</Text>
+          </View>
+          <View style={styles.priceSection}>
+            <Text style={styles.priceValue}>{item.unit_price_ht}</Text>
+            <Text style={styles.priceLabel}>{t('label_pill_vat')}</Text>
           </View>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
+
+  if (isSearchActive) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.searchHeader}>
+          <TouchableOpacity onPress={() => { setIsSearchActive(false); setSearchQuery(''); }}>
+            <ArrowLeft size={24} color="#111827" />
+          </TouchableOpacity>
+          <View style={styles.searchInputBox}>
+            <Search size={18} color="#9CA3AF" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder={t('header_products')}
+              placeholderTextColor="#9CA3AF"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoFocus
+            />
+            {searchQuery && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <X size={16} color="#9CA3AF" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {filteredProducts.length === 0 && searchQuery ? (
+          <View style={styles.emptySearchState}>
+            <Package size={48} color="#D1D5DB" />
+            <Text style={styles.emptySearchTitle}>{t('empty_no_products')}</Text>
+            <Text style={styles.emptySearchSubtitle}>Aucun produit trouvé pour "{searchQuery}"</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredProducts}
+            keyExtractor={(item) => String(item.id)}
+            renderItem={renderProduct}
+            contentContainerStyle={styles.listContent}
+            scrollEnabled
+          />
+        )}
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ArrowLeft size={24} color="#0B5FA5" />
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <ArrowLeft size={24} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t('header_products')}</Text>
-        <View style={{ width: 40 }} />
+        <TouchableOpacity onPress={() => setIsSearchActive(true)}>
+          <Search size={24} color="#111827" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Stats Card */}
+      <View style={styles.statsCardWrapper}>
+        <View style={styles.statsCard}>
+          <View style={styles.statsCardTop}>
+            <Text style={styles.statsLabel}>{t('header_products')}</Text>
+            <Package size={20} color="rgba(255,255,255,0.75)" />
+          </View>
+          <Text style={styles.statsValue}>{products.length}</Text>
+          <Text style={styles.statsSubtitle}>Services et produits actifs</Text>
+        </View>
       </View>
 
       {/* Product list */}
@@ -252,10 +360,10 @@ const Products: React.FC = ({ navigation }: any) => {
         </View>
       ) : (
         <FlatList
-          data={products}
+          data={filteredProducts}
           keyExtractor={(item) => String(item.id)}
           renderItem={renderProduct}
-          contentContainerStyle={[styles.listContent, products.length === 0 && styles.listEmpty]}
+          contentContainerStyle={[styles.listContent, filteredProducts.length === 0 && styles.listEmpty]}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#0B5FA5" />
@@ -275,6 +383,65 @@ const Products: React.FC = ({ navigation }: any) => {
         <Plus size={28} color="#FFFFFF" strokeWidth={2.5} />
       </TouchableOpacity>
 
+      {/* Detail Modal */}
+      {selectedProduct && (
+        <Modal visible={detailModalVisible} animationType="slide" transparent onRequestClose={closeDetailModal}>
+          <View style={styles.detailModalOverlay}>
+            <View style={styles.detailModalSheet}>
+              {/* Header */}
+              <View style={styles.detailModalHeader}>
+                <Text style={styles.detailModalTitle}>Détails du produit</Text>
+                <TouchableOpacity onPress={closeDetailModal} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <X size={22} color="#666" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={styles.detailModalContent} showsVerticalScrollIndicator={false}>
+                {/* Icon */}
+                <View style={styles.detailIconSection}>
+                  <View style={styles.detailIcon}>
+                    <Package size={32} color="#0B5FA5" />
+                  </View>
+                  <Text style={styles.detailName}>{selectedProduct.designation}</Text>
+                </View>
+
+                {/* Details */}
+                <View style={styles.detailSection}>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Prix H.T.</Text>
+                    <Text style={styles.detailValue}>{selectedProduct.unit_price_ht}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>TVA</Text>
+                    <Text style={styles.detailValue}>{selectedProduct.tva_percent}%</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Quantité</Text>
+                    <Text style={styles.detailValue}>{selectedProduct.quantity}</Text>
+                  </View>
+                  <View style={styles.detailRowTotal}>
+                    <Text style={styles.detailLabelTotal}>Total H.T.</Text>
+                    <Text style={styles.detailValueTotal}>{selectedProduct.total_price_ht}</Text>
+                  </View>
+                </View>
+              </ScrollView>
+
+              {/* Actions */}
+              <View style={styles.detailModalActions}>
+                <TouchableOpacity style={styles.deleteBtn} onPress={() => { handleDelete(selectedProduct); }}>
+                  <Trash2 size={16} color="#DC2626" />
+                  <Text style={styles.deleteBtnText}>Supprimer</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.editBtn} onPress={() => { openEdit(selectedProduct); closeDetailModal(); }}>
+                  <Edit2 size={16} color="#FFFFFF" />
+                  <Text style={styles.editBtnText}>Modifier</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
       {/* Add / Edit modal */}
       <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={closeModal}>
         <KeyboardAvoidingView
@@ -282,7 +449,8 @@ const Products: React.FC = ({ navigation }: any) => {
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <View style={styles.modalSheet}>
-            {/* Modal header */}
+
+            {/* Sticky header */}
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>
                 {editingProduct ? t('modal_title_edit') : t('modal_title_create')}
@@ -292,37 +460,125 @@ const Products: React.FC = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
 
-            {/* Fields */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>{t('label_designation')}</Text>
-              <Controller
-                control={control}
-                name="designation"
-                render={({ field: { onChange, value } }) => (
-                  <TextInput
-                    style={[styles.fieldInput, errors.designation && styles.fieldInputError]}
-                    placeholder={t('placeholder_designation')}
-                    placeholderTextColor="#BBBBBB"
-                    value={value}
-                    onChangeText={onChange}
-                  />
-                )}
-              />
-              {errors.designation && (
-                <Text style={styles.fieldError}>{t(errors.designation.message ?? '')}</Text>
-              )}
-            </View>
+            {/* Scrollable form body */}
+            <ScrollView
+              style={styles.modalFormScroll}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
 
-            <View style={styles.fieldRow}>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>{t('label_unit_price')}</Text>
+              {/* ── Designation ──────────────────────────────────────── */}
+              <View style={styles.fieldGroup}>
+                <View style={styles.fieldLabelRow}>
+                  <Text style={styles.fieldLabel}>{t('label_designation')}</Text>
+                  <Text style={styles.fieldRequired}>*</Text>
+                </View>
+                <Controller
+                  control={control}
+                  name="designation"
+                  render={({ field: { onChange, value } }) => (
+                    <TextInput
+                      style={[styles.fieldInput, errors.designation && styles.fieldInputError]}
+                      placeholder={t('placeholder_designation')}
+                      placeholderTextColor="#BBBBBB"
+                      value={value}
+                      onChangeText={onChange}
+                    />
+                  )}
+                />
+                {errors.designation && (
+                  <Text style={styles.fieldError}>{t(errors.designation.message ?? '')}</Text>
+                )}
+              </View>
+
+              {/* ── Description ──────────────────────────────────────── */}
+              <View style={styles.fieldGroup}>
+                <View style={styles.fieldLabelRow}>
+                  <Text style={styles.fieldLabel}>{t('label_description')}</Text>
+                  <Text style={styles.fieldRequired}>*</Text>
+                </View>
+                <Controller
+                  control={control}
+                  name="description"
+                  render={({ field: { onChange, value } }) => (
+                    <TextInput
+                      style={[styles.fieldInput, styles.fieldInputMultiline, errors.description && styles.fieldInputError]}
+                      placeholder={t('placeholder_description')}
+                      placeholderTextColor="#BBBBBB"
+                      value={value}
+                      onChangeText={onChange}
+                      multiline
+                      numberOfLines={3}
+                      textAlignVertical="top"
+                    />
+                  )}
+                />
+                {errors.description && (
+                  <Text style={styles.fieldError}>{t(errors.description.message ?? '')}</Text>
+                )}
+              </View>
+
+              {/* ── Reference (optional) ─────────────────────────────── */}
+              <View style={styles.fieldGroup}>
+                <View style={styles.fieldLabelRow}>
+                  <Text style={styles.fieldLabel}>{t('label_reference')}</Text>
+                  <Text style={styles.fieldOptional}>{t('text_optional')}</Text>
+                </View>
+                <Controller
+                  control={control}
+                  name="reference"
+                  render={({ field: { onChange, value } }) => (
+                    <TextInput
+                      style={styles.fieldInput}
+                      placeholder={t('placeholder_reference')}
+                      placeholderTextColor="#BBBBBB"
+                      value={value}
+                      onChangeText={onChange}
+                    />
+                  )}
+                />
+              </View>
+
+              {/* ── Category dropdown ───────────────────────────────────── */}
+              <View style={styles.fieldGroup}>
+                <View style={styles.fieldLabelRow}>
+                  <Text style={styles.fieldLabel}>{t('label_category')}</Text>
+                  <Text style={styles.fieldRequired}>*</Text>
+                </View>
+                <Controller
+                  control={control}
+                  name="category"
+                  render={({ field: { value } }) => (
+                    <TouchableOpacity
+                      style={[styles.pickerRow, errors.category && styles.fieldInputError]}
+                      onPress={() => setShowCategoryPicker(true)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={value ? styles.pickerValueText : styles.pickerPlaceholderText}>
+                        {value || t('placeholder_category')}
+                      </Text>
+                      <ChevronDown size={18} color="#0B5FA5" />
+                    </TouchableOpacity>
+                  )}
+                />
+                {errors.category && (
+                  <Text style={styles.fieldError}>{t(errors.category.message ?? '')}</Text>
+                )}
+              </View>
+
+              {/* ── Prix H.T. ────────────────────────────────────────── */}
+              <View style={styles.fieldGroup}>
+                <View style={styles.fieldLabelRow}>
+                  <Text style={styles.fieldLabel}>{t('label_unit_price')}</Text>
+                  <Text style={styles.fieldRequired}>*</Text>
+                </View>
                 <Controller
                   control={control}
                   name="unit_price_ht"
                   render={({ field: { onChange, value } }) => (
                     <TextInput
                       style={[styles.fieldInput, errors.unit_price_ht && styles.fieldInputError]}
-                      placeholder={t('placeholder_unit_price')}
+                      placeholder="0.00"
                       placeholderTextColor="#BBBBBB"
                       keyboardType="decimal-pad"
                       value={value}
@@ -334,32 +590,40 @@ const Products: React.FC = ({ navigation }: any) => {
                   <Text style={styles.fieldError}>{t(errors.unit_price_ht.message ?? '')}</Text>
                 )}
               </View>
-              <View style={styles.fieldRowSpacer} />
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>{t('label_vat_percent')}</Text>
+
+              {/* ── TVA dropdown ────────────────────────────────────────── */}
+              <View style={styles.fieldGroup}>
+                <View style={styles.fieldLabelRow}>
+                  <Text style={styles.fieldLabel}>{t('label_vat_percent')}</Text>
+                  <Text style={styles.fieldRequired}>*</Text>
+                </View>
                 <Controller
                   control={control}
                   name="tva_percent"
-                  render={({ field: { onChange, value } }) => (
-                    <TextInput
-                      style={[styles.fieldInput, errors.tva_percent && styles.fieldInputError]}
-                      placeholder={t('placeholder_vat_percent')}
-                      placeholderTextColor="#BBBBBB"
-                      keyboardType="decimal-pad"
-                      value={value}
-                      onChangeText={onChange}
-                    />
+                  render={({ field: { value } }) => (
+                    <TouchableOpacity
+                      style={[styles.pickerRow, errors.tva_percent && styles.fieldInputError]}
+                      onPress={() => setShowTvaPicker(true)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={value ? styles.pickerValueText : styles.pickerPlaceholderText}>
+                        {value ? `${value}%` : '0%'}
+                      </Text>
+                      <ChevronDown size={18} color="#0B5FA5" />
+                    </TouchableOpacity>
                   )}
                 />
                 {errors.tva_percent && (
                   <Text style={styles.fieldError}>{t(errors.tva_percent.message ?? '')}</Text>
                 )}
               </View>
-            </View>
 
-            <View style={styles.fieldRow}>
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>{t('label_quantity')}</Text>
+              {/* ── Quantity ─────────────────────────────────────────── */}
+              <View style={styles.fieldGroup}>
+                <View style={styles.fieldLabelRow}>
+                  <Text style={styles.fieldLabel}>{t('label_quantity')}</Text>
+                  <Text style={styles.fieldRequired}>*</Text>
+                </View>
                 <Controller
                   control={control}
                   name="quantity"
@@ -378,168 +642,511 @@ const Products: React.FC = ({ navigation }: any) => {
                   <Text style={styles.fieldError}>{t(errors.quantity.message ?? '')}</Text>
                 )}
               </View>
-              <View style={styles.fieldRowSpacer} />
-              <View style={[styles.fieldGroup, { flex: 1 }]}>
-                <Text style={styles.fieldLabel}>{t('label_total_price')}</Text>
-                <Controller
-                  control={control}
-                  name="total_price_ht"
-                  render={({ field: { onChange, value } }) => (
-                    <TextInput
-                      style={[styles.fieldInput, styles.fieldInputComputed]}
-                      placeholder={t('placeholder_unit_price')}
-                      placeholderTextColor="#BBBBBB"
-                      keyboardType="decimal-pad"
-                      value={value}
-                      onChangeText={onChange}
-                    />
-                  )}
-                />
-              </View>
+
+              {/* ── Total H.T. computed ───────────────────────────────── */}
+              {watchedUnitPrice && watchedQty &&
+                parseFloat(watchedUnitPrice) > 0 && parseFloat(watchedQty) > 0 && (
+                <View style={styles.computedBox}>
+                  <View style={styles.computedRow}>
+                    <Text style={styles.computedLabel}>{t('label_total_ht_computed')}</Text>
+                    <Text style={styles.computedValue}>
+                      {(parseFloat(watchedUnitPrice) * parseFloat(watchedQty)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
+                    </Text>
+                  </View>
+                  <Text style={styles.computedHint}>{t('label_total_ht_hint')}</Text>
+                </View>
+              )}
+
+              {/* ── T.T.C. computed ──────────────────────────────────── */}
+              {watchedUnitPrice && parseFloat(watchedUnitPrice) > 0 && (
+                <View style={styles.ttcBox}>
+                  <Text style={styles.ttcLabel}>{t('label_price_ttc')}</Text>
+                  <Text style={styles.ttcValue}>
+                    {(
+                      (parseFloat(watchedUnitPrice) * (parseFloat(watchedQty) || 1))
+                      * (1 + parseFloat(watchedTva || '0') / 100)
+                    ).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
+                  </Text>
+                </View>
+              )}
+
+              <View style={{ height: 16 }} />
+            </ScrollView>
+
+            {/* Footer */}
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={closeModal}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.cancelBtnText}>{t('button_cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.saveBtn, (!isValid || saving) && styles.saveBtnDisabled]}
+                onPress={handleSubmit(onSubmit as any)}
+                disabled={!isValid || saving}
+                activeOpacity={0.8}
+              >
+                {saving
+                  ? <ActivityIndicator color="#FFF" />
+                  : <Text style={styles.saveBtnText}>
+                      {editingProduct ? t('button_save_changes') : t('button_add_product')}
+                    </Text>
+                }
+              </TouchableOpacity>
             </View>
 
-            <TouchableOpacity
-              style={[styles.saveBtn, (!isValid || saving) && styles.saveBtnDisabled]}
-              onPress={handleSubmit(onSubmit as any)}
-              disabled={!isValid || saving}
-            >
-              {saving
-                ? <ActivityIndicator color="#FFF" />
-                : <Text style={styles.saveBtnText}>
-                    {editingProduct ? t('button_save_changes') : t('button_add_product')}
-                  </Text>
-              }
-            </TouchableOpacity>
+            {/* ── Category Picker inline overlay ─────────────────── */}
+            {showCategoryPicker && (
+              <TouchableOpacity
+                style={styles.inlinePickerOverlay}
+                activeOpacity={1}
+                onPress={() => setShowCategoryPicker(false)}
+              >
+                <View style={styles.inlinePickerSheet}>
+                  <Text style={styles.pickerSheetTitle}>{t('label_category')}</Text>
+                  {CATEGORY_OPTIONS.map(cat => {
+                    const isSelected = watch('category') === cat;
+                    return (
+                      <TouchableOpacity
+                        key={cat}
+                        style={styles.pickerOption}
+                        onPress={() => { setValue('category', cat, { shouldValidate: true }); setShowCategoryPicker(false); }}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.pickerOptionText, isSelected && styles.pickerOptionSelected]}>{cat}</Text>
+                        {isSelected && <Check size={16} color="#0B5FA5" />}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </TouchableOpacity>
+            )}
+
+            {/* ── TVA Picker inline overlay ───────────────────────── */}
+            {showTvaPicker && (
+              <TouchableOpacity
+                style={styles.inlinePickerOverlay}
+                activeOpacity={1}
+                onPress={() => setShowTvaPicker(false)}
+              >
+                <View style={styles.inlinePickerSheet}>
+                  <Text style={styles.pickerSheetTitle}>{t('label_vat_percent')}</Text>
+                  {TVA_OPTIONS.map(opt => {
+                    const isSelected = watch('tva_percent') === opt;
+                    return (
+                      <TouchableOpacity
+                        key={opt}
+                        style={styles.pickerOption}
+                        onPress={() => { setValue('tva_percent', opt, { shouldValidate: true }); setShowTvaPicker(false); }}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.pickerOptionText, isSelected && styles.pickerOptionSelected]}>{opt}%</Text>
+                        {isSelected && <Check size={16} color="#0B5FA5" />}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </TouchableOpacity>
+            )}
+
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F2F4F7' },
-
+  container: { flex: 1, backgroundColor: '#F5F5FA' },
+  
   // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E9EDF2',
-  },
-  backButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '600', color: '#1A2233' },
-
-  // List
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB', gap: 12 },
+  headerTitle: { flex: 1, fontSize: 18, fontWeight: '600', color: '#111827' },
+  
+  // Stats Card
+  statsCardWrapper: { paddingHorizontal: 16, paddingVertical: 12 },
+  statsCard: { backgroundColor: '#0B5FA5', borderRadius: 12, padding: 16, overflow: 'hidden' },
+  statsCardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  statsLabel: { fontSize: 12, fontWeight: '500', color: 'rgba(255, 255, 255, 0.75)' },
+  statsValue: { fontSize: 32, fontWeight: '700', color: '#FFFFFF', marginBottom: 4 },
+  statsSubtitle: { fontSize: 12, color: 'rgba(255, 255, 255, 0.65)' },
+  
+  // Product Card
+  listContent: { paddingHorizontal: 16, paddingVertical: 12 },
+  listEmpty: { flexGrow: 1, justifyContent: 'center' },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  listContent: { padding: 16, paddingBottom: 100 },
-  listEmpty: { flex: 1 },
-
-  // Empty state
-  emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 80 },
-  emptyTitle: { marginTop: 16, fontSize: 17, fontWeight: '600', color: '#8A9AB0' },
-  emptySubtitle: { marginTop: 6, fontSize: 13, color: '#A8B5C3', textAlign: 'center', paddingHorizontal: 32 },
-
-  // Card
-  card: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 12,
+  
+  productCard: { 
+    backgroundColor: '#FFFFFF', 
+    borderRadius: 12, 
+    padding: 12, 
+    marginBottom: 12, 
+    flexDirection: 'row', 
+    alignItems: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 2 }, 
+    shadowOpacity: 0.05, 
+    shadowRadius: 4, 
+    elevation: 2,
+    position: 'relative',
+  },
+  cardActionButtons: { 
+    position: 'absolute', 
+    top: 8, 
+    right: 8, 
+    flexDirection: 'row', 
+    gap: 8,
+    zIndex: 10,
+  },
+  editIconBtn: { 
+    width: 32, 
+    height: 32, 
+    borderRadius: 8, 
+    backgroundColor: '#0B5FA5', 
+    justifyContent: 'center', 
+    alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.07,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
   },
-  cardIconWrapper: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    backgroundColor: '#EAF2FB',
-    justifyContent: 'center',
+  deleteIconBtn: { 
+    width: 32, 
+    height: 32, 
+    borderRadius: 8, 
+    backgroundColor: '#DC2626', 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  
+  productIconBox: { 
+    width: 40, 
+    height: 40, 
+    borderRadius: 8, 
+    backgroundColor: '#EAF2FB', 
+    justifyContent: 'center', 
     alignItems: 'center',
     marginRight: 12,
-    marginTop: 2,
   },
-  cardBody: { flex: 1 },
-  cardTitle: { fontSize: 15, fontWeight: '600', color: '#1A2233', marginBottom: 8 },
-  cardRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
-  cardPill: {
-    backgroundColor: '#F2F4F7',
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+  productContent: { flex: 1, paddingRight: 44 },
+  productHeader: { marginBottom: 8 },
+  productInfo: { },
+  productName: { fontSize: 14, fontWeight: '600', color: '#111827', marginBottom: 2 },
+  productDesc: { fontSize: 12, color: '#6B7280' },
+  
+  productFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
+  categoryBadge: { backgroundColor: '#EAF2FB', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+  categoryText: { fontSize: 11, fontWeight: '500', color: '#0B5FA5' },
+  priceSection: { flexDirection: 'column', alignItems: 'flex-end' },
+  priceValue: { fontSize: 13, fontWeight: '700', color: '#0B5FA5' },
+  priceLabel: { fontSize: 10, color: '#9CA3AF', marginTop: 2 },
+  
+  // Search View
+  searchHeader: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingHorizontal: 16, 
+    paddingVertical: 12, 
+    backgroundColor: '#FFFFFF', 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#E5E7EB',
+    gap: 12,
+  },
+  searchInputBox: { 
+    flex: 1, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#F3F4F6', 
+    borderRadius: 8, 
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  searchInput: { 
+    flex: 1, 
+    paddingVertical: 10, 
+    fontSize: 14, 
+    color: '#111827' 
+  },
+  
+  emptySearchState: { 
+    flex: 1, 
+    justifyContent: 'center', 
     alignItems: 'center',
+    paddingVertical: 48,
   },
-  cardPillLabel: { fontSize: 10, color: '#8A9AB0', fontWeight: '500' },
-  cardPillValue: { fontSize: 13, color: '#1A2233', fontWeight: '600', marginTop: 1 },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardTotal: { fontSize: 13, color: '#8A9AB0' },
-  cardTotalValue: { color: '#0B5FA5', fontWeight: '700' },
-  cardActions: { flexDirection: 'row', gap: 8 },
-  editBtn: {
-    width: 32, height: 32, borderRadius: 8,
-    backgroundColor: '#EAF2FB', justifyContent: 'center', alignItems: 'center',
+  emptySearchTitle: { fontSize: 16, fontWeight: '600', color: '#111827', marginTop: 12 },
+  emptySearchSubtitle: { fontSize: 13, color: '#6B7280', marginTop: 4 },
+  
+  emptyState: { justifyContent: 'center', alignItems: 'center', paddingVertical: 48 },
+  emptyTitle: { fontSize: 16, fontWeight: '600', color: '#111827', marginTop: 12 },
+  emptySubtitle: { fontSize: 13, color: '#6B7280', marginTop: 4 },
+  
+  // Detail Modal
+  detailModalOverlay: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0, 0, 0, 0.5)', 
+    justifyContent: 'flex-end' 
   },
-  deleteBtn: {
-    width: 32, height: 32, borderRadius: 8,
-    backgroundColor: '#FEF2F2', justifyContent: 'center', alignItems: 'center',
+  detailModalSheet: { 
+    backgroundColor: '#FFFFFF', 
+    borderTopLeftRadius: 24, 
+    borderTopRightRadius: 24, 
+    paddingHorizontal: 16, 
+    paddingVertical: 16,
+    maxHeight: '80%',
   },
-
-  // FAB
-  fab: {
-    position: 'absolute', right: 22, bottom: 22,
-    width: 58, height: 58, borderRadius: 29,
+  detailModalHeader: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  detailModalTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
+  detailModalContent: { marginBottom: 20 },
+  
+  detailIconSection: { alignItems: 'center', marginBottom: 20 },
+  detailIcon: { 
+    width: 56, 
+    height: 56, 
+    borderRadius: 12, 
+    backgroundColor: '#EAF2FB', 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  detailName: { fontSize: 18, fontWeight: '600', color: '#111827', textAlign: 'center' },
+  
+  detailSection: { marginVertical: 12 },
+  detailRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  detailLabel: { fontSize: 13, color: '#6B7280', fontWeight: '500' },
+  detailValue: { fontSize: 13, fontWeight: '600', color: '#111827' },
+  detailRowTotal: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    paddingVertical: 12,
+    backgroundColor: '#EAF2FB',
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  detailLabelTotal: { fontSize: 13, color: '#0B5FA5', fontWeight: '600' },
+  detailValueTotal: { fontSize: 16, fontWeight: '700', color: '#0B5FA5' },
+  
+  detailModalActions: { 
+    flexDirection: 'row', 
+    gap: 12,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  deleteBtn: { 
+    flex: 1, 
+    flexDirection: 'row', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#DC2626',
+    gap: 6,
+  },
+  deleteBtnText: { fontSize: 14, fontWeight: '600', color: '#DC2626' },
+  editBtn: { 
+    flex: 1, 
+    flexDirection: 'row', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    paddingVertical: 12,
+    borderRadius: 8,
     backgroundColor: '#0B5FA5',
-    justifyContent: 'center', alignItems: 'center',
-    shadowColor: '#0B5FA5',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35, shadowRadius: 8, elevation: 8,
+    gap: 6,
   },
-
+  editBtnText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
+  
   // Modal
-  modalOverlay: {
-    flex: 1, justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.45)',
-  },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'flex-end' },
   modalSheet: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20, borderTopRightRadius: 20,
-    padding: 20, paddingBottom: Platform.OS === 'ios' ? 36 : 24,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '92%',
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   modalHeader: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: 20,
-  },
-  modalTitle: { fontSize: 17, fontWeight: '700', color: '#1A2233' },
-
-  // Form fields
-  fieldGroup: { marginBottom: 14 },
-  fieldRow: { flexDirection: 'row', marginBottom: 0 },
-  fieldRowSpacer: { width: 12 },
-  fieldLabel: { fontSize: 12, fontWeight: '600', color: '#8A9AB0', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.4 },
-  fieldInput: {
-    borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10,
-    paddingHorizontal: 14, paddingVertical: 10,
-    fontSize: 15, color: '#1A2233', backgroundColor: '#FAFBFC',
-  },
-  fieldInputComputed: { backgroundColor: '#F0F6FF', borderColor: '#C7DEFF' },
-  fieldInputError: { borderColor: '#DC2626' },
-  fieldError: { fontSize: 11, color: '#DC2626', marginTop: 4 },
-
-  // Save button
-  saveBtn: {
-    marginTop: 20, backgroundColor: '#0B5FA5',
-    borderRadius: 12, paddingVertical: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    backgroundColor: '#FFFFFF',
   },
-  saveBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '700' },
-  saveBtnDisabled: { backgroundColor: '#93C5FD', shadowOpacity: 0, elevation: 0 },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
+  modalFormScroll: { paddingHorizontal: 20, paddingTop: 20 },
+  modalFooter: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    backgroundColor: '#F9FAFB',
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  cancelBtnText: { fontSize: 15, fontWeight: '600', color: '#374151' },
+
+  fieldGroup: { marginBottom: 18 },
+  fieldLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 },
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151' },
+  fieldRequired: { fontSize: 13, fontWeight: '700', color: '#EF4444' },
+  fieldOptional: { fontSize: 11, fontWeight: '400', color: '#9CA3AF' },
+  fieldInput: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#111827',
+    backgroundColor: '#FFFFFF',
+  },
+  fieldInputMultiline: { minHeight: 80, paddingTop: 12 },
+  fieldInputError: { borderColor: '#DC2626' },
+  fieldInputComputed: { backgroundColor: '#F3F4F6', color: '#6B7280' },
+  fieldError: { fontSize: 11, color: '#DC2626', marginTop: 4 },
+  fieldRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  fieldRowSpacer: { width: 12 },
+
+  // Picker dropdown row (trigger button)
+  pickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+  },
+  pickerValueText: { fontSize: 14, color: '#111827', flex: 1 },
+  pickerPlaceholderText: { fontSize: 14, color: '#BBBBBB', flex: 1 },
+
+  // Picker sheet modal
+  pickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  pickerSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 8,
+    paddingBottom: 32,
+  },
+  pickerSheetTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#9CA3AF',
+    letterSpacing: 0.6,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  pickerOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F9FAFB',
+  },
+  pickerOptionText: { fontSize: 15, fontWeight: '500', color: '#374151' },
+  pickerOptionSelected: { color: '#0B5FA5', fontWeight: '700' },
+
+  // Inline picker overlays (rendered inside the add/edit modal to avoid stacked-modal issues)
+  inlinePickerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    zIndex: 100,
+    justifyContent: 'flex-end',
+  },
+  inlinePickerSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 8,
+    paddingBottom: 32,
+  },
+
+  // Computed boxes
+  computedBox: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 12,
+  },
+  computedRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  computedLabel: { fontSize: 14, fontWeight: '600', color: '#374151' },
+  computedValue: { fontSize: 16, fontWeight: '700', color: '#111827' },
+  computedHint: { fontSize: 11, color: '#9CA3AF' },
+  ttcBox: {
+    backgroundColor: '#EAF2FB',
+    borderRadius: 12,
+    padding: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  ttcLabel: { fontSize: 14, fontWeight: '600', color: '#374151' },
+  ttcValue: { fontSize: 16, fontWeight: '700', color: '#0B5FA5' },
+
+  saveBtn: { flex: 1, backgroundColor: '#0B5FA5', borderRadius: 12, paddingVertical: 13, alignItems: 'center', justifyContent: 'center' },
+  saveBtnText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
+  saveBtnDisabled: { backgroundColor: '#BCC0CA' },
+  
+  fab: { position: 'absolute', bottom: 24, right: 16, width: 56, height: 56, borderRadius: 28, backgroundColor: '#0B5FA5', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 5 },
 });
 
 export default Products;

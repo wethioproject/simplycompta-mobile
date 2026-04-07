@@ -28,6 +28,9 @@ class ProductService {
             const body = {
                 customer_id: String(payload.customer_id),
                 designation: payload.designation,
+                description: payload.description,
+                reference: payload.reference,
+                category: payload.category,
                 unit_price_ht: String(payload.unit_price_ht),
                 tva_percent: String(payload.tva_percent),
                 quantity: String(payload.quantity),
@@ -55,6 +58,9 @@ class ProductService {
             const body = {
                 customer_id: String(payload.customer_id),
                 designation: payload.designation,
+                description: payload.description,
+                reference: payload.reference,
+                category: payload.category,
                 unit_price_ht: String(payload.unit_price_ht),
                 tva_percent: String(payload.tva_percent),
                 quantity: String(payload.quantity),
