@@ -34,6 +34,7 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import { LineChart, PieChart } from 'react-native-gifted-charts';
 import dashboardService from '../../services/dashboardService';
+import type { QuickAnalysisData } from '../../services/dashboardService';
 
 type StackNavigation = StackNavigationProp<any>;
 
@@ -233,43 +234,72 @@ const ActionButtons: React.FC<{
 );
 
 /** Quick Analysis section */
-const QuickAnalysis: React.FC<{ t: any; 
-  stats: {
-    unpaidInvoicesCount: number;
-    unpaidInvoiceSum: number;
-  };
- }> = ({ t, stats }) => (
-  <View style={styles.analysisSection}>
-    <View style={styles.analysisTitleRow}>
-      <BarChart3 size={20} color="#1E5BAC" />
-      <Text style={styles.analysisTitleText}>{t('section_quick_analysis')}</Text>
-    </View>
-    {/* Alert: high expenses */}
-    <View style={[styles.analysisAlert, { backgroundColor: '#FEF2F2' }]}>
-      <AlertTriangle size={16} color="#EF4444" style={{ marginTop: 2 }} />
-      <View style={styles.analysisAlertContent}>
-        <Text style={styles.analysisAlertBold}>{t('analysis_high_expenses')} </Text>
-        <Text style={styles.analysisAlertNormal}>{t('analysis_high_expenses_detail', { pct: 25 })}</Text>
+const QuickAnalysis: React.FC<{
+  t: any;
+  loading: boolean;
+  analysis: QuickAnalysisData | null;
+}> = ({ t, loading, analysis }) => {
+  const expensePct = Math.abs(Number(analysis?.expenses_alert?.variation_percentage ?? 0));
+  const pendingCount = Number(analysis?.pending_invoices?.count ?? 0);
+  const pendingAmount = Number(analysis?.pending_invoices?.total_amount ?? 0);
+  const goodMonthPct = Math.abs(Number(analysis?.performance_alert?.variation_percentage ?? 0));
+
+  const showExpenseAlert = Boolean(analysis?.expenses_alert?.is_higher);
+  const showPendingInvoices = pendingCount > 0;
+  const showGoodMonth = Boolean(analysis?.performance_alert?.is_good);
+  const hasAlerts = showExpenseAlert || showPendingInvoices || showGoodMonth;
+
+  if (!loading && !hasAlerts) {
+    return null;
+  }
+
+  return (
+    <View style={styles.analysisSection}>
+      <View style={styles.analysisTitleRow}>
+        <BarChart3 size={20} color="#1E5BAC" />
+        <Text style={styles.analysisTitleText}>{t('section_quick_analysis')}</Text>
       </View>
+
+      {loading ? (
+        <View style={styles.analysisLoadingBox}>
+          <ActivityIndicator size="small" color="#1E5BAC" />
+        </View>
+      ) : (
+        <>
+          {showExpenseAlert && (
+            <View style={[styles.analysisAlert, { backgroundColor: '#FEF2F2' }]}>
+              <AlertTriangle size={16} color="#EF4444" style={{ marginTop: 2 }} />
+              <View style={styles.analysisAlertContent}>
+                <Text style={styles.analysisAlertBold}>{t('analysis_high_expenses')} </Text>
+                <Text style={styles.analysisAlertNormal}>{t('analysis_high_expenses_detail', { pct: expensePct })}</Text>
+              </View>
+            </View>
+          )}
+
+          {showPendingInvoices && (
+            <View style={[styles.analysisAlert, { backgroundColor: '#FEFCE8' }]}>
+              <FileText size={16} color="#CA8A04" style={{ marginTop: 2 }} />
+              <View style={styles.analysisAlertContent}>
+                <Text style={styles.analysisAlertBold}>{t('analysis_pending_invoices', { count: pendingCount })} </Text>
+                <Text style={styles.analysisAlertNormal}>{t('analysis_pending_invoices_amount', { amount: pendingAmount.toLocaleString('fr-FR') })}</Text>
+              </View>
+            </View>
+          )}
+
+          {showGoodMonth && (
+            <View style={[styles.analysisAlert, { backgroundColor: '#F0FDF4' }]}>
+              <TrendingUp size={16} color="#16A34A" style={{ marginTop: 2 }} />
+              <View style={styles.analysisAlertContent}>
+                <Text style={styles.analysisAlertBold}>{t('analysis_good_month')} </Text>
+                <Text style={styles.analysisAlertNormal}>{t('analysis_good_month_detail', { pct: goodMonthPct })}</Text>
+              </View>
+            </View>
+          )}
+        </>
+      )}
     </View>
-    {/* Alert: pending invoices */}
-    <View style={[styles.analysisAlert, { backgroundColor: '#FEFCE8' }]}>
-      <FileText size={16} color="#CA8A04" style={{ marginTop: 2 }} />
-      <View style={styles.analysisAlertContent}>
-        <Text style={styles.analysisAlertBold}>{t('analysis_pending_invoices', { count: stats.unpaidInvoicesCount })} </Text>
-        <Text style={styles.analysisAlertNormal}>{t('analysis_pending_invoices_amount', { amount: stats.unpaidInvoiceSum.toLocaleString('fr-FR') })}</Text>
-      </View>
-    </View>
-    {/* Alert: good month */}
-    <View style={[styles.analysisAlert, { backgroundColor: '#F0FDF4' }]}>
-      <TrendingUp size={16} color="#16A34A" style={{ marginTop: 2 }} />
-      <View style={styles.analysisAlertContent}>
-        <Text style={styles.analysisAlertBold}>{t('analysis_good_month')} </Text>
-        <Text style={styles.analysisAlertNormal}>{t('analysis_good_month_detail', { pct: 12 })}</Text>
-      </View>
-    </View>
-  </View>
-);
+  );
+};
 
 /** Chart section: line chart + donut side by side */
 const ChartSection: React.FC<{
@@ -434,6 +464,8 @@ const Activity: React.FC = () => {
     ca: EMPTY_MONTHS,
     expenses: EMPTY_MONTHS,
   });
+  const [quickAnalysisLoading, setQuickAnalysisLoading] = useState(true);
+  const [quickAnalysis, setQuickAnalysis] = useState<QuickAnalysisData | null>(null);
 
   /* ─── Data fetching ─── */
   const fetchChartData = async (year: number, silent = false) => {
@@ -469,12 +501,32 @@ const Activity: React.FC = () => {
 
   useEffect(() => { fetchStats(selectedPeriodIndex); }, [selectedPeriodIndex]);
 
+  const fetchQuickAnalysis = async (silent = false) => {
+    if (!silent) setQuickAnalysisLoading(true);
+    try {
+      const res = await dashboardService.getQuickAnalysis();
+      if (res.success && res.data) {
+        setQuickAnalysis(res.data);
+      } else {
+        setQuickAnalysis(null);
+      }
+    } catch (e) {
+      console.error('Quick analysis error:', e);
+      setQuickAnalysis(null);
+    } finally {
+      setQuickAnalysisLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchQuickAnalysis(); }, []);
+
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await new Promise<void>(resolve => setTimeout(resolve, 300));
     await Promise.all([
       fetchStats(selectedPeriodIndex, true),
       fetchChartData(selectedChartYear, true),
+      fetchQuickAnalysis(true),
     ]);
     setRefreshing(false);
   }, [selectedPeriodIndex, selectedChartYear]);
@@ -572,7 +624,7 @@ const Activity: React.FC = () => {
         />
 
         {/* Quick Analysis */}
-        <QuickAnalysis t={t} stats={stats} />
+        <QuickAnalysis t={t} loading={quickAnalysisLoading} analysis={quickAnalysis} />
 
         {/* Year Selector */}
         <TouchableOpacity style={styles.yearSelectorRow} activeOpacity={0.7} onPress={() => setShowYearPicker(true)}>
@@ -857,6 +909,15 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
     color: '#111827',
+  },
+  analysisLoadingBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   analysisAlert: {
     flexDirection: 'row',

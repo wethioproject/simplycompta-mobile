@@ -57,6 +57,30 @@ export interface ActivityResponse {
     data: ActivityStats;
 }
 
+export interface QuickAnalysisData {
+    expenses_alert: {
+        is_higher: boolean;
+        variation_percentage: number;
+        current: number;
+        previous: number | string;
+    };
+    pending_invoices: {
+        count: number;
+        total_amount: number | string;
+    };
+    performance_alert: {
+        is_good: boolean;
+        variation_percentage: number;
+        current_revenue: number;
+        previous_revenue: number;
+    };
+}
+
+export interface QuickAnalysisResponse {
+    success: boolean;
+    data: QuickAnalysisData;
+}
+
 export type DashboardFilter = 'this_week' | 'this_month' | 'this_year' | 'last_year' | 'all' | null;
 
 class DashboardService {
@@ -89,6 +113,15 @@ class DashboardService {
             const response = await api.get<GraphResponse>(Api_Endpoints.dashboardGraph, {
                 params: { year },
             });
+            return response.data;
+        } catch (error: any) {
+            throw error;
+        }
+    }
+
+    async getQuickAnalysis(): Promise<QuickAnalysisResponse> {
+        try {
+            const response = await api.get<QuickAnalysisResponse>(Api_Endpoints.customerQuickAnalysis);
             return response.data;
         } catch (error: any) {
             throw error;

@@ -1,5 +1,6 @@
 export const Api_Endpoints = {
   dashboard: 'customer/dashboard-data',
+  customerQuickAnalysis: 'customer/analyse-rapide',
   customerClients: 'customer/customer-clients',
   customerClientsSearch: 'customer/customer-clients',
   customerClient: 'customer/customer-client',
@@ -27,4 +28,5 @@ export const Api_Endpoints = {
   customerSupplierExpenses: 'customer/customer-supplier-expenses',
   customerInvoicePdf: 'customer/customer-invoices/pdf',
   customerExpenseCategoryChart: 'customer/customer-expenses/chart',
+  documentsData: 'customer/documents-data',
 }
