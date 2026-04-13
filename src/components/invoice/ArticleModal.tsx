@@ -112,7 +112,7 @@ const ArticleModal: React.FC<{
               <Text style={styles.modalCancelText}>{t('modal_cancel_text')}</Text>
             </TouchableOpacity>
             <Text style={styles.modalTitle}>{t('modal_title_article_designation')}</Text>
-            <TouchableOpacity style={styles.modalConfirmBtn} onPress={handleConfirm} activeOpacity={0.8}>
+            <TouchableOpacity style={[styles.modalConfirmBtn, (!form.designation.trim() || !form.unitPriceHT) && styles.modalConfirmBtnDisabled]} onPress={handleConfirm} disabled={!form.designation.trim() || !form.unitPriceHT} activeOpacity={0.85}>
               <Text style={styles.modalConfirmText}>{t('modal_confirm_text')}</Text>
             </TouchableOpacity>
           </View>
@@ -226,7 +226,7 @@ const ArticleModal: React.FC<{
                 </View>
               </View>
 
-              <TouchableOpacity style={styles.addArticleBtn} onPress={handleConfirm} activeOpacity={0.85}>
+              <TouchableOpacity style={[styles.addArticleBtn, !form.designation.trim() && !form.unitPriceHT && styles.addArticleBtnDisabled]} onPress={handleConfirm} disabled={!form.designation.trim() || !form.unitPriceHT} activeOpacity={0.85}>
                 <Text style={styles.addArticleBtnText}>{t('button_add')}</Text>
               </TouchableOpacity>
             </View>
@@ -268,7 +268,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: '#329ED2',
+    backgroundColor: '#1E5BAC',
+  },
+  modalConfirmBtnDisabled: {
+    backgroundColor: '#93C5FD',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   modalConfirmText: {
     fontSize: 16,
@@ -370,9 +375,14 @@ const styles = StyleSheet.create({
     marginTop: 24,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#329ED2',
+    backgroundColor: '#1E5BAC',
     borderRadius: 8,
     alignItems: 'center',
+  },
+  addArticleBtnDisabled: {
+    backgroundColor: '#93C5FD',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   addArticleBtnText: {
     fontSize: 16,
