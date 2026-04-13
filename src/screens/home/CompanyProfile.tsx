@@ -533,8 +533,8 @@ const CompanyProfile: React.FC = ({ navigation }: any) => {
             <View style={styles.divider} />
 
 
-            <Text style={styles.sectionSubtitle}>COULEUR DE MARQUE</Text>
-            <Text style={styles.colorSectionDesc}>Cette couleur sera utilisée sur vos factures</Text>
+            <Text style={styles.sectionSubtitle}>{t('color_brand')}</Text>
+            <Text style={styles.colorSectionDesc}>{t('color_brand_desc')}</Text>
             <TouchableOpacity
               style={styles.colorPickerTrigger}
               onPress={() => { setTempColor(companyColor); setShowColorPicker(true); }}
@@ -542,7 +542,7 @@ const CompanyProfile: React.FC = ({ navigation }: any) => {
             >
               <View style={[styles.colorSwatch, { backgroundColor: companyColor }]} />
               <View style={styles.colorSwatchMeta}>
-                <Text style={styles.colorSwatchLabel}>Couleur actuelle</Text>
+                <Text style={styles.colorSwatchLabel}>{t('color_current')}</Text>
                 <Text style={styles.colorSwatchHex}>{companyColor.toUpperCase()}</Text>
               </View>
               <Palette size={20} color="#9CA3AF" />
@@ -670,7 +670,7 @@ const CompanyProfile: React.FC = ({ navigation }: any) => {
             >
               <ArrowLeft size={20} color="#374151" />
             </TouchableOpacity>
-            <Text style={styles.colorPickerTitle}>Sélectionner une couleur</Text>
+            <Text style={styles.colorPickerTitle}>{t('color_picker_title')}</Text>
             <View style={{ width: 36 }} />
           </View>
 
@@ -727,7 +727,7 @@ const CompanyProfile: React.FC = ({ navigation }: any) => {
               onPress={() => { setCompanyColor(tempColor); setShowColorPicker(false); }}
               activeOpacity={0.85}
             >
-              <Text style={styles.colorValidateBtnText}>Valider</Text>
+              <Text style={styles.colorValidateBtnText}>{t('color_validate')}</Text>
             </TouchableOpacity>
           </View>
         </SafeAreaView>
