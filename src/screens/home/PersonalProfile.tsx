@@ -99,7 +99,7 @@ const PersonalProfile: React.FC = ({ navigation }: any) => {
       formData.append('_method', 'PUT');
       formData.append('name', `${firstName.trim()} ${lastName.trim()}`.trim());
       formData.append('email', email.trim());
-      formData.append('phone', phone.trim());   // PUT validation key is `phone`
+      formData.append('contact', phone.trim());   // PUT validation key is `phone`
       formData.append('bio', bio.trim());
 
       if (avatarFile) {
