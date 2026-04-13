@@ -6,6 +6,7 @@ import LegalDocuments from '../screens/home/Legal';
 import AccountingDocuments from '../screens/home/Accounting';
 import Activity from '../screens/home/Activity';
 import BankStatements from '../screens/home/BankStatements';
+import AllDocuments from '../screens/home/AllDocuments';
 import Contact from '../screens/home/Contact';
 import Notifications from '../screens/notification/Notifications';
 import NotificationDetail from '../screens/notification/NotificationDetail';
@@ -21,6 +22,7 @@ const HomeStack: React.FC = () => {
       <Stack.Screen name="Accounting Documents" component={AccountingDocuments} />
       <Stack.Screen name="Activity" component={Activity} />
       <Stack.Screen name="Bank Statements" component={BankStatements} />
+      <Stack.Screen name="AllDocuments" component={AllDocuments} />
       <Stack.Screen name="Contact" component={Contact} />
       <Stack.Screen name="Notifications" component={Notifications} />
       <Stack.Screen name="Notification Detail" component={NotificationDetail} />
