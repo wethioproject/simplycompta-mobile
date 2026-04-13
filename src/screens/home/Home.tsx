@@ -557,7 +557,7 @@ const Home: React.FC = () => {
   };
 
   const userName =
-    customer?.first_name || customer?.client_name || customer?.name || 'Youssef';
+    customer?.first_name || customer?.client_name || customer?.name.split(" ")[0] || 'Youssef';
 
   const currentMonth = new Date().toLocaleString(i18n.language, {
     month: 'long',
