@@ -29,4 +29,6 @@ export const Api_Endpoints = {
   customerInvoicePdf: 'customer/customer-invoices/pdf',
   customerExpenseCategoryChart: 'customer/customer-expenses/chart',
   documentsData: 'customer/documents-data',
+  botRequestActivation: 'customer/bot/request-activation',
+  botVerifyActivation: 'customer/bot/verify-activation',
 }
