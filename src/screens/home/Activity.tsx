@@ -30,6 +30,7 @@ import {
   BarChart3,
   Wallet,
   Receipt,
+  Info,
 } from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { LineChart, PieChart } from 'react-native-gifted-charts';
@@ -140,10 +141,13 @@ const StatsCards: React.FC<{
   loading: boolean;
   t: any;
 }> = ({ stats, loading, t }) => {
+  const [activeInfo, setActiveInfo] = useState<number | null>(null);
+
   const cards = [
     {
       label: t('label_ca'),
       rawValue: stats.total_issued_paid_sum,
+      infoKey: 'info_ca',
       icon: <FileText size={16} color="#1E5BAC" />,
       bg: '#FFFFFF',
       borderColor: '#F3F4F6',
@@ -154,6 +158,7 @@ const StatsCards: React.FC<{
       rawValue: stats.total_paid_sum,
       perValue: stats.total_paid_percentage_change,
       perColor: "#16A34A",
+      infoKey: 'info_cash_collected',
       icon: <Wallet size={16} color="#16A34A" />,
       bg: '#F0FDF4',
       borderColor: '#DCFCE7',
@@ -164,6 +169,7 @@ const StatsCards: React.FC<{
       rawValue: stats.total_expenses_sum,
       perValue: stats.total_expenses_percentage_change,
       perColor: "#EF4444",
+      infoKey: 'info_expenses',
       icon: <Receipt size={16} color="#EF4444" />,
       bg: '#FEF2F2',
       borderColor: '#FEE2E2',
@@ -174,6 +180,7 @@ const StatsCards: React.FC<{
       rawValue: stats.total_vat_payable,
       perValue: stats.total_vat_payable_percentage_change,
       perColor: "#CA8A04",
+      infoKey: 'info_estimated_vat',
       icon: <Sparkles size={16} color="#CA8A04" />,
       bg: '#FEFCE8',
       borderColor: '#FEF9C3',
@@ -193,7 +200,14 @@ const StatsCards: React.FC<{
         >
           <View style={styles.statCardHeader}>
             <View style={styles.statIconWrap}>{card.icon}</View>
-            <Text style={styles.statLabel}>{card.label}</Text>
+            <Text style={[styles.statLabel, { flex: 1 }]}>{card.label}</Text>
+            <TouchableOpacity
+              onPress={() => setActiveInfo(activeInfo === index ? null : index)}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              activeOpacity={0.7}
+            >
+              <Info size={13} color={activeInfo === index ? '#1E5BAC' : '#9CA3AF'} />
+            </TouchableOpacity>
           </View>
           {loading ? (
             <ActivityIndicator size="small" color="#1E5BAC" style={{ marginTop: 8 }} />
@@ -203,15 +217,12 @@ const StatsCards: React.FC<{
                 {card.rawValue.toLocaleString('fr-FR')}{' '}
                 <Text style={styles.statCurrency}>{t('currency_mad')}</Text>
               </Text>
-              {/* {
-              card.perValue && (
-              <Text style={[styles.statPercentage, {color: card.perColor}]} numberOfLines={1} adjustsFontSizeToFit>
-                {card.perValue}%{' '}
-                <Text>{t('currency_mad')}</Text>
-              </Text>
-              )
-              } */}
             </>
+          )}
+          {activeInfo === index && (
+            <View style={styles.statTooltip}>
+              <Text style={styles.statTooltipText}>{t(card.infoKey)}</Text>
+            </View>
           )}
         </View>
       ))}
@@ -840,6 +851,17 @@ const styles = StyleSheet.create({
   statPercentage: {
     fontSize: 10,
     fontWeight: '500',
+  },
+  statTooltip: {
+    marginTop: 8,
+    // backgroundColor: 'rgba(0,0,0,0.06)',
+    borderRadius: 8,
+    // padding: 8,
+  },
+  statTooltipText: {
+    fontSize: 11,
+    color: '#4B5563',
+    lineHeight: 16,
   },
 
   /* Note */
