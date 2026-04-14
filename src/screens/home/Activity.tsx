@@ -322,15 +322,59 @@ const ChartSection: React.FC<{
   chartLoading: boolean;
   t: any;
 }> = ({ chartData, chartLoading, t }) => {
+  const [lineTooltip, setLineTooltip] = useState<{
+    index: number;
+    caVal: number;
+    expVal: number;
+    label: string;
+  } | null>(null);
+  const [pieTooltip, setPieTooltip] = useState<{
+    label: string;
+    value: number;
+    pct: string;
+    color: string;
+  } | null>(null);
+
   const totalCA = chartData.ca.reduce((sum, p) => sum + p.value, 0);
   const totalExpenses = chartData.expenses.reduce((sum, p) => sum + p.value, 0);
   const grandTotal = totalCA + totalExpenses;
   const caPct = grandTotal > 0 ? ((totalCA / grandTotal) * 100).toFixed(1) : '0.0';
   const expPct = grandTotal > 0 ? ((totalExpenses / grandTotal) * 100).toFixed(1) : '0.0';
 
+  const showLineTooltip = (index: number, caVal: number) => {
+    setPieTooltip(null);
+    const expVal = chartData.expenses[index]?.value ?? 0;
+    const label =
+      chartData.ca[index]?.label ??
+      chartData.expenses[index]?.label ??
+      `M${index + 1}`;
+    setLineTooltip({ index, caVal, expVal, label });
+  };
+
+  const expensesWithPress = chartData.expenses.map((item: any, idx: number) => ({
+    ...item,
+    onPress: () => showLineTooltip(idx, chartData.ca[idx]?.value ?? 0),
+  }));
+
   const pieData = [
-    { value: totalCA || 0.01, color: '#3B82F6', label: t('legend_ca') },
-    { value: totalExpenses || 0.01, color: '#F97316', label: t('legend_expenses') },
+    {
+      value: totalCA || 0.01,
+      color: '#3B82F6',
+      label: t('legend_ca'),
+      onPress: () => {
+        setLineTooltip(null);
+        setPieTooltip({ label: t('legend_ca'), value: totalCA, pct: caPct, color: '#3B82F6' });
+      },
+    },
+    {
+      value: totalExpenses || 0.01,
+      color: '#F97316',
+      label: t('legend_expenses'),
+      onPress: () => {
+        setLineTooltip(null);
+        setPieTooltip({ label: t('legend_expenses'), value: totalExpenses, pct: expPct, color: '#F97316' });
+      },
+    },
   ];
 
   return (
@@ -359,7 +403,7 @@ const ChartSection: React.FC<{
             <View style={styles.lineChartWrap}>
               <LineChart
                 data={chartData.ca}
-                data2={chartData.expenses}
+                data2={expensesWithPress}
                 height={160}
                 spacing={28}
                 initialSpacing={8}
@@ -388,11 +432,12 @@ const ChartSection: React.FC<{
                 noOfSections={4}
                 maxValue={
                   Math.max(
-                    ...chartData.ca.map(p => p.value),
-                    ...chartData.expenses.map(p => p.value),
+                    ...chartData.ca.map((p: any) => p.value),
+                    ...chartData.expenses.map((p: any) => p.value),
                     1000,
                   ) * 1.2
                 }
+                onPress={(item: any, index: number) => showLineTooltip(index, item.value)}
               />
             </View>
 
@@ -421,6 +466,68 @@ const ChartSection: React.FC<{
                 <Text style={styles.donutPctText}>{caPct}%</Text>
                 <Text style={styles.donutPctText}>{expPct}%</Text>
               </View>
+            </View>
+          </View>
+        )}
+
+        {/* Line chart data popup */}
+        {lineTooltip && (
+          <View style={styles.chartPopup}>
+            <View style={styles.chartPopupHeader}>
+              <Text style={styles.chartPopupTitle}>{lineTooltip.label}</Text>
+              <TouchableOpacity
+                onPress={() => setLineTooltip(null)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.chartPopupClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.chartPopupRow}>
+              <View style={[styles.chartPopupDot, { backgroundColor: '#3B82F6' }]} />
+              <Text style={styles.chartPopupLabel}>{t('legend_ca')}</Text>
+              <Text style={styles.chartPopupValue}>
+                {lineTooltip.caVal.toLocaleString('fr-FR')}{' '}
+                <Text style={styles.chartPopupCurrency}>{t('currency_mad')}</Text>
+              </Text>
+            </View>
+            <View style={styles.chartPopupRow}>
+              <View style={[styles.chartPopupDot, { backgroundColor: '#F97316' }]} />
+              <Text style={styles.chartPopupLabel}>{t('legend_expenses')}</Text>
+              <Text style={styles.chartPopupValue}>
+                {lineTooltip.expVal.toLocaleString('fr-FR')}{' '}
+                <Text style={styles.chartPopupCurrency}>{t('currency_mad')}</Text>
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Pie slice data popup */}
+        {pieTooltip && (
+          <View style={styles.chartPopup}>
+            <View style={styles.chartPopupHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={[styles.chartPopupDot, { backgroundColor: pieTooltip.color }]} />
+                <Text style={styles.chartPopupTitle}>{pieTooltip.label}</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setPieTooltip(null)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={styles.chartPopupClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.chartPopupRow}>
+              <Text style={styles.chartPopupLabel}>{t('chart_popup_amount')}</Text>
+              <Text style={[styles.chartPopupValue, { color: pieTooltip.color }]}>
+                {pieTooltip.value.toLocaleString('fr-FR')}{' '}
+                <Text style={styles.chartPopupCurrency}>{t('currency_mad')}</Text>
+              </Text>
+            </View>
+            <View style={styles.chartPopupRow}>
+              <Text style={styles.chartPopupLabel}>{t('chart_popup_share')}</Text>
+              <Text style={[styles.chartPopupValue, { color: pieTooltip.color }]}>
+                {pieTooltip.pct}%
+              </Text>
             </View>
           </View>
         )}
@@ -1091,6 +1198,59 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#1E5BAC',
+  },
+
+  /* Chart popup */
+  chartPopup: {
+    marginTop: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  chartPopupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  chartPopupTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  chartPopupClose: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    fontWeight: '600',
+  },
+  chartPopupRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 4,
+  },
+  chartPopupDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  chartPopupLabel: {
+    flex: 1,
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  chartPopupValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  chartPopupCurrency: {
+    fontSize: 11,
+    fontWeight: '400',
+    color: '#6B7280',
   },
 
   /* Period / Year Picker Modal */

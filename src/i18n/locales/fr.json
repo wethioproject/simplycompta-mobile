@@ -268,6 +268,8 @@
   "label_annual_chart": "Graphique annuel",
   "legend_ca": "CA",
   "legend_expenses": "Dépenses",
+  "chart_popup_amount": "Montant",
+  "chart_popup_share": "Part",
   "pie_title_distribution": "Répartition des dépenses",
   "pie_empty_message": "Aucune donnée de dépense disponible",
   "period_q1": "T1 (Jan – Mar)",

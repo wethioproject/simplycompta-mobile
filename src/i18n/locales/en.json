@@ -268,6 +268,8 @@
   "label_annual_chart": "Annual chart",
   "legend_ca": "Revenue",
   "legend_expenses": "Expenses",
+  "chart_popup_amount": "Amount",
+  "chart_popup_share": "Share",
   "pie_title_distribution": "Expense Distribution by Category",
   "pie_empty_message": "No expense data available",
   "period_q1": "Q1 (Jan – Mar)",
