@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { Save, Camera, Trash2 } from 'lucide-react-native';
+import { Save, Camera, Trash2, ArrowLeft } from 'lucide-react-native';
 import { pick, types, isErrorWithCode, errorCodes } from '@react-native-documents/picker';
 import { appLogoIcon } from '../../assets/icons';
 import api from '../../api';
@@ -167,8 +167,16 @@ const PersonalProfile: React.FC = ({ navigation }: any) => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={styles.headerRow}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <ArrowLeft size={24} color="#374151" />
+        </TouchableOpacity>
         <Image source={appLogoIcon} style={styles.logo} resizeMode="contain" />
+        <View style={{ width: 40 }} />
       </View>
 
       <KeyboardAvoidingView
@@ -325,12 +333,24 @@ const PersonalProfile: React.FC = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F0F2F8' },
 
-  header: {
-    backgroundColor: '#FFFFFF',
+  headerRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#F9FAFB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
   },
   logo: { height: 44, width: 150 },
 
