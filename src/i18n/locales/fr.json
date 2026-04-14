@@ -205,6 +205,7 @@
   "alert_delete_account_title": "Supprimer mon compte",
   "alert_delete_account_message": "Voulez-vous vraiment supprimer votre compte ? Cette action est irréversible.",
   "error_designation_required": "Veuillez saisir une désignation.",
+  "error_reference_required": "La référence est requise.",
   "error_save_product": "Impossible de sauvegarder.",
   "error_delete_product": "Impossible de supprimer.",
   "label_pill_unit_price": "P.U. HT",

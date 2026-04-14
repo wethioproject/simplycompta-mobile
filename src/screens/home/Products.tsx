@@ -43,7 +43,7 @@ interface Product {
 const productSchema = yup.object({
   designation: yup.string().trim().required('error_designation_required'),
   description: yup.string().trim().required('error_description_required'),
-  reference: yup.string().trim().optional().default(''),
+  reference: yup.string().trim().required('error_reference_required'),
   category: yup.string().trim().required('error_category_required'),
   unit_price_ht: yup
     .string()
@@ -518,18 +518,18 @@ const Products: React.FC = ({ navigation }: any) => {
                 )}
               </View>
 
-              {/* ── Reference (optional) ─────────────────────────────── */}
+              {/* ── Reference (required) ──────────────────────────────── */}
               <View style={styles.fieldGroup}>
                 <View style={styles.fieldLabelRow}>
                   <Text style={styles.fieldLabel}>{t('label_reference')}</Text>
-                  <Text style={styles.fieldOptional}>{t('text_optional')}</Text>
+                  <Text style={styles.fieldRequired}>*</Text>
                 </View>
                 <Controller
                   control={control}
                   name="reference"
                   render={({ field: { onChange, value } }) => (
                     <TextInput
-                      style={styles.fieldInput}
+                      style={[styles.fieldInput, errors.reference && styles.fieldInputError]}
                       placeholder={t('placeholder_reference')}
                       placeholderTextColor="#BBBBBB"
                       value={value}
@@ -537,6 +537,9 @@ const Products: React.FC = ({ navigation }: any) => {
                     />
                   )}
                 />
+                {errors.reference && (
+                  <Text style={styles.fieldError}>{t(errors.reference.message ?? '')}</Text>
+                )}
               </View>
 
               {/* ── Category dropdown ───────────────────────────────────── */}
