@@ -411,11 +411,11 @@ const ChartSection: React.FC<{
         )}
 
         {/* See all */}
-        <View style={styles.seeAllRow}>
+        {/* <View style={styles.seeAllRow}>
           <TouchableOpacity activeOpacity={0.7}>
             <Text style={styles.seeAllText}>{t('label_see_all')}</Text>
           </TouchableOpacity>
-        </View>
+        </View> */}
       </View>
     </View>
   );
