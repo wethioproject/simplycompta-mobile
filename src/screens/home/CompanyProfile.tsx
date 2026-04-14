@@ -12,10 +12,11 @@ import {
   KeyboardAvoidingView,
   Image,
   Modal,
+  Clipboard,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { Save, Building2, Upload, ChevronDown, X, ImageIcon, PenLine, Camera, ArrowLeft, Palette, Check } from 'lucide-react-native';
+import { Save, Building2, Upload, ChevronDown, X, ImageIcon, PenLine, Camera, ArrowLeft, Palette, Check, Copy } from 'lucide-react-native';
 import { appLogoIcon } from '../../assets/icons';
 import api from '../../api';
 import { Api_Endpoints } from '../../services/endpoints';
@@ -66,6 +67,15 @@ const CompanyProfile: React.FC = ({ navigation }: any) => {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  const handleCopyToClipboard = (text: string, label: string) => {
+    if (!text.trim()) {
+      Alert.alert(t('info_title'), `${label} ${t('field_is_empty') || 'is empty'}`);
+      return;
+    }
+    Clipboard.setString(text.trim());
+    Alert.alert(t('success_title'), `${label} ${t('copied_to_clipboard') || 'copied to clipboard'}`);
+  };
 
   const fetchProfile = async () => {
     try {
@@ -467,28 +477,46 @@ const CompanyProfile: React.FC = ({ navigation }: any) => {
             {/* ── Section: Identifiants fiscaux & légaux ─────────────────── */}
             <Text style={styles.sectionSubtitle}>{t('section_fiscal_identifiers')}</Text>
 
-            {/* Patente + RC */}
+            {/* Patente + CNSS */}
             <View style={styles.rowFields}>
               <View style={styles.halfField}>
                 <Text style={styles.fieldLabel}>{t('label_patente')}</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  value={patente}
-                  onChangeText={setPatente}
-                  placeholder={t('placeholder_patente')}
-                  placeholderTextColor="#AAAAAA"
-                />
+                <View style={styles.fieldWithCopyRow}>
+                  <TextInput
+                    style={[styles.fieldInput, styles.fieldInputWithCopy]}
+                    value={patente}
+                    onChangeText={setPatente}
+                    placeholder={t('placeholder_patente')}
+                    placeholderTextColor="#AAAAAA"
+                  />
+                  <TouchableOpacity
+                    style={styles.copyButton}
+                    onPress={() => handleCopyToClipboard(patente, t('label_patente'))}
+                    activeOpacity={0.7}
+                  >
+                    <Copy size={16} color="#3B6FD4" />
+                  </TouchableOpacity>
+                </View>
               </View>
               <View style={styles.halfField}>
                 <Text style={styles.fieldLabel}>{t('label_cnss')}</Text>
-                <TextInput
-                style={styles.fieldInput}
-                value={cnss}
-                onChangeText={setCnss}
-                placeholder={t('placeholder_cnss')}
-                placeholderTextColor="#AAAAAA"
-                keyboardType="numeric"
-              />
+                <View style={styles.fieldWithCopyRow}>
+                  <TextInput
+                    style={[styles.fieldInput, styles.fieldInputWithCopy]}
+                    value={cnss}
+                    onChangeText={setCnss}
+                    placeholder={t('placeholder_cnss')}
+                    placeholderTextColor="#AAAAAA"
+                    keyboardType="numeric"
+                  />
+                  <TouchableOpacity
+                    style={styles.copyButton}
+                    onPress={() => handleCopyToClipboard(cnss, t('label_cnss'))}
+                    activeOpacity={0.7}
+                  >
+                    <Copy size={16} color="#3B6FD4" />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
 
@@ -496,38 +524,65 @@ const CompanyProfile: React.FC = ({ navigation }: any) => {
             <View style={styles.rowFields}>
               <View style={styles.halfField}>
                 <Text style={styles.fieldLabel}>{t('label_ice')}</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  value={ice}
-                  onChangeText={setIce}
-                  placeholder={t('placeholder_ice')}
-                  placeholderTextColor="#AAAAAA"
-                  keyboardType="numeric"
-                />
+                <View style={styles.fieldWithCopyRow}>
+                  <TextInput
+                    style={[styles.fieldInput, styles.fieldInputWithCopy]}
+                    value={ice}
+                    onChangeText={setIce}
+                    placeholder={t('placeholder_ice')}
+                    placeholderTextColor="#AAAAAA"
+                    keyboardType="numeric"
+                  />
+                  <TouchableOpacity
+                    style={styles.copyButton}
+                    onPress={() => handleCopyToClipboard(ice, t('label_ice'))}
+                    activeOpacity={0.7}
+                  >
+                    <Copy size={16} color="#3B6FD4" />
+                  </TouchableOpacity>
+                </View>
               </View>
               <View style={styles.halfField}>
                 <Text style={styles.fieldLabel}>{t('label_if')}</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  value={ifField}
-                  onChangeText={setIfField}
-                  placeholder={t('placeholder_if')}
-                  placeholderTextColor="#AAAAAA"
-                  keyboardType="numeric"
-                />
+                <View style={styles.fieldWithCopyRow}>
+                  <TextInput
+                    style={[styles.fieldInput, styles.fieldInputWithCopy]}
+                    value={ifField}
+                    onChangeText={setIfField}
+                    placeholder={t('placeholder_if')}
+                    placeholderTextColor="#AAAAAA"
+                    keyboardType="numeric"
+                  />
+                  <TouchableOpacity
+                    style={styles.copyButton}
+                    onPress={() => handleCopyToClipboard(ifField, t('label_if'))}
+                    activeOpacity={0.7}
+                  >
+                    <Copy size={16} color="#3B6FD4" />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
 
-            {/* CNSS */}
+            {/* RC */}
             <View style={styles.fieldBlock}>
               <Text style={styles.fieldLabel}>{t('label_rc')}</Text>
-              <TextInput
-                  style={styles.fieldInput}
+              <View style={styles.fieldWithCopyRow}>
+                <TextInput
+                  style={[styles.fieldInput, styles.fieldInputWithCopy]}
                   value={rc}
                   onChangeText={setRc}
                   placeholder={t('placeholder_rc')}
                   placeholderTextColor="#AAAAAA"
                 />
+                <TouchableOpacity
+                  style={styles.copyButton}
+                  onPress={() => handleCopyToClipboard(rc, t('label_rc'))}
+                  activeOpacity={0.7}
+                >
+                  <Copy size={16} color="#3B6FD4" />
+                </TouchableOpacity>
+              </View>
             </View>
 
             <View style={styles.divider} />
@@ -912,6 +967,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1A1A2E',
     backgroundColor: '#FAFBFF',
+  },
+  fieldWithCopyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  fieldInputWithCopy: {
+    flex: 1,
+  },
+  copyButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: '#F0F4FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E6F0',
   },
 
   pickerRow: {
