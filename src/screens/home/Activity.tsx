@@ -51,15 +51,19 @@ const fmtDisplay = (dateStr: string) => {
   return `${d}/${m}/${y}`;
 };
 
+const MONTH_KEYS = ['month_january','month_february','month_march','month_april','month_may','month_june','month_july','month_august','month_september','month_october','month_november','month_december'] as const;
+
 const buildPeriods = (t: any) => {
   const now = new Date();
   const y = now.getFullYear();
   const lastY = y - 1;
+  const monthPeriods = Array.from({ length: 12 }, (_, i) => ({
+    label: `${t(MONTH_KEYS[i])} ${y}`,
+    date_from: fmt(new Date(y, i, 1)),
+    date_to: fmt(new Date(y, i + 1, 0)), // last day of month, handles 28/29/30/31 correctly
+  }));
   return [
-    { label: t('period_q1'), date_from: fmt(new Date(y, 0, 1)), date_to: fmt(new Date(y, 2, 31)) },
-    { label: t('period_q2'), date_from: fmt(new Date(y, 3, 1)), date_to: fmt(new Date(y, 5, 30)) },
-    { label: t('period_q3'), date_from: fmt(new Date(y, 6, 1)), date_to: fmt(new Date(y, 8, 30)) },
-    { label: t('period_q4'), date_from: fmt(new Date(y, 9, 1)), date_to: fmt(new Date(y, 11, 31)) },
+    ...monthPeriods,
     { label: `${t('period_current_year')} (${y})`, date_from: fmt(new Date(y, 0, 1)), date_to: fmt(new Date(y, 11, 31)) },
     { label: `${t('period_previous_year')} (${lastY})`, date_from: fmt(new Date(lastY, 0, 1)), date_to: fmt(new Date(lastY, 11, 31)) },
     { label: t('period_last_6_months'), date_from: fmt(new Date(now.getFullYear(), now.getMonth() - 5, 1)), date_to: fmt(now) },
@@ -429,7 +433,7 @@ const Activity: React.FC = () => {
 
   const [isFabOpen, setIsFabOpen] = useState(false);
   const [showPeriodPicker, setShowPeriodPicker] = useState(false);
-  const [selectedPeriodIndex, setSelectedPeriodIndex] = useState(0);
+  const [selectedPeriodIndex, setSelectedPeriodIndex] = useState(new Date().getMonth());
   const [statsLoading, setStatsLoading] = useState(true);
   const [stats, setStats] = useState({
     total_issued_paid_sum: 0,
