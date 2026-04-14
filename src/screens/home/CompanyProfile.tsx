@@ -12,7 +12,6 @@ import {
   KeyboardAvoidingView,
   Image,
   Modal,
-  Clipboard,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -22,6 +21,7 @@ import api from '../../api';
 import { Api_Endpoints } from '../../services/endpoints';
 import { pick, types, isErrorWithCode, errorCodes } from '@react-native-documents/picker';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
+import Clipboard from '@react-native-clipboard/clipboard';
 
 const COMPANY_TYPES = [
   'Auto-entrepreneur',
