@@ -66,12 +66,12 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, navigation }) => {
       onPress: () => { setShowMenu(false); navigation.navigate('Expenses' as never); },
     },
     {
-      key: 'releve',
-      label: t('tab_send_statement'),
+      key: 'documents',
+      label: t('tab_my_documents'),
       Icon: Building2,
       iconBg: '#EFF6FF',
       iconColor: '#1E5BAC',
-      onPress: () => { setShowMenu(false); navigation.navigate('Bank statements' as never); },
+      onPress: () => { setShowMenu(false); navigation.navigate('Documents List' as never); },
     },
   ];
 
