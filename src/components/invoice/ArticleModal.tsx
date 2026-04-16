@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   TextInput,
@@ -14,29 +13,56 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { X } from 'lucide-react-native';
+import { X, ChevronDown, Check } from 'lucide-react-native';
 import { useProducts } from '../../hooks/useProduct';
+import { useInvoice } from '../../hooks/useInvoice';
+import { invoiceStyles as styles } from '../../styles/invoice.styles';
 import type { Article } from '../../types/invoice.types';
+
+const CATEGORY_OPTIONS = ['Produit', 'Service'] as const;
 
 const ArticleModal: React.FC<{
   visible: boolean;
   onClose: () => void;
   onConfirm: (article: Article) => void;
-}> = ({ visible, onClose, onConfirm }) => {
+  customerId?: number;
+}> = ({ visible, onClose, onConfirm, customerId }) => {
   const { t } = useTranslation();
   const { getProducts } = useProducts();
+  const { createProduct, getProductResources } = useInvoice();
 
-  const [form, setForm] = useState<Article>({
+  const [form, setForm] = useState<Article & { description?: string; reference?: string; category?: string }>({
     designation: '',
     unitPriceHT: 0,
     quantity: 1,
     totalHT: 0,
     tva: 20,
+    description: '',
+    reference: '',
+    category: 'Produit',
   });
+  const [tvaOptions, setTvaOptions] = useState<number[]>([0, 7, 10, 14, 20]);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [showTvaPicker, setShowTvaPicker] = useState(false);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Fetch product resources on mount
+  useEffect(() => {
+    const fetchResources = async () => {
+      const result = await getProductResources();
+      console.log('preeeeeeee', result);
+      if (result.success && result.resources) {
+        const resources = result.resources as any;
+        if (resources.tva && Array.isArray(resources.tva)) {
+          setTvaOptions(resources.tva.map((t: any) => typeof t === 'number' ? t : parseFloat(t)));
+        }
+      }
+    };
+    fetchResources();
+  }, [getProductResources]);
 
   // Recalculate total whenever unit price or quantity changes
   useEffect(() => {
@@ -79,316 +105,323 @@ const ArticleModal: React.FC<{
   const handleSelectSuggestion = (product: any) => {
     const unitPrice = parseFloat(product.unit_price_ht) || 0;
     const qty = parseFloat(product.quantity) || form.quantity;
-    const tva = parseFloat(product.tva_percent) || form.tva;
+    const tva = parseFloat(product.tva_percentage) || form.tva;
     setForm({
       designation: product.designation,
       unitPriceHT: unitPrice,
       quantity: qty,
       totalHT: unitPrice * qty,
       tva,
+      description: product.description ?? '',
+      reference: product.reference ?? '',
+      category: product.category ?? 'Produit',
     });
     setSuggestions([]);
     setShowSuggestions(false);
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (!form.designation.trim()) {
       Alert.alert(t('alert_field_required'), t('message_designation_required'));
       return;
     }
-    onConfirm(form);
-    setForm({ designation: '', unitPriceHT: 0, quantity: 1, totalHT: 0, tva: 20 });
+    let product_id: number | undefined;
+    if (customerId) {
+      const result = await createProduct({
+        customer_id: customerId,
+        designation: form.designation,
+        description: form.description ?? '',
+        reference: form.reference ?? '',
+        category: form.category ?? 'Produit',
+        unit_price_ht: form.unitPriceHT,
+        tva_percentage: form.tva,
+        quantity: form.quantity,
+        total_price_ht: form.totalHT,
+      });
+      if (result.success) {
+        product_id = (result.data as any)?.id ?? (result as any)?.product_id;
+      }
+      console.log('wewewewe',product_id);
+    }
+    onConfirm({ ...form, product_id });
+    setForm({ designation: '', unitPriceHT: 0, quantity: 1, totalHT: 0, tva: 20, description: '', reference: '', category: 'Produit' });
     setSuggestions([]);
     setShowSuggestions(false);
   };
 
   return (
-    <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <SafeAreaView style={styles.modalContainer} edges={['top']}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          {/* Modal Header */}
+    <Modal visible={visible} animationType="slide" transparent presentationStyle="pageSheet" onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        style={styles.modalOverlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <SafeAreaView style={styles.modalSheet} edges={['top']}>
+          {/* Sticky header */}
           <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={onClose} activeOpacity={0.7}>
-              <Text style={styles.modalCancelText}>{t('modal_cancel_text')}</Text>
-            </TouchableOpacity>
             <Text style={styles.modalTitle}>{t('modal_title_article_designation')}</Text>
-            <TouchableOpacity style={[styles.modalConfirmBtn, (!form.designation.trim() || !form.unitPriceHT) && styles.modalConfirmBtnDisabled]} onPress={handleConfirm} disabled={!form.designation.trim() || !form.unitPriceHT} activeOpacity={0.85}>
-              <Text style={styles.modalConfirmText}>{t('modal_confirm_text')}</Text>
+            <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <X size={22} color="#666" />
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
+          {/* Scrollable form body */}
+          <ScrollView
+            style={styles.modalFormScroll}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
             {/* Désignation */}
-            <View style={styles.formCard}>
-              <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>{t('label_designation')} <Text style={styles.required}>*</Text></Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  placeholder={t('placeholder_designation')}
-                  placeholderTextColor="#9CA3AF"
-                  value={form.designation}
-                  onChangeText={handleDesignationChange}
-                  autoCorrect={false}
-                />
-                {/* Autocomplete suggestions */}
-                {showSuggestions && (
-                  <View style={styles.suggestionsContainer}>
-                    {suggestionsLoading ? (
-                      <View style={styles.suggestionLoadingRow}>
-                        <ActivityIndicator size="small" color="#1E5BAC" />
-                        <Text style={styles.suggestionLoadingText}>{t('text_searching')}</Text>
-                      </View>
-                    ) : (
-                      suggestions.map((product, index) => (
-                        <TouchableOpacity
-                          key={product.id ?? index}
-                          style={[
-                            styles.suggestionItem,
-                            index < suggestions.length - 1 && styles.suggestionItemBorder,
-                          ]}
-                          onPress={() => handleSelectSuggestion(product)}
-                          activeOpacity={0.7}
-                        >
-                          <Text style={styles.suggestionDesignation}>{product.designation}</Text>
-                          <Text style={styles.suggestionMeta}>
-                            {parseFloat(product.unit_price_ht).toLocaleString('fr-FR')} MAD HT  ·  TVA {product.tva_percent}%
-                          </Text>
-                        </TouchableOpacity>
-                      ))
-                    )}
-                  </View>
-                )}
+            <View style={styles.fieldGroup}>
+              <View style={styles.fieldLabelRow}>
+                <Text style={styles.fieldLabel}>{t('label_designation')}</Text>
+                <Text style={styles.fieldRequired}>*</Text>
               </View>
-
-              {/* Prix H.T. unitaire */}
-              <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>{t('label_unit_price_ht')} <Text style={styles.required}>*</Text></Text>
-                <View style={styles.fieldInputRow}>
-                  <TextInput
-                    style={[styles.fieldInput, { flex: 1 }]}
-                    placeholder="0"
-                    placeholderTextColor="#9CA3AF"
-                    keyboardType="numeric"
-                    value={form.unitPriceHT > 0 ? String(form.unitPriceHT) : ''}
-                    onChangeText={v => setForm(prev => ({
-                      ...prev,
-                      unitPriceHT: parseFloat(v) || 0,
-                      totalHT: (parseFloat(v) || 0) * prev.quantity,
-                    }))}
-                  />
-                  <Text style={styles.fieldUnit}>{t('field_unit')}</Text>
+              <TextInput
+                style={styles.fieldInput}
+                placeholder={t('placeholder_designation')}
+                placeholderTextColor="#BBBBBB"
+                value={form.designation}
+                onChangeText={handleDesignationChange}
+                autoCorrect={false}
+              />
+              {/* Autocomplete suggestions */}
+              {showSuggestions && (
+                <View style={styles.suggestionsContainer}>
+                  {suggestionsLoading ? (
+                    <View style={styles.suggestionLoadingRow}>
+                      <ActivityIndicator size="small" color="#1E5BAC" />
+                      <Text style={styles.suggestionLoadingText}>{t('text_searching')}</Text>
+                    </View>
+                  ) : (
+                    suggestions.map((product, index) => (
+                      <TouchableOpacity
+                        key={product.id ?? index}
+                        style={[
+                          styles.suggestionItem,
+                          index < suggestions.length - 1 && styles.suggestionItemBorder,
+                        ]}
+                        onPress={() => handleSelectSuggestion(product)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.suggestionDesignation}>{product.designation}</Text>
+                        <Text style={styles.suggestionMeta}>
+                          {parseFloat(product.unit_price_ht).toLocaleString('fr-FR')} MAD HT  ·  TVA {product.tva_percent}%
+                        </Text>
+                      </TouchableOpacity>
+                    ))
+                  )}
                 </View>
-              </View>
+              )}
+            </View>
 
-              {/* Quantité */}
-              <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>{t('label_quantity')} <Text style={styles.required}>*</Text></Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  placeholder="1"
-                  placeholderTextColor="#9CA3AF"
-                  keyboardType="numeric"
-                  value={form.quantity > 0 ? String(form.quantity) : ''}
-                  onChangeText={v => setForm(prev => ({
-                    ...prev,
-                    quantity: parseFloat(v) || 0,
-                    totalHT: prev.unitPriceHT * (parseFloat(v) || 0),
-                  }))}
-                />
+            {/* Description */}
+            <View style={styles.fieldGroup}>
+              <View style={styles.fieldLabelRow}>
+                <Text style={styles.fieldLabel}>{t('label_description')}</Text>
+                <Text style={styles.fieldRequired}>*</Text>
               </View>
+              <TextInput
+                style={[styles.fieldInput, styles.fieldInputMultiline]}
+                placeholder={t('placeholder_description')}
+                placeholderTextColor="#BBBBBB"
+                value={form.description || ''}
+                onChangeText={v => setForm(prev => ({ ...prev, description: v }))}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+            </View>
 
-              {/* Prix H.T. total (read-only) */}
-              <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>{t('label_price_ht_total')}</Text>
-                <View style={styles.fieldInputRow}>
-                  <TextInput
-                    style={[styles.fieldInput, styles.fieldInputReadOnly, { flex: 1 }]}
-                    value={form.totalHT.toLocaleString('fr-FR')}
-                    editable={false}
-                  />
-                  <Text style={styles.fieldUnit}>{t('field_unit')}</Text>
-                </View>
+            {/* Reference */}
+            <View style={styles.fieldGroup}>
+              <View style={styles.fieldLabelRow}>
+                <Text style={styles.fieldLabel}>{t('label_reference')}</Text>
+                <Text style={styles.fieldRequired}>*</Text>
               </View>
+              <TextInput
+                style={styles.fieldInput}
+                placeholder={t('placeholder_reference')}
+                placeholderTextColor="#BBBBBB"
+                value={form.reference || ''}
+                onChangeText={v => setForm(prev => ({ ...prev, reference: v }))}
+              />
+            </View>
 
-              {/* TVA */}
-              <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>{t('label_tva_percent')}</Text>
-                <View style={styles.fieldInputRow}>
-                  <TextInput
-                    style={[styles.fieldInput, { flex: 1 }]}
-                    placeholder="20"
-                    placeholderTextColor="#9CA3AF"
-                    keyboardType="numeric"
-                    value={String(form.tva)}
-                    onChangeText={v => setForm({ ...form, tva: parseFloat(v) || 0 })}
-                  />
-                  <Text style={styles.fieldUnit}>%</Text>
-                </View>
+            {/* Category */}
+            <View style={styles.fieldGroup}>
+              <View style={styles.fieldLabelRow}>
+                <Text style={styles.fieldLabel}>{t('label_category')}</Text>
+                <Text style={styles.fieldRequired}>*</Text>
               </View>
-
-              <TouchableOpacity style={[styles.addArticleBtn, !form.designation.trim() && !form.unitPriceHT && styles.addArticleBtnDisabled]} onPress={handleConfirm} disabled={!form.designation.trim() || !form.unitPriceHT} activeOpacity={0.85}>
-                <Text style={styles.addArticleBtnText}>{t('button_add')}</Text>
+              <TouchableOpacity
+                style={styles.pickerRow}
+                onPress={() => setShowCategoryPicker(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.pickerValueText}>
+                  {form.category || 'Produit'}
+                </Text>
+                <ChevronDown size={18} color="#0B5FA5" />
               </TouchableOpacity>
             </View>
+
+            {/* Prix H.T. unitaire */}
+            <View style={styles.fieldGroup}>
+              <View style={styles.fieldLabelRow}>
+                <Text style={styles.fieldLabel}>{t('label_unit_price_ht')}</Text>
+                <Text style={styles.fieldRequired}>*</Text>
+              </View>
+              <TextInput
+                style={styles.fieldInput}
+                placeholder="0.00"
+                placeholderTextColor="#BBBBBB"
+                keyboardType="decimal-pad"
+                value={form.unitPriceHT > 0 ? String(form.unitPriceHT) : ''}
+                onChangeText={v => setForm(prev => ({
+                  ...prev,
+                  unitPriceHT: parseFloat(v) || 0,
+                  totalHT: (parseFloat(v) || 0) * prev.quantity,
+                }))}
+              />
+            </View>
+
+            {/* Quantité */}
+            <View style={styles.fieldGroup}>
+              <View style={styles.fieldLabelRow}>
+                <Text style={styles.fieldLabel}>{t('label_quantity')}</Text>
+                <Text style={styles.fieldRequired}>*</Text>
+              </View>
+              <TextInput
+                style={styles.fieldInput}
+                placeholder="1"
+                placeholderTextColor="#BBBBBB"
+                keyboardType="decimal-pad"
+                value={form.quantity > 0 ? String(form.quantity) : ''}
+                onChangeText={v => setForm(prev => ({
+                  ...prev,
+                  quantity: parseFloat(v) || 0,
+                  totalHT: prev.unitPriceHT * (parseFloat(v) || 0),
+                }))}
+              />
+            </View>
+
+            {/* TVA */}
+            <View style={styles.fieldGroup}>
+              <View style={styles.fieldLabelRow}>
+                <Text style={styles.fieldLabel}>{t('label_tva_percent')}</Text>
+                <Text style={styles.fieldRequired}>*</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.pickerRow}
+                onPress={() => setShowTvaPicker(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.pickerValueText}>
+                  {form.tva}%
+                </Text>
+                <ChevronDown size={18} color="#0B5FA5" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Total H.T. computed box */}
+            {form.unitPriceHT > 0 && form.quantity > 0 && (
+              <View style={styles.computedBox}>
+                <View style={styles.computedRow}>
+                  <Text style={styles.computedLabel}>{t('label_price_ht_total')}</Text>
+                  <Text style={styles.computedValue}>
+                    {form.totalHT.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {/* T.T.C. computed box */}
+            {form.unitPriceHT > 0 && (
+              <View style={styles.ttcBox}>
+                <Text style={styles.ttcLabel}>{t('label_price_ttc')}</Text>
+                <Text style={styles.ttcValue}>
+                  {(form.totalHT * (1 + form.tva / 100)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
+                </Text>
+              </View>
+            )}
+
+            <View style={{ height: 16 }} />
           </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+
+          {/* Footer */}
+          <View style={styles.modalFooter}>
+            <TouchableOpacity
+              style={styles.cancelBtn}
+              onPress={onClose}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.cancelBtnText}>{t('modal_cancel_text')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.saveBtn, (!form.designation.trim() || !form.unitPriceHT) && styles.saveBtnDisabled]}
+              onPress={handleConfirm}
+              disabled={!form.designation.trim() || !form.unitPriceHT}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.saveBtnText}>{t('button_add')}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Category Picker inline overlay */}
+          {showCategoryPicker && (
+            <TouchableOpacity
+              style={styles.inlinePickerOverlay}
+              activeOpacity={1}
+              onPress={() => setShowCategoryPicker(false)}
+            >
+              <View style={styles.inlinePickerSheet}>
+                <Text style={styles.pickerSheetTitle}>{t('label_category')}</Text>
+                {CATEGORY_OPTIONS.map(cat => (
+                  <TouchableOpacity
+                    key={cat}
+                    style={styles.pickerOption}
+                    onPress={() => { setForm(prev => ({ ...prev, category: cat })); setShowCategoryPicker(false); }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.pickerOptionText, form.category === cat && styles.pickerOptionSelected]}>
+                      {cat}
+                    </Text>
+                    {form.category === cat && <Check size={16} color="#0B5FA5" />}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </TouchableOpacity>
+          )}
+
+          {/* TVA Picker inline overlay */}
+          {showTvaPicker && (
+            <TouchableOpacity
+              style={styles.inlinePickerOverlay}
+              activeOpacity={1}
+              onPress={() => setShowTvaPicker(false)}
+            >
+              <View style={styles.inlinePickerSheet}>
+                <Text style={styles.pickerSheetTitle}>{t('label_tva_percent')}</Text>
+                {tvaOptions.map(opt => (
+                  <TouchableOpacity
+                    key={opt}
+                    style={styles.pickerOption}
+                    onPress={() => { setForm(prev => ({ ...prev, tva: opt })); setShowTvaPicker(false); }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.pickerOptionText, form.tva === opt && styles.pickerOptionSelected]}>
+                      {opt}%
+                    </Text>
+                    {form.tva === opt && <Text style={styles.pickerCheck}>✓</Text>}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </TouchableOpacity>
+          )}
+        </SafeAreaView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
-
-const styles = StyleSheet.create({
-  // Modal Container
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  modalCancelText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#9CA3AF',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-    flex: 1,
-    textAlign: 'center',
-  },
-  modalConfirmBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#1E5BAC',
-  },
-  modalConfirmBtnDisabled: {
-    backgroundColor: '#93C5FD',
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  modalConfirmText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  modalContent: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-
-  // Form Card
-  formCard: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 16,
-    padding: 16,
-  },
-  fieldBlock: {
-    marginBottom: 20,
-  },
-  fieldLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: 8,
-  },
-  required: {
-    color: '#EF4444',
-  },
-  fieldInput: {
-    fontSize: 16,
-    color: '#111827',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  fieldInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  fieldUnit: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500',
-    paddingRight: 4,
-  },
-  fieldInputReadOnly: {
-    backgroundColor: '#F9FAFB',
-    color: '#6B7280',
-  },
-
-  // Autocomplete Suggestions
-  suggestionsContainer: {
-    marginTop: 8,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 8,
-    overflow: 'hidden',
-    maxHeight: 300,
-  },
-  suggestionLoadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    gap: 8,
-  },
-  suggestionLoadingText: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  suggestionItem: {
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-  },
-  suggestionItemBorder: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  suggestionDesignation: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  suggestionMeta: {
-    fontSize: 12,
-    color: '#9CA3AF',
-  },
-
-  // Add Article Button
-  addArticleBtn: {
-    marginTop: 24,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#1E5BAC',
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  addArticleBtnDisabled: {
-    backgroundColor: '#93C5FD',
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  addArticleBtnText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-});
 
 export default ArticleModal;

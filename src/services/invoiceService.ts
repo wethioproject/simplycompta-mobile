@@ -33,6 +33,16 @@ class InvoiceService {
         }
     }
 
+    async getProductResources() {
+        try {
+            const response = await api.get(Api_Endpoints.customerProductResources);
+            return response.data;
+        } catch (error: any) {
+            console.error('Product resources fetch error:', error.response?.data || error.message);
+            throw error;
+        }
+    }
+
     // async createInvoice(payload: BankStatementPayload): Promise<BankStatementResponse> {
     async createInvoice(payload: any): Promise<any> {
         try {
@@ -45,6 +55,7 @@ class InvoiceService {
             formData.append('payment_method', payload.payment_method);
             formData.append('status', payload.status ?? 'Brouillons');
             formData.append('notes', payload.notes);
+            formData.append('due_date', payload.due_date);
 
             if (payload.document) {
                 const file = payload.document;
@@ -61,6 +72,7 @@ class InvoiceService {
                 formData.append(`articles[${index}][quantity]`, String(article.quantity));
                 formData.append(`articles[${index}][total_price_ht]`, String(article.total_price_ht));
                 formData.append(`articles[${index}][tva_percentage]`, String(article.tva_percentage));
+                formData.append(`articles[${index}][product_id]`, String(article.product_id));
             });
 
             const response = await api.post<any>(Api_Endpoints.customerInvoice, formData, {
@@ -74,6 +86,35 @@ class InvoiceService {
     }
 
 
+    async createProduct(payload: any): Promise<any> {
+        try {
+            const body = {
+                customer_id: String(payload.customer_id),
+                designation: payload.designation,
+                description: payload.description,
+                reference: payload.reference,
+                category: payload.category,
+                unit_price_ht: String(payload.unit_price_ht),
+                tva_percentage: String(payload.tva_percentage),
+                quantity: String(payload.quantity),
+                total_price_ht: String(payload.total_price_ht),
+            };
+
+            const response = await api.post(
+                Api_Endpoints.customerProduct,
+                body
+            );
+
+            return response.data;
+        } catch (error: any) {
+            console.error(
+                'Create Product error:',
+                error.response?.data || error.message
+            );
+            throw error;
+        }
+    }
+
     async updateInvoice(id: number,payload: any): Promise<any> {
         try {
             const formData = new FormData();
@@ -83,6 +124,7 @@ class InvoiceService {
             formData.append('invoice_number', payload.invoice_number);
             formData.append('payment_method', payload.payment_method);
             formData.append('status', payload.status ?? 'Brouillons');
+            if (payload.due_date) formData.append('due_date', payload.due_date);
             formData.append('_method', 'PUT');
 
             if (payload.document) {
@@ -100,6 +142,7 @@ class InvoiceService {
                 formData.append(`articles[${index}][quantity]`, String(article.quantity));
                 formData.append(`articles[${index}][total_price_ht]`, String(article.total_price_ht));
                 formData.append(`articles[${index}][tva_percentage]`, String(article.tva_percentage));
+                formData.append(`articles[${index}][product_id]`, String(article.product_id));
             });
 
             const response = await api.post<any>(`${Api_Endpoints.customerInvoice}/${id}`, formData, {

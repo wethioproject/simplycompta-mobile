@@ -24,6 +24,7 @@ export const Api_Endpoints = {
   hasUnreadNotifications: 'customer/has-unread-notifications',
   customerProducts: 'customer/customer-products',
   customerProduct: 'customer/customer-product',
+  customerProductResources: 'customer/product-resources',
   customerSuppliers: 'customer/customer-suppliers',
   customerSupplier: 'customer/customer-supplier',
   customerSupplierExpenses: 'customer/customer-supplier-expenses',

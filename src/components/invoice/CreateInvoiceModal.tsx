@@ -50,6 +50,7 @@ const invoiceSchema = yup.object({
     .required('Client is required')
     .positive('Client is required'),
   accountId: yup.string().trim().required('Payment method is required'),
+  validUntil: yup.string().required('Due date is required'),
   status: yup.string().required('Status is required'),
   articles: yup
     .array()
@@ -82,6 +83,7 @@ const invoiceSchema = yup.object({
 type InvoiceFormValues = {
   invoiceNumber: string;
   date: string;
+  validUntil: string;
   clientId: number;
   accountId: string;
   status: string;
@@ -113,6 +115,8 @@ const CreateInvoiceModal: React.FC<{
   const [saving, setSaving] = useState(false);
   const [showClientPicker, setShowClientPicker] = useState(false);
   const [showAccountPicker, setShowAccountPicker] = useState(false);
+  const [showDueDatePicker, setShowDueDatePicker] = useState(false);
+  const [tempDueDate, setTempDueDate] = useState<Date>(new Date());
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [showCreateClientModal, setShowCreateClientModal] = useState(false);
   const [showImagePreview, setShowImagePreview] = useState(false);
@@ -137,9 +141,10 @@ const CreateInvoiceModal: React.FC<{
     defaultValues: {
       invoiceNumber: '',
       date: '',
+      validUntil: '',
       clientId: undefined,
       accountId: undefined,
-      status: 'Quotes',
+      status: 'Issued',
       articles: [],
       notes: '',
     },
@@ -149,6 +154,7 @@ const CreateInvoiceModal: React.FC<{
   const watchedAccountId = watch('accountId');
   const watchedStatus = watch('status');
   const watchedDate = watch('date');
+  const watchedValidUntil = watch('validUntil');
   const watchedArticles = watch('articles') ?? [];
 
   // Derived display objects from IDs
@@ -162,6 +168,7 @@ const CreateInvoiceModal: React.FC<{
     if (!visible) return;
     setShowArticleModal(false);
     setShowDatePicker(false);
+    setShowDueDatePicker(false);
     setSaving(false);
 
     if (editItem) {
@@ -178,6 +185,7 @@ const CreateInvoiceModal: React.FC<{
       reset({
         invoiceNumber: editItem.invoice_number,
         date: datePart,
+        validUntil: editItem.valid_until ? editItem.valid_until.split('T')[0] : '',
         clientId: client?.id ?? undefined,
         accountId: editItem.payment_method ?? undefined,
         status: editItem.status,
@@ -200,9 +208,10 @@ const CreateInvoiceModal: React.FC<{
       reset({
         invoiceNumber: '',
         date: `${y}-${mo}-${d}`,
+        validUntil: '',
         clientId: defaultClientId ?? undefined,
         accountId: undefined,
-        status: 'Quotes',
+        status: 'Issued',
         notes: '',
         articles: [],
       });
@@ -299,6 +308,15 @@ const CreateInvoiceModal: React.FC<{
     setShowDatePicker(false);
   };
 
+  const confirmDueDate = () => {
+    const y = tempDueDate.getFullYear();
+    const m = String(tempDueDate.getMonth() + 1).padStart(2, '0');
+    const d = String(tempDueDate.getDate()).padStart(2, '0');
+    const formatted = `${y}-${m}-${d}`;
+    setValue('validUntil', formatted, { shouldValidate: true });
+    setShowDueDatePicker(false);
+  };
+
   const totalHT = watchedArticles.reduce((s, a) => s + (a.totalHT ?? 0), 0);
   const totalTVA = watchedArticles.reduce((s, a) => s + ((a.totalHT ?? 0) * (a.tva ?? 0)) / 100, 0);
   console.log('fsfss333', totalTVA)
@@ -314,6 +332,7 @@ const CreateInvoiceModal: React.FC<{
         invoice_number: data.invoiceNumber,
         payment_method: data.accountId,
         status: data.status,
+        due_date: data.validUntil || null,
         notes: data.notes || null,
         document: document?.isExisting ? null : document,
         articles: (data.articles ?? []).map(a => ({
@@ -322,6 +341,8 @@ const CreateInvoiceModal: React.FC<{
           quantity: a.quantity,
           total_price_ht: a.totalHT,
           tva_percentage: a.tva,
+          // ...(a.product_id ? { product_id: a.product_id } : {}),
+          product_id: a.product_id,
         })),
       };
       if (editItem && onUpdate) {
@@ -451,6 +472,25 @@ const CreateInvoiceModal: React.FC<{
                 </TouchableOpacity>
                 {errors.date && (
                   <Text style={styles.fieldError}>{errors.date.message}</Text>
+                )}
+              </View>
+
+
+              {/* Due Date (validUntil) */}
+              <View style={styles.fieldBlock}>
+                <Text style={styles.fieldLabel}>{t('label_due_date')} <Text style={styles.required}>*</Text></Text>
+                <TouchableOpacity
+                  style={[styles.fieldInput, styles.fieldInputRow, { paddingVertical: 13 }, errors.validUntil && styles.fieldInputError]}
+                  onPress={() => { setTempDueDate(watchedValidUntil ? new Date(watchedValidUntil) : new Date()); setShowDueDatePicker(true); }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[{ flex: 1, fontSize: 14 }, watchedValidUntil ? { color: '#1F2937' } : { color: '#9CA3AF' }]}>
+                    {watchedValidUntil || 'YYYY-MM-DD'}
+                  </Text>
+                  <Calendar size={18} color="#1E5BAC" />
+                </TouchableOpacity>
+                {errors.validUntil && (
+                  <Text style={styles.fieldError}>{errors.validUntil.message}</Text>
                 )}
               </View>
 
@@ -729,6 +769,50 @@ const CreateInvoiceModal: React.FC<{
           </TouchableOpacity>
         </Modal>
 
+        {/* Due Date Picker Modal - iOS only */}
+        <Modal visible={Platform.OS === 'ios' && showDueDatePicker} transparent animationType="fade" onRequestClose={() => setShowDueDatePicker(false)}>
+          <View style={styles.datePickerOverlay}>
+            <View style={styles.datePickerSheet}>
+              <View style={styles.datePickerHeader}>
+                <TouchableOpacity onPress={() => setShowDueDatePicker(false)} activeOpacity={0.7}>
+                  <Text style={styles.datePickerCancel}>{t('modal_cancel_text')}</Text>
+                </TouchableOpacity>
+                <Text style={styles.datePickerTitle}>{t('label_due_date')}</Text>
+                <TouchableOpacity onPress={confirmDueDate} activeOpacity={0.7}>
+                  <Text style={styles.datePickerOk}>{t('button_confirm')}</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={{ alignItems: 'center', paddingBottom: 8 }}>
+                <DateTimePicker
+                  value={tempDueDate}
+                  mode="date"
+                  display="inline"
+                  onChange={(_, selected) => { if (selected) setTempDueDate(selected); }}
+                  themeVariant="light"
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Due Date Picker - Android */}
+        {Platform.OS === 'android' && showDueDatePicker && (
+          <DateTimePicker
+            value={tempDueDate}
+            mode="date"
+            display="default"
+            onChange={(event, selected) => {
+              setShowDueDatePicker(false);
+              if (event.type === 'set' && selected) {
+                const y = selected.getFullYear();
+                const m = String(selected.getMonth() + 1).padStart(2, '0');
+                const d = String(selected.getDate()).padStart(2, '0');
+                setValue('validUntil', `${y}-${m}-${d}`, { shouldValidate: true });
+              }
+            }}
+          />
+        )}
+
         {/* Date Picker Modal - iOS only (inline calendar in centered card) */}
         <Modal visible={Platform.OS === 'ios' && showDatePicker} transparent animationType="fade" onRequestClose={() => setShowDatePicker(false)}>
           <View style={styles.datePickerOverlay}>
@@ -776,6 +860,7 @@ const CreateInvoiceModal: React.FC<{
 
         <ArticleModal
           visible={showArticleModal}
+          customerId={customerId}
           onClose={() => setShowArticleModal(false)}
           onConfirm={a => {
             setValue('articles', [...watchedArticles, a], { shouldValidate: true });

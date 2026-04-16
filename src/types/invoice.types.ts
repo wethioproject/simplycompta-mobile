@@ -38,6 +38,7 @@ export interface InvoiceItem {
   review_status: string;
   document_path: string | null;
   invoice_url: string | null;
+  valid_until?: string | null;
   client: { id: number; client_name: string } | null;
   articles: InvoiceArticle[];
   notes?: string | null;
@@ -49,6 +50,7 @@ export interface Article {
   quantity: number;
   totalHT: number;
   tva: number;
+  product_id?: number;
 }
 
 export interface InvoiceFormValues {

@@ -37,6 +37,23 @@ export const useInvoice = () => {
         }
     }, [])
 
+    const getProductResources = useCallback(async () => {
+        try {
+            const response = await invoiceService.getProductResources();
+            return {
+                resources: response.data,
+                success: true
+            }
+        } catch (error: any) {
+            const errorMessage = error.response?.data?.message || 'Failed to fetch product resources.';
+            return {
+                resources: [],
+                success: false,
+                error: errorMessage
+            }
+        }
+    }, [])
+
     const getInvoice = useCallback(async (id: number) => {
         try {
             const result = await invoiceService.getInvoice(id);
@@ -64,6 +81,22 @@ export const useInvoice = () => {
             };
         } catch (error: any) {
             const errorMessage = error.response?.data?.message || 'Failed to upload invoice.';
+            return {
+                success: false,
+                error: errorMessage
+            };
+        }
+    }, []);
+
+    const createProduct = useCallback(async (payload: any) => {
+        try {
+            const response = await invoiceService.createProduct(payload);
+            return {
+                data: response.data,
+                success: true
+            };
+        } catch (error: any) {
+            const errorMessage = error.response?.data?.message || 'Failed to create product.';
             return {
                 success: false,
                 error: errorMessage
@@ -116,7 +149,9 @@ export const useInvoice = () => {
         getInvoices,
         getInvoice,
         getInvoiceResources,
+        getProductResources,
         createInvoice,
+        createProduct,
         updateInvoice,
         exportInvoices,
         deleteInvoice,

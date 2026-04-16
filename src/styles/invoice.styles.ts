@@ -1137,4 +1137,88 @@ export const invoiceStyles = StyleSheet.create({
     minWidth: 48,
     textAlign: 'right',
   },
+
+  // Article Modal Specific Styles
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'flex-end' },
+  modalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '92%',
+    paddingTop: 0,
+    paddingBottom: 0,
+  },
+  modalFormScroll: { paddingHorizontal: 20, paddingTop: 20 },
+  modalFooter: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    backgroundColor: '#F9FAFB',
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  cancelBtnText: { fontSize: 15, fontWeight: '600', color: '#374151' },
+  saveBtn: { flex: 1, backgroundColor: '#1E5BAC', borderRadius: 12, paddingVertical: 13, alignItems: 'center', justifyContent: 'center' },
+  saveBtnText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
+  saveBtnDisabled: { backgroundColor: '#93C5FD' },
+
+  // Form Fields (custom for ArticleModal)
+  fieldGroup: { marginBottom: 18 },
+  fieldLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 8 },
+  fieldRequired: { fontSize: 13, fontWeight: '700', color: '#1E5BAC' },
+  fieldInputMultiline: { minHeight: 80, paddingTop: 12 },
+
+  // Inline picker overlays
+  inlinePickerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    zIndex: 100,
+    justifyContent: 'flex-end',
+  },
+  inlinePickerSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 8,
+    paddingBottom: 32,
+  },
+
+  // Computed boxes
+  computedBox: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 12,
+  },
+  computedRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 },
+  computedLabel: { fontSize: 14, fontWeight: '600', color: '#374151' },
+  computedValue: { fontSize: 16, fontWeight: '700', color: '#111827' },
+  ttcBox: {
+    backgroundColor: '#EAF2FB',
+    borderRadius: 12,
+    padding: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  ttcLabel: { fontSize: 14, fontWeight: '600', color: '#374151' },
+  ttcValue: { fontSize: 16, fontWeight: '700', color: '#0B5FA5' },
 });
