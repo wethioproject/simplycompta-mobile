@@ -168,6 +168,7 @@ const Contacts: React.FC = ({ navigation: navProp }: any) => {
   const renderClientItem = ({ item }: { item: ClientItem }) => {
     const revenue = item.total_revenue_ht ?? 0;
     const lateCount = item.late_invoices_count ?? 0;
+    const displayRevenue = lateCount <= 0 ? 0 : revenue;
     return (
       <TouchableOpacity
         style={styles.card}
@@ -182,18 +183,11 @@ const Contacts: React.FC = ({ navigation: navProp }: any) => {
           <Text style={styles.cardMeta}>{item.client_name}</Text>
         </View>
         <View style={styles.cardRight}>
-          {lateCount > 0 ? (
-            <View style={styles.badgeLate}>
-              <Clock size={14} color="#EF4444" />
-              <Text style={styles.badgeLateText}>{lateCount} {t('contacts_pending')}</Text>
-            </View>
-          ) : (
-            <View style={styles.badgeSettled}>
-              <CheckCircle2 size={14} color="#16A34A" />
-              <Text style={styles.badgeSettledText}>{t('contacts_settle')}</Text>
-            </View>
-          )}
-          {revenue > 0 && <Text style={styles.amountGreen}>+{revenue.toLocaleString('fr-FR')} MAD</Text>}
+          <View style={lateCount > 0 ? styles.badgeLate : styles.badgePending}>
+            <Clock size={14} color={lateCount > 0 ? '#EF4444' : '#EA580C'} />
+            <Text style={lateCount > 0 ? styles.badgeLateText : styles.badgePendingText}>{lateCount} {t('contacts_pending')}</Text>
+          </View>
+          <Text style={displayRevenue > 0 ? styles.amountGreen : styles.amountGray}>+{displayRevenue.toLocaleString('fr-FR')} MAD</Text>
         </View>
       </TouchableOpacity>
     );
@@ -688,6 +682,7 @@ const styles = StyleSheet.create({
 
   amountRed:   { fontSize: 13, fontWeight: '600', color: '#EF4444' },
   amountGreen: { fontSize: 13, fontWeight: '600', color: '#16A34A' },
+  amountGray:  { fontSize: 13, fontWeight: '600', color: '#9CA3AF' },
 });
 
 export default Contacts;
