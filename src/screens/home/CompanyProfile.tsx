@@ -53,6 +53,7 @@ const CompanyProfile: React.FC = ({ navigation }: any) => {
   const [ice, setIce] = useState('');
   const [ifField, setIfField] = useState('');
   const [cnss, setCnss] = useState('');
+  const [rib, setRib] = useState('');
   const [companyType, setCompanyType] = useState('');
   const [showCompanyTypePicker, setShowCompanyTypePicker] = useState(false);
   const [companyColor, setCompanyColor] = useState('#3B6FD4');
@@ -95,6 +96,7 @@ const CompanyProfile: React.FC = ({ navigation }: any) => {
       setIce(d.ice_number ?? '');
       setIfField(d.if_number ?? '');
       setCnss(d.cnss ?? '');
+      setRib(d.rib ?? '');
       setCompanyType(d.company_type ?? '');
       setCompanyColor(d.company_color ?? '#3B6FD4');
       setExistingLogoUrl(d.avatar_url ?? null);
@@ -162,6 +164,7 @@ const CompanyProfile: React.FC = ({ navigation }: any) => {
       formData.append('ice_number', ice.trim());
       formData.append('if_number', ifField.trim());
       formData.append('cnss', cnss.trim());
+      formData.append('rib', rib.trim());
       formData.append('company_type', companyType);
       formData.append('company_color', companyColor);
 
@@ -578,6 +581,28 @@ const CompanyProfile: React.FC = ({ navigation }: any) => {
                 <TouchableOpacity
                   style={styles.copyButton}
                   onPress={() => handleCopyToClipboard(rc, t('label_rc'))}
+                  activeOpacity={0.7}
+                >
+                  <Copy size={16} color="#3B6FD4" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* RIB */}
+            <View style={styles.fieldBlock}>
+              <Text style={styles.fieldLabel}>{t('label_rib')}</Text>
+              <View style={styles.fieldWithCopyRow}>
+                <TextInput
+                  style={[styles.fieldInput, styles.fieldInputWithCopy]}
+                  value={rib}
+                  onChangeText={setRib}
+                  placeholder={t('placeholder_rib')}
+                  placeholderTextColor="#AAAAAA"
+                  autoCapitalize="characters"
+                />
+                <TouchableOpacity
+                  style={styles.copyButton}
+                  onPress={() => handleCopyToClipboard(rib, t('label_rib'))}
                   activeOpacity={0.7}
                 >
                   <Copy size={16} color="#3B6FD4" />
