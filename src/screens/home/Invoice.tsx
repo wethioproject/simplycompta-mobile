@@ -38,7 +38,7 @@ import i18n from '../../i18n/i18n';
 /** i18n key for each tab */
 const TAB_LABEL_KEYS: Record<InvoiceTabType, string> = {
   Tous:      'tab_all',
-  Quotes:    'status_quotes',
+  // Quotes:    'status_quotes',
   Issued:    'status_issued',
   Paid:      'status_paid',
   Cancelled: 'status_cancelled',
@@ -47,7 +47,7 @@ const TAB_LABEL_KEYS: Record<InvoiceTabType, string> = {
 /** Active background color for each tab */
 const TAB_COLORS: Record<InvoiceTabType, string> = {
   Tous:      '#1E5BAC',
-  Quotes:    '#6B7280',
+  // Quotes:    '#6B7280',
   Issued:    '#3B82F6',
   Paid:      '#16A34A',
   Cancelled: '#EF4444',

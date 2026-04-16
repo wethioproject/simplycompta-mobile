@@ -63,10 +63,14 @@ export interface InvoiceFormValues {
   notes: string;
 }
 
-export type InvoiceTabType = 'Tous' | 'Quotes' | 'Issued' | 'Paid' | 'Cancelled';
+// export type InvoiceTabType = 'Tous' | 'Quotes' | 'Issued' | 'Paid' | 'Cancelled';
+export type InvoiceTabType = 'Tous' | 'Issued' | 'Paid' | 'Cancelled';
 
-export const INVOICE_TABS: InvoiceTabType[] = ['Tous', 'Quotes', 'Issued', 'Paid', 'Cancelled'];
-export const STATUT_OPTIONS = ['Quotes', 'Issued', 'Paid', 'Cancelled'];
+// export const INVOICE_TABS: InvoiceTabType[] = ['Tous', 'Quotes', 'Issued', 'Paid', 'Cancelled'];
+export const INVOICE_TABS: InvoiceTabType[] = ['Tous', 'Issued', 'Paid', 'Cancelled'];
+// export const STATUT_OPTIONS = ['Quotes', 'Issued', 'Paid', 'Cancelled'];
+export const STATUT_OPTIONS = ['Issued', 'Paid'];
+export const STATUT_OPTIONS_DETAIL_MODAL = ['Issued', 'Paid', 'Cancelled'];
 
 export const PAYMENT_METHODS = [
   { key: 'cash',             fr: 'Espèces',                   en: 'Cash' },

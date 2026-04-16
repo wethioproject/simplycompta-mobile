@@ -27,7 +27,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import { useInvoice } from '../../hooks/useInvoice';
 import { invoiceStyles as styles } from '../../styles/invoice.styles';
 import type { InvoiceArticle, InvoiceItem } from '../../types/invoice.types';
-import { STATUT_OPTIONS, resolvePaymentMethod } from '../../types/invoice.types';
+import { STATUT_OPTIONS_DETAIL_MODAL, resolvePaymentMethod } from '../../types/invoice.types';
 import { calculateInvoiceTotals } from '../../utils/invoiceCalculations';
 
 interface DetailModalProps {
@@ -454,7 +454,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
           >
             <View style={styles.pickerSheet}>
               <Text style={styles.pickerSheetTitle}>{t('modal_title_change_status')}</Text>
-              {STATUT_OPTIONS.map(s => (
+              {STATUT_OPTIONS_DETAIL_MODAL.map(s => (
                 <TouchableOpacity
                   key={s}
                   style={styles.pickerOption}
