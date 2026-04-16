@@ -13,6 +13,7 @@ export const Api_Endpoints = {
   customerInvoiceExport: 'customer/export-invoices',
   customerExpenses: 'customer/customer-expenses',
   customerExpense: 'customer/customer-expense',
+  customerExpenseDuplicate: 'customer/duplicate-expense',
   customerExpenseResources: 'customer/transaction-resources',
   customerExpenseExport: 'customer/export-expenses',
   customerProfile: '/customer/profile',

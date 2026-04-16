@@ -98,6 +98,16 @@ export const useExpense = () => {
         }
     }, []);
 
+    const duplicateExpense = useCallback(async (id: number) => {
+        try {
+            const response = await expenseService.duplicateExpense(id);
+            return { success: true, data: response.data };
+        } catch (error: any) {
+            const errorMessage = error.response?.data?.message || 'Failed to duplicate expense.';
+            return { success: false, error: errorMessage };
+        }
+    }, []);
+
     const deleteExpense = useCallback(async (id: number) => {
         try {
             await expenseService.deleteExpense(id);
@@ -115,6 +125,7 @@ export const useExpense = () => {
         createExpense,
         updateExpense,
         exportExpenses,
+        duplicateExpense,
         deleteExpense,
     }
 };

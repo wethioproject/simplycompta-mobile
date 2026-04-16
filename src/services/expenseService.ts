@@ -127,6 +127,16 @@ class ExpenseService {
         }
     }
 
+    async duplicateExpense(id: number): Promise<any> {
+        try {
+            const response = await api.post<any>(`${Api_Endpoints.customerExpenseDuplicate}/${id}`);
+            return response.data;
+        } catch (error: any) {
+            console.error('Duplicate Expense error:', error.response?.data || error.message);
+            throw error;
+        }
+    }
+
     async deleteExpense(id: number) {
         try {
             const response = await api.delete(`${Api_Endpoints.customerExpense}/${id}`)

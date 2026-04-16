@@ -48,6 +48,7 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
     createExpense,
     updateExpense,
     exportExpenses,
+    duplicateExpense,
     deleteExpense,
   } = useExpense();
   const { getSuppliers } = useSupplier();
@@ -146,6 +147,15 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
         );
       }
     } catch {}
+  };
+
+  const handleDuplicateExpense = async (id: number) => {
+    const result = await duplicateExpense(id);
+    if (result.success) {
+      fetchData();
+    } else {
+      Alert.alert(t('error_title'), result.error ?? t('error_generic'));
+    }
   };
 
   const handleDeleteExpense = async (id: number) => {
@@ -322,6 +332,7 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
           item={selectedItem}
           onClose={() => setSelectedItem(null)}
           onDelete={handleDeleteExpense}
+          onDuplicate={handleDuplicateExpense}
           onEdit={() => handleEditExpense(selectedItem)}
         />
       )}

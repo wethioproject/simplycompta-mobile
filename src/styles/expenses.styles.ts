@@ -286,8 +286,8 @@ export const styles = StyleSheet.create({
     alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13,
     borderBottomWidth: 1, borderBottomColor: '#F9FAFB',
   },
-  detailRowLabel: { fontSize: 14, color: '#6B7280' },
-  detailRowValue: { fontSize: 14, fontWeight: '600', color: '#1F2937', maxWidth: '55%', textAlign: 'right' },
+  detailRowLabel: { fontSize: 14, color: '#6B7280', flexShrink: 1 },
+  detailRowValue: { fontSize: 14, fontWeight: '600', color: '#1F2937', flexShrink: 1, textAlign: 'right' },
   statusCompleted: { color: '#16A34A' },
   statusPending: { color: '#EA580C' },
   attachmentCard: {
@@ -325,6 +325,63 @@ export const styles = StyleSheet.create({
     gap: 8, paddingVertical: 13, borderRadius: 12, backgroundColor: '#1E5BAC',
   },
   detailEditText: { fontSize: 14, fontWeight: '600', color: '#FFFFFF' },
+
+  // Redesigned detail modal styles
+  detailHeaderBack: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  detailHeaderActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  detailHeaderBtn: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  detailHeaderBtnDanger: { backgroundColor: '#FEE2E2' },
+  detailHeaderBtnPrimary: { backgroundColor: '#EFF6FF' },
+
+  detailAmountSection: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05, shadowRadius: 3, elevation: 2,
+  },
+  detailExpenseIconCircle: {
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: '#FCE7F3',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  detailExpenseCategoryName: { fontSize: 16, fontWeight: '700', color: '#1F2937' },
+
+  detailSectionTitle: {
+    fontSize: 14, fontWeight: '700', color: '#374151', marginBottom: -4,
+  },
+
+  detailRowLeft: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  detailRowIconBox: {
+    width: 36, height: 36, borderRadius: 10,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  detailRowRight: { flexShrink: 1, flexDirection: 'row', alignItems: 'center', gap: 6, maxWidth: '50%' },
+
+  detailAttachSection: {
+    backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05, shadowRadius: 3, elevation: 2,
+    padding: 16, gap: 12,
+  },
+  detailAttachHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  detailAttachTitle: { fontSize: 14, fontWeight: '700', color: '#374151' },
+
+  attachAddBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 10, paddingVertical: 13, borderRadius: 12,
+    borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#BFDBFE',
+    backgroundColor: '#EFF6FF',
+  },
+  attachAddIcon: {
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: '#3B82F6',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  attachAddText: { fontSize: 14, fontWeight: '600', color: '#1E5BAC' },
 
   // Date Picker bottom sheet
   datePickerOverlay: {

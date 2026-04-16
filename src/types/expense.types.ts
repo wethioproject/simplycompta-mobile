@@ -27,6 +27,7 @@ export interface ExpenseItem {
   tva: string;
   total_ttc: string;
   total_tva: string;
+  notes: string | null;
   category: { id: number; name: string };
 }
 
