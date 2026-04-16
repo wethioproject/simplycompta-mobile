@@ -35,6 +35,7 @@ import {
   Plus,
   TrendingDown,
   Users,
+  BookOpen,
 } from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { appLogoIcon } from '../../assets/icons';
@@ -255,7 +256,7 @@ const handleDocOpen = async (doc: any) => {
         {/* Page Title Card */}
         <View style={styles.titleCard}>
           <View style={styles.titleIconBox}>
-            <Scale size={24} color="#FFFFFF" strokeWidth={2.5} />
+            <BookOpen size={24} color="#E65100"  strokeWidth={2.5} />
           </View>
           <Text style={styles.titleText}>{t('title_accounting_documents')}</Text>
         </View>
@@ -483,7 +484,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: '#6B21A8',
+    backgroundColor: '#FFE0B2',
     justifyContent: 'center',
     alignItems: 'center',
   },
