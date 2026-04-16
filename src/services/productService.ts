@@ -32,7 +32,7 @@ class ProductService {
                 reference: payload.reference,
                 category: payload.category,
                 unit_price_ht: String(payload.unit_price_ht),
-                tva_percent: String(payload.tva_percent),
+                tva_percentage: String(payload.tva_percentage),
                 quantity: String(payload.quantity),
                 total_price_ht: String(payload.total_price_ht),
             };
@@ -62,7 +62,7 @@ class ProductService {
                 reference: payload.reference,
                 category: payload.category,
                 unit_price_ht: String(payload.unit_price_ht),
-                tva_percent: String(payload.tva_percent),
+                tva_percentage: String(payload.tva_percentage),
                 quantity: String(payload.quantity),
                 total_price_ht: String(payload.total_price_ht),
             };

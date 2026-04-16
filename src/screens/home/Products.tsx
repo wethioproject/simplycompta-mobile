@@ -32,7 +32,7 @@ interface Product {
   customer_id: number;
   designation: string;
   unit_price_ht: string;
-  tva_percent: string;
+  tva_percentage: string;
   quantity: string;
   total_price_ht: string;
   description?: string;
@@ -50,7 +50,7 @@ const productSchema = yup.object({
     .trim()
     .required('error_unit_price_required')
     .test('is-number', 'error_unit_price_invalid', v => !v || !isNaN(parseFloat(v))),
-  tva_percent: yup
+  tva_percentage: yup
     .string()
     .trim()
     .required('error_tva_required')
@@ -69,7 +69,7 @@ interface ProductFormValues {
   reference: string;
   category: string;
   unit_price_ht: string;
-  tva_percent: string;
+  tva_percentage: string;
   quantity: string;
   total_price_ht: string;
 }
@@ -110,7 +110,7 @@ const Products: React.FC = ({ navigation }: any) => {
       reference: '',
       category: 'Produit',
       unit_price_ht: '',
-      tva_percent: '20',
+      tva_percentage: '20',
       quantity: '',
       total_price_ht: '',
     },
@@ -118,7 +118,7 @@ const Products: React.FC = ({ navigation }: any) => {
 
   const watchedUnitPrice = watch('unit_price_ht');
   const watchedQty = watch('quantity');
-  const watchedTva = watch('tva_percent');
+  const watchedTva = watch('tva_percentage');
 
   useEffect(() => {
     const qty = parseFloat(watchedQty) || 0;
@@ -149,7 +149,7 @@ const Products: React.FC = ({ navigation }: any) => {
   // Open modal
   const openCreate = () => {
     setEditingProduct(null);
-    reset({ designation: '', description: '', reference: '', category: 'Produit', unit_price_ht: '', tva_percent: '20', quantity: '', total_price_ht: '' });
+    reset({ designation: '', description: '', reference: '', category: 'Produit', unit_price_ht: '', tva_percentage: '20', quantity: '', total_price_ht: '' });
     setModalVisible(true);
   };
 
@@ -161,7 +161,7 @@ const Products: React.FC = ({ navigation }: any) => {
       reference: item.reference ?? '',
       category: item.category ?? 'Produit',
       unit_price_ht: item.unit_price_ht,
-      tva_percent: item.tva_percent,
+      tva_percentage: item.tva_percentage,
       quantity: item.quantity,
       total_price_ht: item.total_price_ht,
     });
@@ -413,7 +413,7 @@ const Products: React.FC = ({ navigation }: any) => {
                   </View>
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>TVA</Text>
-                    <Text style={styles.detailValue}>{selectedProduct.tva_percent}%</Text>
+                    <Text style={styles.detailValue}>{selectedProduct.tva_percentage}%</Text>
                   </View>
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Quantité</Text>
@@ -602,10 +602,10 @@ const Products: React.FC = ({ navigation }: any) => {
                 </View>
                 <Controller
                   control={control}
-                  name="tva_percent"
+                  name="tva_percentage"
                   render={({ field: { value } }) => (
                     <TouchableOpacity
-                      style={[styles.pickerRow, errors.tva_percent && styles.fieldInputError]}
+                      style={[styles.pickerRow, errors.tva_percentage && styles.fieldInputError]}
                       onPress={() => setShowTvaPicker(true)}
                       activeOpacity={0.7}
                     >
@@ -616,8 +616,8 @@ const Products: React.FC = ({ navigation }: any) => {
                     </TouchableOpacity>
                   )}
                 />
-                {errors.tva_percent && (
-                  <Text style={styles.fieldError}>{t(errors.tva_percent.message ?? '')}</Text>
+                {errors.tva_percentage && (
+                  <Text style={styles.fieldError}>{t(errors.tva_percentage.message ?? '')}</Text>
                 )}
               </View>
 
@@ -737,12 +737,12 @@ const Products: React.FC = ({ navigation }: any) => {
                 <View style={styles.inlinePickerSheet}>
                   <Text style={styles.pickerSheetTitle}>{t('label_vat_percent')}</Text>
                   {TVA_OPTIONS.map(opt => {
-                    const isSelected = watch('tva_percent') === opt;
+                    const isSelected = watch('tva_percentage') === opt;
                     return (
                       <TouchableOpacity
                         key={opt}
                         style={styles.pickerOption}
-                        onPress={() => { setValue('tva_percent', opt, { shouldValidate: true }); setShowTvaPicker(false); }}
+                        onPress={() => { setValue('tva_percentage', opt, { shouldValidate: true }); setShowTvaPicker(false); }}
                         activeOpacity={0.7}
                       >
                         <Text style={[styles.pickerOptionText, isSelected && styles.pickerOptionSelected]}>{opt}%</Text>
