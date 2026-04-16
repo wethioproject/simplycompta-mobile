@@ -386,15 +386,13 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                       {document.isExisting ? t('label_attached_file') : (document.type ?? 'file')}
                     </Text>
                   </View>
-                  {!document.isExisting && (
-                    <TouchableOpacity
-                      style={styles.attachmentRemoveBtn}
-                      onPress={() => setDocument(null)}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <X size={16} color="#DC2626" />
-                    </TouchableOpacity>
-                  )}
+                  <TouchableOpacity
+                    style={styles.attachmentRemoveBtn}
+                    onPress={() => setDocument(null)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <X size={16} color="#DC2626" />
+                  </TouchableOpacity>
                 </View>
               ) : (
                 <View style={styles.uploadArea}>
