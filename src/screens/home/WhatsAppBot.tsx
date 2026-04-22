@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,20 +9,53 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, MessageCircle, Phone } from 'lucide-react-native';
+import { ArrowLeft, MessageCircle, Phone, CheckCircle2, PhoneOff, RefreshCw } from 'lucide-react-native';
 import api from '../../api';
 import { Api_Endpoints } from '../../services/endpoints';
+
+interface BotStatus {
+  bot_active: 0 | 1;
+  bot_verified_at: string | null;
+  bot_contact: string | null;
+}
 
 const WhatsAppBot: React.FC = () => {
   const navigation = useNavigation<any>();
   const { t } = useTranslation();
+
+
+  const [statusLoading, setStatusLoading] = useState(true);
+  const [botStatus, setBotStatus] = useState<BotStatus | null>(null);
+
+
   const [phoneNumber, setPhoneNumber] = useState('');
   const [countryCode, setCountryCode] = useState('212');
   const [submitting, setSubmitting] = useState(false);
+
+
+  const [deactivating, setDeactivating] = useState(false);
+
+  const fetchStatus = useCallback(async () => {
+    setStatusLoading(true);
+    try {
+      const res = await api.get(Api_Endpoints.botActivationStatus);
+      setBotStatus(res.data);
+    } catch {
+      // If the endpoint fails, default to not-active so the user can still activate
+      setBotStatus({ bot_active: 0, bot_verified_at: null, bot_contact: null });
+    } finally {
+      setStatusLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStatus();
+  }, [fetchStatus]);
 
   const handleSubmit = async () => {
     const cleaned = `+${countryCode.trim()}${phoneNumber.trim()}`;
@@ -34,7 +67,6 @@ const WhatsAppBot: React.FC = () => {
       Alert.alert(t('error_title'), t('whatsapp_error_phone_invalid'));
       return;
     }
-
     setSubmitting(true);
     try {
       await api.post(Api_Endpoints.botRequestActivation, { phone: cleaned });
@@ -57,6 +89,116 @@ const WhatsAppBot: React.FC = () => {
       setSubmitting(false);
     }
   };
+
+  // ── Deactivation ──────────────────────────────────────────────────
+  const handleDeactivate = () => {
+    Alert.alert(
+      t('whatsapp_deactivate_title'),
+      t('whatsapp_deactivate_confirm'),
+      [
+        { text: t('button_cancel'), style: 'cancel' },
+        {
+          text: t('whatsapp_deactivate_btn'),
+          style: 'destructive',
+          onPress: async () => {
+            setDeactivating(true);
+            try {
+              await api.post(Api_Endpoints.botRequestDeactivation);
+              Alert.alert(t('success_title'), t('whatsapp_deactivated_success'));
+              fetchStatus();
+            } catch (e: any) {
+              Alert.alert(t('error_title'), e?.response?.data?.message ?? t('error_generic'));
+            } finally {
+              setDeactivating(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  if (statusLoading) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <ArrowLeft size={24} color="#111827" strokeWidth={2} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{t('whatsapp_bot_title')}</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#25D366" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (botStatus?.bot_active === 1) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <ArrowLeft size={24} color="#111827" strokeWidth={2} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{t('whatsapp_bot_title')}</Text>
+          <View style={{ width: 40 }} />
+        </View>
+
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {/* Active hero */}
+          <View style={styles.heroCard}>
+            <View style={[styles.heroIconWrap, { backgroundColor: '#F0FFF4', borderColor: '#BBF7D0' }]}>
+              <CheckCircle2 size={48} color="#25D366" strokeWidth={1.5} />
+            </View>
+            <Text style={styles.heroTitle}>{t('whatsapp_connected_title')}</Text>
+            <Text style={styles.heroDesc}>{t('whatsapp_connected_desc')}</Text>
+          </View>
+
+          {/* Connected number card */}
+          <View style={styles.connectedCard}>
+            <Text style={styles.connectedLabel}>{t('whatsapp_connected_number')}</Text>
+            <View style={styles.connectedNumberRow}>
+              <Phone size={20} color="#25D366" strokeWidth={2} />
+              <Text style={styles.connectedNumber}>{botStatus.bot_contact ?? '—'}</Text>
+            </View>
+            {botStatus.bot_verified_at && (
+              <Text style={styles.connectedSince}>
+                {t('whatsapp_connected_since')} {new Date(botStatus.bot_verified_at).toLocaleDateString()}
+              </Text>
+            )}
+          </View>
+
+          {/* Management actions */}
+          <View style={styles.actionsCard}>
+            {/* Deactivate */}
+            <TouchableOpacity
+              style={[styles.actionRow, { borderBottomWidth: 0 }]}
+              onPress={handleDeactivate}
+              disabled={deactivating}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.actionIconBox, { backgroundColor: '#FEE2E2' }]}>
+                {deactivating
+                  ? <ActivityIndicator size="small" color="#EF4444" />
+                  : <PhoneOff size={20} color="#EF4444" strokeWidth={2} />}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.actionLabel, { color: '#EF4444' }]}>{t('whatsapp_deactivate_btn')}</Text>
+                <Text style={styles.actionSub}>{t('whatsapp_deactivate_sub')}</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Reconnect hint */}
+          <TouchableOpacity style={styles.reconnectBtn} onPress={fetchStatus} activeOpacity={0.8}>
+            <RefreshCw size={16} color="#6B7280" strokeWidth={2} />
+            <Text style={styles.reconnectText}>{t('whatsapp_refresh_status')}</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -347,6 +489,89 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+
+  connectedCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    gap: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  connectedLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  connectedNumberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  connectedNumber: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  connectedSince: {
+    fontSize: 12,
+    color: '#9CA3AF',
+  },
+
+  actionsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  actionIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  actionLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  actionSub: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 2,
+  },
+
+  reconnectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+  },
+  reconnectText: {
+    fontSize: 13,
+    color: '#6B7280',
   },
 });
 

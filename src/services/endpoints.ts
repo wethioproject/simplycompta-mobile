@@ -37,4 +37,6 @@ export const Api_Endpoints = {
   documentsData: 'customer/documents-data',
   botRequestActivation: 'customer/bot/request-activation',
   botVerifyActivation: 'customer/bot/verify-activation',
+  botActivationStatus: 'customer/bot/activation-status',
+  botRequestDeactivation: 'customer/bot/request-deactivation',
 }
