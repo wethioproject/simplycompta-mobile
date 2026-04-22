@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import HomeStack from './HomeStack';
 import Invoice from '../screens/home/Invoice';
+import Quote from '../screens/home/Quote';
 import Activity from '../screens/home/Activity';
 import PlusScreen from '../screens/home/Plus';
 import Expenses from '../screens/home/Expenses';
@@ -28,6 +29,7 @@ import {
   FileText,
   TrendingDown,
   Building2,
+  Receipt,
 } from 'lucide-react-native';
 
 const Tab = createBottomTabNavigator();
@@ -56,6 +58,14 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, navigation }) => {
       iconBg: '#EFF6FF',
       iconColor: '#1E5BAC',
       onPress: () => { setShowMenu(false); navigation.navigate('Invoice' as never); },
+    },
+    {
+      key: 'devis',
+      label: t('status_quotes'),
+      Icon: Receipt,
+      iconBg: '#FEF3C7',
+      iconColor: '#D97706',
+      onPress: () => { setShowMenu(false); navigation.navigate('Quote' as never); },
     },
     {
       key: 'depense',
@@ -272,6 +282,7 @@ const HomeTabs: React.FC = () => (
     <Tab.Screen name="Dashboard"  component={HomeStack}  />
     <Tab.Screen name="Activity"   component={Activity}   />
     <Tab.Screen name="Invoice"    component={Invoice}    />
+    <Tab.Screen name="Quote"      component={Quote}      />
     <Tab.Screen name="Expenses"   component={Expenses}   />
     <Tab.Screen name="Bank statements"   component={BankStatements}   />
     <Tab.Screen name="Contacts"   component={Contacts}   />

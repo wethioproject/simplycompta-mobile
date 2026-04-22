@@ -56,6 +56,7 @@ import Activity from '../screens/home/Activity';
 import BankStatements from '../screens/home/BankStatements';
 import Contact from '../screens/home/Contact';
 import Invoice from '../screens/home/Invoice';
+import Quote from '../screens/home/Quote';
 import PersonalProfile from '../screens/home/PersonalProfile';
 import CompanyProfile from '../screens/home/CompanyProfile';
 import Suppliers from '../screens/home/Suppliers';
@@ -129,6 +130,7 @@ const AppNavigator = () => {
         <Stack.Screen name="Bank Statements" component={BankStatements} options={{ headerShown: false }} />
         <Stack.Screen name="Contact" component={Contact} options={{ headerShown: false }} />
         <Stack.Screen name="Invoice" component={Invoice} options={{ headerShown: false }} />
+        <Stack.Screen name="Quote" component={Quote} options={{ headerShown: false }} />
         <Stack.Screen name="Personal Profile" component={PersonalProfile} options={{ headerShown: false }} />
         <Stack.Screen name="Company Profile" component={CompanyProfile} options={{ headerShown: false }} />
         <Stack.Screen name="Notification Preferences" component={NotificationPreferences} options={{ headerShown: false }} />
