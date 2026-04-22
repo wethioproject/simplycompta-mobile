@@ -22,6 +22,7 @@ import {
   Share2,
   ChevronDown,
   FileText,
+  Copy,
 } from 'lucide-react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import RNShare from 'react-native-share';
@@ -62,7 +63,8 @@ const DetailModal: React.FC<DetailModalProps> = ({
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
-  const { getPdfDownloadUrl } = useInvoice();
+  const { getPdfDownloadUrl, duplicateInvoice } = useInvoice();
+  const [duplicating, setDuplicating] = useState(false);
 
   const handleStatusChange = async (newStatus: string) => {
     if (newStatus === currentStatus) {
@@ -284,9 +286,33 @@ const DetailModal: React.FC<DetailModalProps> = ({
         {/* Header */}
         <View style={styles.detailModalHeader}>
           <Text style={styles.detailModalTitle}>{t('title_invoice_details')}</Text>
-          <TouchableOpacity onPress={onClose} style={styles.detailCloseBtn} activeOpacity={0.7}>
-            <X size={20} color="#6B7280" />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity
+              style={styles.detailCloseBtn}
+              onPress={async () => {
+                setDuplicating(true);
+                try {
+                  const result = await duplicateInvoice(item.id);
+                  if (result.success) {
+                    Alert.alert(t('success_title'), t('success_invoice_duplicated'));
+                  } else {
+                    Alert.alert(t('error_title'), result.error ?? t('error_generic'));
+                  }
+                } finally {
+                  setDuplicating(false);
+                }
+              }}
+              disabled={duplicating}
+              activeOpacity={0.7}
+            >
+              {duplicating
+                ? <ActivityIndicator size="small" color="#6B7280" />
+                : <Copy size={20} color="#6B7280" />}
+            </TouchableOpacity>
+            <TouchableOpacity onPress={onClose} style={styles.detailCloseBtn} activeOpacity={0.7}>
+              <X size={20} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>

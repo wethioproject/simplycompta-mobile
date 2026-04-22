@@ -141,6 +141,26 @@ export const useInvoice = () => {
         }
     }, [])
 
+    const duplicateInvoice = useCallback(async (id: number) => {
+        try {
+            const response = await invoiceService.duplicateInvoice(id);
+            return { data: response.data, success: true };
+        } catch (error: any) {
+            const errorMessage = error.response?.data?.message || 'Failed to duplicate invoice.';
+            return { success: false, error: errorMessage };
+        }
+    }, [])
+
+    const updateInvoiceStatus = useCallback(async (id: number, status: string) => {
+        try {
+            const response = await invoiceService.updateInvoiceStatus(id, status);
+            return { data: response.data, success: true };
+        } catch (error: any) {
+            const errorMessage = error.response?.data?.message || 'Failed to update invoice status.';
+            return { success: false, error: errorMessage };
+        }
+    }, [])
+
     const getPdfDownloadUrl = useCallback((id: number): string => {
         return invoiceService.getPdfDownloadUrl(id);
     }, []);
@@ -153,8 +173,10 @@ export const useInvoice = () => {
         createInvoice,
         createProduct,
         updateInvoice,
+        updateInvoiceStatus,
         exportInvoices,
         deleteInvoice,
+        duplicateInvoice,
         getPdfDownloadUrl,
     }
 };

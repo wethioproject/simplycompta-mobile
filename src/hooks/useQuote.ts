@@ -132,6 +132,26 @@ export const useQuote = () => {
         }
     }, [])
 
+    const duplicateQuote = useCallback(async (id: number) => {
+        try {
+            const response = await quoteService.duplicateQuote(id);
+            return { data: response.data, success: true };
+        } catch (error: any) {
+            const errorMessage = error.response?.data?.message || 'Failed to duplicate quote.';
+            return { success: false, error: errorMessage };
+        }
+    }, [])
+
+    const updateQuoteStatus = useCallback(async (id: number, status: string) => {
+        try {
+            const response = await quoteService.updateQuoteStatus(id, status);
+            return { data: response.data, success: true };
+        } catch (error: any) {
+            const errorMessage = error.response?.data?.message || 'Failed to update quote status.';
+            return { success: false, error: errorMessage };
+        }
+    }, [])
+
     const getPdfDownloadUrl = useCallback((id: number): string => {
         return quoteService.getPdfDownloadUrl(id);
     }, []);
@@ -154,7 +174,9 @@ export const useQuote = () => {
         createQuote,
         createProduct,
         updateQuote,
+        updateQuoteStatus,
         deleteQuote,
+        duplicateQuote,
         getPdfDownloadUrl,
         convertToInvoice,
     }

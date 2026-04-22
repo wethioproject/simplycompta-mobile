@@ -1179,4 +1179,35 @@ export const invoiceStyles = StyleSheet.create({
     minWidth: 48,
     textAlign: 'right',
   },
+
+  /* ── Quote action dropdown menu ── */
+  invoiceActionMenu: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    minWidth: 190,
+  },
+  invoiceActionMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+  },
+  invoiceActionMenuText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  invoiceActionMenuDivider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginHorizontal: 8,
+  },
 });

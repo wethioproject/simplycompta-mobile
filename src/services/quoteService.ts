@@ -172,7 +172,30 @@ class QuoteService {
             throw error;
         }
     }
+    async duplicateQuote(id: number): Promise<any> {
+        try {
+            const response = await api.post(`${Api_Endpoints.customerQuoteDuplicate}/${id}`);
+            return response.data;
+        } catch (error: any) {
+            console.error('Duplicate quote error:', error.response?.data || error.message);
+            throw error;
+        }
+    }
 
+    async updateQuoteStatus(id: number, status: string): Promise<any> {
+        try {
+            const formData = new FormData();
+            formData.append('status', status);
+            formData.append('_method', 'PUT');
+            const response = await api.post<any>(`${Api_Endpoints.customerQuote}/${id}`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            return response.data;
+        } catch (error: any) {
+            console.error('Update quote status error:', error.response?.data || error.message);
+            throw error;
+        }
+    }
     async convertToInvoice(id: number): Promise<any> {
         try {
             const response = await api.post(`${Api_Endpoints.quoteToInvoice}/${id}`);

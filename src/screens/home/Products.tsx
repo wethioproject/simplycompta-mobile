@@ -99,7 +99,6 @@ const Products: React.FC = ({ navigation }: any) => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [saving, setSaving] = useState(false);
   const [categoryOptions, setCategoryOptions] = useState<{ id: number; name: string; type?: string }[]>([]);
-  const [showTypePicker, setShowTypePicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showTvaPicker, setShowTvaPicker] = useState(false);
   const [showUnitPicker, setShowUnitPicker] = useState(false);
@@ -304,20 +303,37 @@ const Products: React.FC = ({ navigation }: any) => {
 
       {/* Content */}
       <View style={styles.productContent}>
-        <View style={styles.productHeader}>
-          <View style={styles.productInfo}>
-            <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
-            <Text style={styles.productDesc} numberOfLines={1}>{item.sku}</Text>
+        {/* Name + type badge */}
+        <View style={styles.productNameRow}>
+          <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
+          <View style={[
+            styles.typeBadge,
+            (item.type ?? '').toLowerCase() === 'product' ? styles.typeBadgeProduct : styles.typeBadgeService,
+          ]}>
+            <Text style={[
+              styles.typeBadgeText,
+              (item.type ?? '').toLowerCase() === 'product' ? styles.typeBadgeTextProduct : styles.typeBadgeTextService,
+            ]}>
+              {(item.type ?? '').toLowerCase() === 'product' ? t('type_badge_product') : t('type_badge_service')}
+            </Text>
           </View>
         </View>
 
+        {/* Description */}
+        <Text style={styles.productDesc} numberOfLines={1}>{item.description}</Text>
+
+        {/* Footer: category badge + price */}
         <View style={styles.productFooter}>
           <View style={styles.categoryBadge}>
-            <Text style={styles.categoryText}>{t('label_pill_unit_price')}</Text>
+            <Text style={styles.categoryText} numberOfLines={1}>
+              {categoryOptions.find(c => c.id === item.category_id)?.name ?? (item.type ?? 'Produit')}
+            </Text>
           </View>
           <View style={styles.priceSection}>
-            <Text style={styles.priceValue}>{item.sale_price}</Text>
-            <Text style={styles.priceLabel}>{t('label_pill_vat')}</Text>
+            <Text style={styles.priceValue}>
+              {parseFloat(item.sale_price).toLocaleString('fr-FR')}
+            </Text>
+            <Text style={styles.priceLabel}>MAD H.T.</Text>
           </View>
         </View>
       </View>
@@ -353,7 +369,7 @@ const Products: React.FC = ({ navigation }: any) => {
           <View style={styles.emptySearchState}>
             <Package size={48} color="#D1D5DB" />
             <Text style={styles.emptySearchTitle}>{t('empty_no_products')}</Text>
-            <Text style={styles.emptySearchSubtitle}>Aucun produit trouvé pour "{searchQuery}"</Text>
+            <Text style={styles.emptySearchSubtitle}>{t('empty_search_no_products', { query: searchQuery })}</Text>
           </View>
         ) : (
           <FlatList
@@ -389,7 +405,7 @@ const Products: React.FC = ({ navigation }: any) => {
             <Package size={20} color="rgba(255,255,255,0.75)" />
           </View>
           <Text style={styles.statsValue}>{products.length}</Text>
-          <Text style={styles.statsSubtitle}>Services et produits actifs</Text>
+          <Text style={styles.statsSubtitle}>{t('stats_products_subtitle')}</Text>
         </View>
       </View>
 
@@ -430,29 +446,62 @@ const Products: React.FC = ({ navigation }: any) => {
             <View style={styles.detailModalSheet}>
               {/* Header */}
               <View style={styles.detailModalHeader}>
-                <Text style={styles.detailModalTitle}>Détails du produit</Text>
+                <Text style={styles.detailModalTitle}>{t('detail_modal_title_product')}</Text>
                 <TouchableOpacity onPress={closeDetailModal} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                   <X size={22} color="#666" />
                 </TouchableOpacity>
               </View>
 
               <ScrollView style={styles.detailModalContent} showsVerticalScrollIndicator={false}>
-                {/* Icon */}
+                {/* Icon + name + type badge */}
                 <View style={styles.detailIconSection}>
                   <View style={styles.detailIcon}>
                     <Package size={32} color="#0B5FA5" />
                   </View>
-                  <Text style={styles.detailName}>{selectedProduct.name}</Text>
+                  <View style={styles.detailNameRow}>
+                    <Text style={styles.detailName}>{selectedProduct.name}</Text>
+                    <View style={[
+                      styles.typeBadge,
+                      (selectedProduct.type ?? '').toLowerCase() === 'product' ? styles.typeBadgeProduct : styles.typeBadgeService,
+                    ]}>
+                      <Text style={[
+                        styles.typeBadgeText,
+                        (selectedProduct.type ?? '').toLowerCase() === 'product' ? styles.typeBadgeTextProduct : styles.typeBadgeTextService,
+                      ]}>
+                        {(selectedProduct.type ?? '').toLowerCase() === 'product' ? t('type_badge_product') : t('type_badge_service')}
+                      </Text>
+                    </View>
+                  </View>
+                  {selectedProduct.description ? (
+                    <Text style={styles.detailDesc}>{selectedProduct.description}</Text>
+                  ) : null}
                 </View>
 
                 {/* Details */}
                 <View style={styles.detailSection}>
+                  {selectedProduct.sku ? (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>{t('label_reference')}</Text>
+                      <Text style={styles.detailValue}>{selectedProduct.sku}</Text>
+                    </View>
+                  ) : null}
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Prix H.T.</Text>
-                    <Text style={styles.detailValue}>{selectedProduct.sale_price}</Text>
+                    <Text style={styles.detailLabel}>{t('label_category')}</Text>
+                    <View style={styles.detailCategoryRow}>
+                      <View style={styles.detailCategoryDot} />
+                      <Text style={styles.detailValue}>
+                        {categoryOptions.find(c => c.id === selectedProduct.category_id)?.name ?? '—'}
+                      </Text>
+                    </View>
                   </View>
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>TVA</Text>
+                    <Text style={styles.detailLabel}>{t('label_price_ht')}</Text>
+                    <Text style={styles.detailValue}>
+                      {parseFloat(selectedProduct.sale_price).toLocaleString('fr-FR')} MAD
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>{t('label_tva_short')}</Text>
                     <Text style={styles.detailValue}>
                       {(() => {
                         const tax = tvaOptions.find(t => String(t.id) === String(selectedProduct.tax_id));
@@ -461,13 +510,18 @@ const Products: React.FC = ({ navigation }: any) => {
                     </Text>
                   </View>
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Quantité</Text>
+                    <Text style={styles.detailLabel}>{t('label_quantity')}</Text>
                     <Text style={styles.detailValue}>{selectedProduct.quantity}</Text>
                   </View>
                   <View style={styles.detailRowTotal}>
-                    <Text style={styles.detailLabelTotal}>Total H.T.</Text>
+                    <Text style={styles.detailLabelTotal}>{t('label_price_ttc_short')}</Text>
                     <Text style={styles.detailValueTotal}>
-                      {(parseFloat(selectedProduct.sale_price) * Number(selectedProduct.quantity)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
+                      {(() => {
+                        const tax = tvaOptions.find(t => String(t.id) === String(selectedProduct.tax_id));
+                        const rate = tax ? parseFloat(tax.rate) : 0;
+                        const total = parseFloat(selectedProduct.sale_price) * Number(selectedProduct.quantity) * (1 + rate / 100);
+                        return total.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                      })()} MAD
                     </Text>
                   </View>
                 </View>
@@ -477,11 +531,11 @@ const Products: React.FC = ({ navigation }: any) => {
               <View style={styles.detailModalActions}>
                 <TouchableOpacity style={styles.deleteBtn} onPress={() => { handleDelete(selectedProduct); }}>
                   <Trash2 size={16} color="#DC2626" />
-                  <Text style={styles.deleteBtnText}>Supprimer</Text>
+                  <Text style={styles.deleteBtnText}>{t('button_delete')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.editBtn} onPress={() => { openEdit(selectedProduct); closeDetailModal(); }}>
                   <Edit2 size={16} color="#FFFFFF" />
-                  <Text style={styles.editBtnText}>Modifier</Text>
+                  <Text style={styles.editBtnText}>{t('button_edit')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -589,7 +643,7 @@ const Products: React.FC = ({ navigation }: any) => {
                 )}
               </View>
 
-              {/* ── Type dropdown (static) ──────────────────────────── */}
+              {/* ── Type toggle (2-button) ──────────────────────────── */}
               <View style={styles.fieldGroup}>
                 <View style={styles.fieldLabelRow}>
                   <Text style={styles.fieldLabel}>{t('label_type')}</Text>
@@ -599,16 +653,34 @@ const Products: React.FC = ({ navigation }: any) => {
                   control={control}
                   name="type"
                   render={({ field: { value } }) => (
-                    <TouchableOpacity
-                      style={[styles.pickerRow, errors.type && styles.fieldInputError]}
-                      onPress={() => setShowTypePicker(true)}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={value ? styles.pickerValueText : styles.pickerPlaceholderText}>
-                        {value || t('placeholder_select')}
-                      </Text>
-                      <ChevronDown size={18} color="#0B5FA5" />
-                    </TouchableOpacity>
+                    <View style={styles.typeToggleRow}>
+                      <TouchableOpacity
+                        style={[
+                          styles.typeToggleBtn,
+                          value === 'Service' && styles.typeToggleBtnServiceActive,
+                        ]}
+                        onPress={() => setValue('type', 'Service', { shouldValidate: true })}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[
+                          styles.typeToggleBtnText,
+                          value === 'Service' && styles.typeToggleBtnTextServiceActive,
+                        ]}>Service</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          styles.typeToggleBtn,
+                          value === 'Product' && styles.typeToggleBtnProductActive,
+                        ]}
+                        onPress={() => setValue('type', 'Product', { shouldValidate: true })}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[
+                          styles.typeToggleBtnText,
+                          value === 'Product' && styles.typeToggleBtnTextProductActive,
+                        ]}>Produit</Text>
+                      </TouchableOpacity>
+                    </View>
                   )}
                 />
                 {errors.type && (
@@ -803,33 +875,6 @@ const Products: React.FC = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
 
-            {/* ── Type Picker inline overlay ──────────────────────── */}
-            {showTypePicker && (
-              <TouchableOpacity
-                style={styles.inlinePickerOverlay}
-                activeOpacity={1}
-                onPress={() => setShowTypePicker(false)}
-              >
-                <View style={styles.inlinePickerSheet}>
-                  <Text style={styles.pickerSheetTitle}>{t('label_type')}</Text>
-                  {TYPE_OPTIONS.map(opt => {
-                    const isSelected = watch('type') === opt;
-                    return (
-                      <TouchableOpacity
-                        key={opt}
-                        style={styles.pickerOption}
-                        onPress={() => { setValue('type', opt, { shouldValidate: true }); setShowTypePicker(false); }}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={[styles.pickerOptionText, isSelected && styles.pickerOptionSelected]}>{opt}</Text>
-                        {isSelected && <Check size={16} color="#0B5FA5" />}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </TouchableOpacity>
-            )}
-
             {/* ── Category Picker inline overlay (API-driven) ─────── */}
             {showCategoryPicker && (
               <TouchableOpacity
@@ -1002,14 +1047,23 @@ const styles = StyleSheet.create({
   productContent: { flex: 1, paddingRight: 44 },
   productHeader: { marginBottom: 8 },
   productInfo: { },
-  productName: { fontSize: 14, fontWeight: '600', color: '#111827', marginBottom: 2 },
-  productDesc: { fontSize: 12, color: '#6B7280' },
-  
-  productFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 },
-  categoryBadge: { backgroundColor: '#EAF2FB', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
-  categoryText: { fontSize: 11, fontWeight: '500', color: '#0B5FA5' },
+  productNameRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginBottom: 4 },
+  productName: { fontSize: 14, fontWeight: '600', color: '#111827', flexShrink: 1 },
+  productDesc: { fontSize: 12, color: '#6B7280', marginBottom: 10 },
+
+  // Type badge (card + detail)
+  typeBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20 },
+  typeBadgeService: { backgroundColor: '#D1FAE5' },
+  typeBadgeProduct: { backgroundColor: '#EDE9FE' },
+  typeBadgeText: { fontSize: 10, fontWeight: '700' },
+  typeBadgeTextService: { color: '#059669' },
+  typeBadgeTextProduct: { color: '#7C3AED' },
+
+  productFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  categoryBadge: { backgroundColor: '#EAF2FB', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, maxWidth: '55%' },
+  categoryText: { fontSize: 11, fontWeight: '600', color: '#0B5FA5' },
   priceSection: { flexDirection: 'column', alignItems: 'flex-end' },
-  priceValue: { fontSize: 13, fontWeight: '700', color: '#0B5FA5' },
+  priceValue: { fontSize: 20, fontWeight: '700', color: '#0B5FA5', lineHeight: 24 },
   priceLabel: { fontSize: 10, color: '#9CA3AF', marginTop: 2 },
   
   // Search View
@@ -1078,6 +1132,15 @@ const styles = StyleSheet.create({
   detailModalTitle: { fontSize: 18, fontWeight: '600', color: '#111827' },
   detailModalContent: { marginBottom: 20 },
   
+  // Type toggle (form)
+  typeToggleRow: { flexDirection: 'row', gap: 12 },
+  typeToggleBtn: { flex: 1, paddingVertical: 12, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#E5E7EB', backgroundColor: '#FFFFFF' },
+  typeToggleBtnServiceActive: { borderColor: '#059669', backgroundColor: '#D1FAE5' },
+  typeToggleBtnProductActive: { borderColor: '#7C3AED', backgroundColor: '#EDE9FE' },
+  typeToggleBtnText: { fontSize: 14, fontWeight: '600', color: '#6B7280' },
+  typeToggleBtnTextServiceActive: { color: '#059669' },
+  typeToggleBtnTextProductActive: { color: '#7C3AED' },
+
   detailIconSection: { alignItems: 'center', marginBottom: 20 },
   detailIcon: { 
     width: 56, 
@@ -1088,7 +1151,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
   },
+  detailNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 4 },
   detailName: { fontSize: 18, fontWeight: '600', color: '#111827', textAlign: 'center' },
+  detailDesc: { fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 4 },
+  detailCategoryRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  detailCategoryDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#0B5FA5' },
   
   detailSection: { marginVertical: 12 },
   detailRow: { 

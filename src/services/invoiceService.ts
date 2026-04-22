@@ -191,6 +191,31 @@ class InvoiceService {
         }
     }
 
+    async duplicateInvoice(id: number): Promise<any> {
+        try {
+            const response = await api.post(`${Api_Endpoints.customerInvoiceDuplicate}/${id}`);
+            return response.data;
+        } catch (error: any) {
+            console.error('Duplicate invoice error:', error.response?.data || error.message);
+            throw error;
+        }
+    }
+
+    async updateInvoiceStatus(id: number, status: string): Promise<any> {
+        try {
+            const formData = new FormData();
+            formData.append('status', status);
+            formData.append('_method', 'PUT');
+            const response = await api.post<any>(`${Api_Endpoints.customerInvoice}/${id}`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            return response.data;
+        } catch (error: any) {
+            console.error('Update invoice status error:', error.response?.data || error.message);
+            throw error;
+        }
+    }
+
     getPdfDownloadUrl(id: number): string {
         const base = (api.defaults.baseURL ?? 'https://simply-compta.com/api/').replace(/\/$/, '');
         return `${base}/${Api_Endpoints.customerInvoicePdf}/${id}`;

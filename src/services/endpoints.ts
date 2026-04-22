@@ -39,4 +39,6 @@ export const Api_Endpoints = {
   botVerifyActivation: 'customer/bot/verify-activation',
   botActivationStatus: 'customer/bot/activation-status',
   botRequestDeactivation: 'customer/bot/request-deactivation',
+  customerInvoiceDuplicate: 'customer/duplicate-invoice',
+  customerQuoteDuplicate: 'customer/duplicate-quote',
 }

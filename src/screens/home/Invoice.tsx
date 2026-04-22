@@ -10,6 +10,8 @@ import {
   RefreshControl,
   Platform,
   Share,
+  TextInput,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -22,6 +24,8 @@ import {
   Receipt,
   AlertTriangle,
   Plus,
+  Search,
+  X,
 } from 'lucide-react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { useInvoice } from '../../hooks/useInvoice';
@@ -58,7 +62,7 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
   const navigation = useNavigation<StackNavigation>();
   const nav = navProp ?? navigation;
   const route = useRoute<any>();
-  const { createInvoice, updateInvoice, exportInvoices, deleteInvoice, getInvoiceResources } = useInvoice();
+  const { createInvoice, updateInvoice, exportInvoices, deleteInvoice, getInvoiceResources, duplicateInvoice, updateInvoiceStatus } = useInvoice();
   const token = useSelector((state: any) => state.user.token);
   const user = useSelector((state: any) => state.user.customer);
 
@@ -79,6 +83,7 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
   } = useInvoiceList();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [defaultClientId, setDefaultClientId] = useState<number | undefined>(undefined);
   const [selectedItem, setSelectedItem] = useState<InvoiceItem | null>(null);
@@ -188,6 +193,26 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
     }
   };
 
+  const handleDuplicate = async (item: InvoiceItem) => {
+    const result = await duplicateInvoice(item.id);
+    if (result.success) {
+      fetchInvoices(getFilterParams());
+      Alert.alert(t('success'), t('success_invoice_duplicated'));
+    } else {
+      Alert.alert(t('error'), result.error ?? t('error_generic'));
+    }
+  };
+
+  const handleMarkPaid = async (item: InvoiceItem) => {
+    const newStatus = item.status === 'Paid' ? 'Issued' : 'Paid';
+    const result = await updateInvoiceStatus(item.id, newStatus);
+    if (result.success) {
+      fetchInvoices(getFilterParams());
+    } else {
+      Alert.alert(t('error'), result.error ?? t('error_generic'));
+    }
+  };
+
   const handleRelancerAll = () => {
     Alert.alert(t('invoice_relancer_tout'), t('error_generic'));
   };
@@ -207,7 +232,14 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
   });
 
   const renderItem = ({ item }: { item: InvoiceItem }) => (
-    <InvoiceCard item={item} onPress={setSelectedItem} />
+    <InvoiceCard
+      item={item}
+      onPress={setSelectedItem}
+      openMenuId={openMenuId}
+      onMenuToggle={setOpenMenuId}
+      onMarkPaid={handleMarkPaid}
+      onDuplicate={handleDuplicate}
+    />
   );
 
   return (
@@ -300,6 +332,31 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
         </View>
       </View>
 
+      {/* ── Search Bar ─────────────────────────────────────────────── */}
+      <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4 }}>
+        <View style={{
+          flexDirection: 'row', alignItems: 'center',
+          backgroundColor: '#F3F4F6', borderRadius: 12,
+          paddingHorizontal: 12, height: 44,
+        }}>
+          <Search size={16} color="#9CA3AF" style={{ marginRight: 8 }} />
+          <TextInput
+            style={{ flex: 1, fontSize: 14, color: '#111827' }}
+            placeholder={t('placeholder_search_invoice')}
+            placeholderTextColor="#9CA3AF"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+            clearButtonMode="never"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <X size={15} color="#9CA3AF" />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
       {/* ── Pill Filter Tabs ────────────────────────────────────────── */}
       <View style={styles.pillTabsWrapper}>
         <ScrollView
@@ -351,6 +408,7 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
           style={{ flex: 1 }}
           contentContainerStyle={[styles.listContent, { gap: 12 }]}
           showsVerticalScrollIndicator={false}
+          onScrollBeginDrag={() => setOpenMenuId(null)}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
