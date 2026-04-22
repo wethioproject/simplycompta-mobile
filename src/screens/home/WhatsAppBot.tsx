@@ -21,15 +21,16 @@ const WhatsAppBot: React.FC = () => {
   const navigation = useNavigation<any>();
   const { t } = useTranslation();
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [countryCode, setCountryCode] = useState('212');
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
-    const cleaned = phoneNumber.trim();
-    if (!cleaned) {
+    const cleaned = `+${countryCode.trim()}${phoneNumber.trim()}`;
+    if (!phoneNumber.trim()) {
       Alert.alert(t('error_title'), t('whatsapp_error_phone_required'));
       return;
     }
-    if (cleaned.replace(/[\s\-\(\)]/g, '').length < 8) {
+    if (cleaned.replace(/[\s\-\(\)\+]/g, '').length < 8) {
       Alert.alert(t('error_title'), t('whatsapp_error_phone_invalid'));
       return;
     }
@@ -110,7 +111,16 @@ const WhatsAppBot: React.FC = () => {
             <View style={styles.phoneRow}>
               <View style={styles.phonePrefix}>
                 <Phone size={16} color="#25D366" strokeWidth={2} />
-                <Text style={styles.phonePrefixText}>+</Text>
+                <Text style={styles.phonePrefixPlus}>+</Text>
+                <TextInput
+                  style={styles.countryCodeInput}
+                  value={countryCode}
+                  onChangeText={v => setCountryCode(v.replace(/[^0-9]/g, '').slice(0, 4))}
+                  keyboardType="numeric"
+                  maxLength={4}
+                  placeholder="212"
+                  placeholderTextColor="#9CA3AF"
+                />
               </View>
               <TextInput
                 style={styles.phoneInput}
@@ -119,7 +129,7 @@ const WhatsAppBot: React.FC = () => {
                 value={phoneNumber}
                 onChangeText={setPhoneNumber}
                 keyboardType="phone-pad"
-                maxLength={20}
+                maxLength={9}
               />
             </View>
             <Text style={styles.inputHint}>{t('whatsapp_phone_hint')}</Text>
@@ -277,12 +287,25 @@ const styles = StyleSheet.create({
   phonePrefix: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 14,
+    gap: 2,
+    paddingHorizontal: 10,
     paddingVertical: 14,
     borderRightWidth: 1.5,
     borderRightColor: '#E5E7EB',
     backgroundColor: '#F0FFF4',
+  },
+  phonePrefixPlus: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#25D366',
+  },
+  countryCodeInput: {
+    minWidth: 36,
+    maxWidth: 52,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#15803D',
+    padding: 0,
   },
   phonePrefixText: {
     fontSize: 16,

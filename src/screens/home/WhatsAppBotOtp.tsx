@@ -18,7 +18,7 @@ import { ArrowLeft, MessageCircle, CheckCircle2, RefreshCw } from 'lucide-react-
 import api from '../../api';
 import { Api_Endpoints } from '../../services/endpoints';
 
-const OTP_LENGTH = 6;
+const OTP_LENGTH = 4;
 const RESEND_COOLDOWN = 30;
 
 const WhatsAppBotOtp: React.FC = () => {
