@@ -35,6 +35,7 @@ import { launchCamera } from 'react-native-image-picker';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import api from '../../api';
 import { Api_Endpoints } from '../../services/endpoints';
+import { useInvoice } from '../../hooks/useInvoice';
 import { CreateClientModal } from '../../components/clients/CreateClientModal';
 import ArticleModal from './ArticleModal';
 import { invoiceStyles as styles } from '../../styles/invoice.styles';
@@ -106,6 +107,7 @@ const CreateInvoiceModal: React.FC<{
 }> = ({ visible, onClose, accounts, clients, customerId, onCreated, onSave, editItem, onUpdate, onClientsRefresh, defaultClientId }) => {
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { getInvoiceResources } = useInvoice();
 
   // Non-form UI states
   const [showArticleModal, setShowArticleModal] = useState(false);
@@ -185,7 +187,7 @@ const CreateInvoiceModal: React.FC<{
       reset({
         invoiceNumber: editItem.invoice_number,
         date: datePart,
-        validUntil: editItem.valid_until ? editItem.valid_until.split('T')[0] : '',
+        validUntil: (editItem.due_date ?? editItem.valid_until) ? (editItem.due_date ?? editItem.valid_until ?? '').split('T')[0] : '',
         clientId: client?.id ?? undefined,
         accountId: editItem.payment_method ?? undefined,
         status: editItem.status,
@@ -196,6 +198,7 @@ const CreateInvoiceModal: React.FC<{
           quantity: a.quantity,
           totalHT: parseFloat(a.total_price_ht),
           tva: parseFloat(a.tva_percentage),
+          product_id: a.product_id,
         })),
       });
     } else {
@@ -203,18 +206,28 @@ const CreateInvoiceModal: React.FC<{
       const y = today.getFullYear();
       const mo = String(today.getMonth() + 1).padStart(2, '0');
       const d = String(today.getDate()).padStart(2, '0');
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const ty = tomorrow.getFullYear();
+      const tmo = String(tomorrow.getMonth() + 1).padStart(2, '0');
+      const td = String(tomorrow.getDate()).padStart(2, '0');
       setDocument(null);
       setTempDate(today);
-      reset({
-        invoiceNumber: '',
-        date: `${y}-${mo}-${d}`,
-        validUntil: '',
-        clientId: defaultClientId ?? undefined,
-        accountId: undefined,
-        status: 'Issued',
-        notes: '',
-        articles: [],
-      });
+      setTempDueDate(tomorrow);
+      (async () => {
+        const resourcesResult = await getInvoiceResources();
+        const autoInvoiceNumber = (resourcesResult.resources as any)?.invoice_number ?? '';
+        reset({
+          invoiceNumber: autoInvoiceNumber,
+          date: `${y}-${mo}-${d}`,
+          validUntil: `${ty}-${tmo}-${td}`,
+          clientId: defaultClientId ?? undefined,
+          accountId: undefined,
+          status: 'Issued',
+          notes: '',
+          articles: [],
+        });
+      })();
     }
   }, [visible]);
 
@@ -343,6 +356,8 @@ const CreateInvoiceModal: React.FC<{
           tva_percentage: a.tva,
           // ...(a.product_id ? { product_id: a.product_id } : {}),
           product_id: a.product_id,
+          unit_id: (a as any).unit_id ?? null,
+          discount: (a as any).discount ?? null,
         })),
       };
       if (editItem && onUpdate) {
@@ -441,12 +456,11 @@ const CreateInvoiceModal: React.FC<{
                 <Controller
                   control={control}
                   name="invoiceNumber"
-                  render={({ field: { value, onChange, onBlur } }) => (
+                  render={({ field: { value } }) => (
                     <TextInput
-                      style={[styles.fieldInput, errors.invoiceNumber && styles.fieldInputError]}
+                      style={[styles.fieldInput, errors.invoiceNumber && styles.fieldInputError, { color: '#6B7280', backgroundColor: '#F3F4F6' }]}
                       value={value}
-                      onChangeText={onChange}
-                      onBlur={onBlur}
+                      editable={false}
                       placeholder={t('placeholder_invoice_number')}
                       placeholderTextColor="#9CA3AF"
                     />

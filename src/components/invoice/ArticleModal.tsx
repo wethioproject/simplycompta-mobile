@@ -19,7 +19,7 @@ import { useInvoice } from '../../hooks/useInvoice';
 import { invoiceStyles as styles } from '../../styles/invoice.styles';
 import type { Article } from '../../types/invoice.types';
 
-const CATEGORY_OPTIONS = ['Produit', 'Service'] as const;
+const CATEGORY_OPTIONS = ['Product', 'Service'] as const;
 
 const ArticleModal: React.FC<{
   visible: boolean;
@@ -31,22 +31,25 @@ const ArticleModal: React.FC<{
   const { getProducts } = useProducts();
   const { createProduct, getProductResources } = useInvoice();
 
-  const [form, setForm] = useState<Article & { description?: string; reference?: string; category?: string }>({
+  const [form, setForm] = useState<Article & { description?: string; reference?: string; category?: string; unit_id?: number; discount?: number }>({
     designation: '',
     unitPriceHT: 0,
     quantity: 1,
     totalHT: 0,
-    tva: 20,
+    tva: null as any,
     description: '',
     reference: '',
-    category: 'Produit',
+    category: 'Product',
   });
-  const [tvaOptions, setTvaOptions] = useState<number[]>([0, 7, 10, 14, 20]);
+  const [tvaOptions, setTvaOptions] = useState<{ id: number; name: string; rate: string }[]>([]);
+  const [unitOptions, setUnitOptions] = useState<{ id: number; name: string }[]>([]);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [showTvaPicker, setShowTvaPicker] = useState(false);
+  const [showUnitPicker, setShowUnitPicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState<number | undefined>(undefined);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetch product resources on mount
@@ -56,8 +59,11 @@ const ArticleModal: React.FC<{
       console.log('preeeeeeee', result);
       if (result.success && result.resources) {
         const resources = result.resources as any;
-        if (resources.tva && Array.isArray(resources.tva)) {
-          setTvaOptions(resources.tva.map((t: any) => typeof t === 'number' ? t : parseFloat(t)));
+        if (resources.tax && Array.isArray(resources.tax)) {
+          setTvaOptions(resources.tax);
+        }
+        if (resources.units && Array.isArray(resources.units)) {
+          setUnitOptions(resources.units);
         }
       }
     };
@@ -66,8 +72,11 @@ const ArticleModal: React.FC<{
 
   // Recalculate total whenever unit price or quantity changes
   useEffect(() => {
-    setForm(prev => ({ ...prev, totalHT: prev.unitPriceHT * prev.quantity }));
-  }, [form.unitPriceHT, form.quantity]);
+    setForm(prev => ({
+      ...prev,
+      totalHT: Math.max(0, prev.unitPriceHT * prev.quantity - (prev.discount ?? 0)),
+    }));
+  }, [form.unitPriceHT, form.quantity, form.discount]);
 
   // Reset state when modal closes
   useEffect(() => {
@@ -80,6 +89,7 @@ const ArticleModal: React.FC<{
 
   const handleDesignationChange = (value: string) => {
     setForm(prev => ({ ...prev, designation: value }));
+    setSelectedProductId(undefined);
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     if (!value.trim()) {
       setSuggestions([]);
@@ -103,18 +113,21 @@ const ArticleModal: React.FC<{
   };
 
   const handleSelectSuggestion = (product: any) => {
-    const unitPrice = parseFloat(product.unit_price_ht) || 0;
+    const unitPrice = parseFloat(product.sale_price) || 0;
     const qty = parseFloat(product.quantity) || form.quantity;
-    const tva = parseFloat(product.tva_percentage) || form.tva;
+    const tva = parseFloat(product.tax_id) || form.tva;
+    setSelectedProductId(product.id ?? undefined);
     setForm({
-      designation: product.designation,
+      designation: product.name ?? product.designation ?? '',
       unitPriceHT: unitPrice,
       quantity: qty,
       totalHT: unitPrice * qty,
       tva,
       description: product.description ?? '',
-      reference: product.reference ?? '',
-      category: product.category ?? 'Produit',
+      reference: product.sku ?? product.reference ?? '',
+      category: product.type ?? product.category ?? 'product',
+      unit_id: product.unit_id ?? undefined,
+      discount: product.discount ? parseFloat(product.discount) : undefined,
     });
     setSuggestions([]);
     setShowSuggestions(false);
@@ -125,26 +138,29 @@ const ArticleModal: React.FC<{
       Alert.alert(t('alert_field_required'), t('message_designation_required'));
       return;
     }
-    let product_id: number | undefined;
+    let product_id: number | undefined = selectedProductId;
     if (customerId) {
       const result = await createProduct({
         customer_id: customerId,
         designation: form.designation,
         description: form.description ?? '',
         reference: form.reference ?? '',
-        category: form.category ?? 'Produit',
+        category: form.category ?? 'product',
         unit_price_ht: form.unitPriceHT,
         tva_percentage: form.tva,
         quantity: form.quantity,
         total_price_ht: form.totalHT,
+        unit_id: (form as any).unit_id ?? null,
       });
       if (result.success) {
         product_id = (result.data as any)?.id ?? (result as any)?.product_id;
       }
-      console.log('wewewewe',product_id);
+      // if createProduct fails (e.g. duplicate designation), fall back to selectedProductId from suggestion
     }
+    console.log('Confirming article with data:', { ...form, product_id });
     onConfirm({ ...form, product_id });
-    setForm({ designation: '', unitPriceHT: 0, quantity: 1, totalHT: 0, tva: 20, description: '', reference: '', category: 'Produit' });
+    setForm({ designation: '', unitPriceHT: 0, quantity: 1, totalHT: 0, tva: null as any, description: '', reference: '', category: 'Product', unit_id: undefined, discount: undefined });
+    setSelectedProductId(undefined);
     setSuggestions([]);
     setShowSuggestions(false);
   };
@@ -203,9 +219,9 @@ const ArticleModal: React.FC<{
                         onPress={() => handleSelectSuggestion(product)}
                         activeOpacity={0.7}
                       >
-                        <Text style={styles.suggestionDesignation}>{product.designation}</Text>
+                        <Text style={styles.suggestionDesignation}>{product.name ?? product.designation}</Text>
                         <Text style={styles.suggestionMeta}>
-                          {parseFloat(product.unit_price_ht).toLocaleString('fr-FR')} MAD HT  ·  TVA {product.tva_percent}%
+                          {parseFloat(product.sale_price ?? product.unit_price_ht ?? '0').toLocaleString('fr-FR')} MAD HT  ·  TVA {product.tax_id ?? product.tva_percentage ?? 0}%
                         </Text>
                       </TouchableOpacity>
                     ))
@@ -259,7 +275,7 @@ const ArticleModal: React.FC<{
                 activeOpacity={0.7}
               >
                 <Text style={styles.pickerValueText}>
-                  {form.category || 'Produit'}
+                  {form.category || 'product'}
                 </Text>
                 <ChevronDown size={18} color="#0B5FA5" />
               </TouchableOpacity>
@@ -305,6 +321,34 @@ const ArticleModal: React.FC<{
               />
             </View>
 
+            {/* Unit */}
+            <View style={styles.fieldGroup}>
+              <View style={styles.fieldLabelRow}>
+                <Text style={styles.fieldLabel}>{t('label_unit')}</Text>
+              </View>
+              <TouchableOpacity style={styles.pickerRow} onPress={() => setShowUnitPicker(true)} activeOpacity={0.7}>
+                <Text style={(form as any).unit_id ? styles.pickerValueText : styles.pickerPlaceholderText}>
+                  {unitOptions.find(u => u.id === (form as any).unit_id)?.name ?? t('placeholder_select')}
+                </Text>
+                <ChevronDown size={18} color="#0B5FA5" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Discount */}
+            <View style={styles.fieldGroup}>
+              <View style={styles.fieldLabelRow}>
+                <Text style={styles.fieldLabel}>{t('label_discount')}</Text>
+              </View>
+              <TextInput
+                style={styles.fieldInput}
+                placeholder="0"
+                placeholderTextColor="#BBBBBB"
+                keyboardType="decimal-pad"
+                value={form.discount != null && form.discount > 0 ? String(form.discount) : ''}
+                onChangeText={v => setForm(prev => ({ ...prev, discount: parseFloat(v) || undefined }))}
+              />
+            </View>
+
             {/* TVA */}
             <View style={styles.fieldGroup}>
               <View style={styles.fieldLabelRow}>
@@ -317,7 +361,10 @@ const ArticleModal: React.FC<{
                 activeOpacity={0.7}
               >
                 <Text style={styles.pickerValueText}>
-                  {form.tva}%
+                  {(() => {
+                    const selected = tvaOptions.find(t => t.id === form.tva);
+                    return selected ? `${selected.name} (${selected.rate})` : '-';
+                  })()}
                 </Text>
                 <ChevronDown size={18} color="#0B5FA5" />
               </TouchableOpacity>
@@ -327,8 +374,22 @@ const ArticleModal: React.FC<{
             {form.unitPriceHT > 0 && form.quantity > 0 && (
               <View style={styles.computedBox}>
                 <View style={styles.computedRow}>
-                  <Text style={styles.computedLabel}>{t('label_price_ht_total')}</Text>
+                  <Text style={styles.computedLabel}>{t('label_subtotal_ht')}</Text>
                   <Text style={styles.computedValue}>
+                    {(form.unitPriceHT * form.quantity).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
+                  </Text>
+                </View>
+                {(form.discount ?? 0) > 0 && (
+                  <View style={styles.computedRow}>
+                    <Text style={[styles.computedLabel, { color: '#EF4444' }]}>{t('label_discount')}</Text>
+                    <Text style={[styles.computedValue, { color: '#EF4444' }]}>
+                      - {(form.discount ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
+                    </Text>
+                  </View>
+                )}
+                <View style={[styles.computedRow, { borderTopWidth: 1, borderTopColor: '#E5E7EB', marginTop: 6, paddingTop: 6 }]}>
+                  <Text style={[styles.computedLabel, { fontWeight: '700', color: '#1F2937' }]}>{t('label_price_ht_total')}</Text>
+                  <Text style={[styles.computedValue, { fontWeight: '700', color: '#1F2937' }]}>
                     {form.totalHT.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
                   </Text>
                 </View>
@@ -340,7 +401,11 @@ const ArticleModal: React.FC<{
               <View style={styles.ttcBox}>
                 <Text style={styles.ttcLabel}>{t('label_price_ttc')}</Text>
                 <Text style={styles.ttcValue}>
-                  {(form.totalHT * (1 + form.tva / 100)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
+                  {(() => {
+                    const selectedTax = tvaOptions.find(t => t.id === form.tva);
+                    const rate = selectedTax ? parseFloat(selectedTax.rate) : 0;
+                    return (form.totalHT * (1 + rate / 100)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                  })()} MAD
                 </Text>
               </View>
             )}
@@ -358,9 +423,9 @@ const ArticleModal: React.FC<{
               <Text style={styles.cancelBtnText}>{t('modal_cancel_text')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.saveBtn, (!form.designation.trim() || !form.unitPriceHT) && styles.saveBtnDisabled]}
+              style={[styles.saveBtn, (!form.designation.trim() || !form.unitPriceHT || form.tva == null) && styles.saveBtnDisabled]}
               onPress={handleConfirm}
-              disabled={!form.designation.trim() || !form.unitPriceHT}
+              disabled={!form.designation.trim() || !form.unitPriceHT || form.tva == null}
               activeOpacity={0.8}
             >
               <Text style={styles.saveBtnText}>{t('button_add')}</Text>
@@ -404,15 +469,41 @@ const ArticleModal: React.FC<{
                 <Text style={styles.pickerSheetTitle}>{t('label_tva_percent')}</Text>
                 {tvaOptions.map(opt => (
                   <TouchableOpacity
-                    key={opt}
+                    key={opt.id}
                     style={styles.pickerOption}
-                    onPress={() => { setForm(prev => ({ ...prev, tva: opt })); setShowTvaPicker(false); }}
+                    onPress={() => { setForm(prev => ({ ...prev, tva: opt.id })); setShowTvaPicker(false); }}
                     activeOpacity={0.7}
                   >
-                    <Text style={[styles.pickerOptionText, form.tva === opt && styles.pickerOptionSelected]}>
-                      {opt}%
+                    <Text style={[styles.pickerOptionText, form.tva === opt.id && styles.pickerOptionSelected]}>
+                      {opt.name} ({opt.rate})
                     </Text>
-                    {form.tva === opt && <Text style={styles.pickerCheck}>✓</Text>}
+                    {form.tva === opt.id && <Text style={styles.pickerCheck}>✓</Text>}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </TouchableOpacity>
+          )}
+
+          {/* Unit Picker inline overlay */}
+          {showUnitPicker && (
+            <TouchableOpacity
+              style={styles.inlinePickerOverlay}
+              activeOpacity={1}
+              onPress={() => setShowUnitPicker(false)}
+            >
+              <View style={styles.inlinePickerSheet}>
+                <Text style={styles.pickerSheetTitle}>{t('label_unit')}</Text>
+                {unitOptions.map(opt => (
+                  <TouchableOpacity
+                    key={opt.id}
+                    style={styles.pickerOption}
+                    onPress={() => { setForm(prev => ({ ...prev, unit_id: opt.id })); setShowUnitPicker(false); }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.pickerOptionText, (form as any).unit_id === opt.id && styles.pickerOptionSelected]}>
+                      {opt.name}
+                    </Text>
+                    {(form as any).unit_id === opt.id && <Check size={16} color="#0B5FA5" />}
                   </TouchableOpacity>
                 ))}
               </View>

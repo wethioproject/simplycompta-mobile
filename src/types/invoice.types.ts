@@ -25,6 +25,7 @@ export interface InvoiceArticle {
   quantity: number;
   total_price_ht: string;
   tva_percentage: string;
+  product_id?: number;
 }
 
 export interface InvoiceItem {
@@ -39,6 +40,7 @@ export interface InvoiceItem {
   document_path: string | null;
   invoice_url: string | null;
   valid_until?: string | null;
+  due_date?: string | null;
   client: { id: number; client_name: string } | null;
   articles: InvoiceArticle[];
   notes?: string | null;
@@ -74,14 +76,14 @@ export const STATUT_OPTIONS_DETAIL_MODAL = ['Issued', 'Paid', 'Cancelled'];
 
 export const PAYMENT_METHODS = [
   { key: 'cash',             fr: 'Espèces',                   en: 'Cash' },
-  { key: 'bank_transfer',    fr: 'Virement bancaire',          en: 'Bank Transfer' },
+  { key: 'bank transfer',    fr: 'Virement bancaire',          en: 'Bank Transfer' },
   { key: 'card',             fr: 'Carte bancaire',             en: 'Credit / Debit Card' },
   { key: 'cheque',           fr: 'Chèque',                     en: 'Cheque' },
-  { key: 'mobile_payment',   fr: 'Paiement mobile',            en: 'Mobile Payment' },
-  { key: 'online_payment',   fr: 'Paiement en ligne',          en: 'Online Payment' },
-  { key: 'direct_debit',     fr: 'Prélèvement automatique',    en: 'Direct Debit' },
+  { key: 'mobile payment',   fr: 'Paiement mobile',            en: 'Mobile Payment' },
+  { key: 'online payment',   fr: 'Paiement en ligne',          en: 'Online Payment' },
+  { key: 'direct debit',     fr: 'Prélèvement automatique',    en: 'Direct Debit' },
   { key: 'deferred',         fr: 'Paiement différé',           en: 'Deferred Payment' },
-  { key: 'instant_transfer', fr: 'Virement instantané',        en: 'Instant Bank Transfer' },
+  { key: 'instant transfer', fr: 'Virement instantané',        en: 'Instant Bank Transfer' },
   { key: 'other',            fr: 'Autre',                      en: 'Other' },
 ] as const;
 

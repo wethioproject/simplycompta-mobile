@@ -73,8 +73,9 @@ class InvoiceService {
                 formData.append(`articles[${index}][total_price_ht]`, String(article.total_price_ht));
                 formData.append(`articles[${index}][tva_percentage]`, String(article.tva_percentage));
                 formData.append(`articles[${index}][product_id]`, String(article.product_id));
+                if (article.unit_id != null) formData.append(`articles[${index}][unit_id]`, String(article.unit_id));
+                if (article.discount != null) formData.append(`articles[${index}][discount]`, String(article.discount));
             });
-
             const response = await api.post<any>(Api_Endpoints.customerInvoice, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
@@ -88,7 +89,7 @@ class InvoiceService {
 
     async createProduct(payload: any): Promise<any> {
         try {
-            const body = {
+            const body: any = {
                 customer_id: String(payload.customer_id),
                 designation: payload.designation,
                 description: payload.description,
@@ -99,6 +100,7 @@ class InvoiceService {
                 quantity: String(payload.quantity),
                 total_price_ht: String(payload.total_price_ht),
             };
+            if (payload.unit_id != null) body.unit_id = String(payload.unit_id);
 
             const response = await api.post(
                 Api_Endpoints.customerProduct,
@@ -143,6 +145,8 @@ class InvoiceService {
                 formData.append(`articles[${index}][total_price_ht]`, String(article.total_price_ht));
                 formData.append(`articles[${index}][tva_percentage]`, String(article.tva_percentage));
                 formData.append(`articles[${index}][product_id]`, String(article.product_id));
+                if (article.unit_id != null) formData.append(`articles[${index}][unit_id]`, String(article.unit_id));
+                if (article.discount != null) formData.append(`articles[${index}][discount]`, String(article.discount));
             });
 
             const response = await api.post<any>(`${Api_Endpoints.customerInvoice}/${id}`, formData, {

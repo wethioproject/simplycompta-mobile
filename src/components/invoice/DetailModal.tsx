@@ -24,6 +24,7 @@ import {
   FileText,
 } from 'lucide-react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import RNShare from 'react-native-share';
 import { useInvoice } from '../../hooks/useInvoice';
 import { invoiceStyles as styles } from '../../styles/invoice.styles';
 import type { InvoiceArticle, InvoiceItem } from '../../types/invoice.types';
@@ -87,6 +88,8 @@ const DetailModal: React.FC<DetailModalProps> = ({
           quantity: a.quantity,
           total_price_ht: parseFloat(a.total_price_ht),
           tva_percentage: parseFloat(a.tva_percentage),
+          product_id: a.product_id,
+          unit_id: (a as any).unit_id ?? null,
         })),
       };
       const result = await onUpdate(item.id, payload);
@@ -201,18 +204,21 @@ const DetailModal: React.FC<DetailModalProps> = ({
         return;
       }
 
+      const subject = t('subject_share_invoice').replace('{invoice_number}', item.invoice_number);
       const message = t('message_share_invoice').replace('{invoice_number}', item.invoice_number);
 
-      if (Platform.OS === 'ios') {
-        await Share.share({
-          url: `file://${filePath}`,
-          message,
-        });
-      } else {
-        await ReactNativeBlobUtil.android.actionViewIntent(filePath, contentType || 'application/pdf');
-      }
+      await RNShare.open({
+        url: `file://${filePath}`,
+        type: 'application/pdf',
+        filename: `${safeNumber}.pdf`,
+        title: subject,
+        subject,
+        message,
+        showAppsToView: true,
+        failOnCancel: false,
+      });
     } catch (e: any) {
-      if (e?.message !== 'User did not share') {
+      if (e?.message && !e.message.includes('cancel') && !e.message.includes('dismiss')) {
         console.error('Share error:', e);
         Alert.alert(t('error_title'), t('error_unable_to_share'));
       }
