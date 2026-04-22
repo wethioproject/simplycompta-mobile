@@ -30,12 +30,13 @@ class ProductService {
                 designation: payload.designation,
                 description: payload.description,
                 reference: payload.reference,
-                category: payload.category,
+                type: payload.type,
                 unit_price_ht: String(payload.unit_price_ht),
                 tva_percentage: String(payload.tva_percentage),
                 quantity: String(payload.quantity),
                 total_price_ht: String(payload.total_price_ht),
             };
+            if (payload.category_id != null) body.category_id = String(payload.category_id);
             if (payload.unit_id != null) body.unit_id = String(payload.unit_id);
 
             const response = await api.post(
@@ -61,12 +62,13 @@ class ProductService {
                 designation: payload.designation,
                 description: payload.description,
                 reference: payload.reference,
-                category: payload.category,
+                type: payload.type,
                 unit_price_ht: String(payload.unit_price_ht),
                 tva_percentage: String(payload.tva_percentage),
                 quantity: String(payload.quantity),
                 total_price_ht: String(payload.total_price_ht),
             };
+            if (payload.category_id != null) body.category_id = String(payload.category_id);
             if (payload.unit_id != null) body.unit_id = String(payload.unit_id);
 
             const response = await api.put(

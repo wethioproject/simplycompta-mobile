@@ -19,7 +19,7 @@ import { useInvoice } from '../../hooks/useInvoice';
 import { invoiceStyles as styles } from '../../styles/invoice.styles';
 import type { Article } from '../../types/invoice.types';
 
-const CATEGORY_OPTIONS = ['Product', 'Service'] as const;
+const TYPE_OPTIONS = ['Product', 'Service'] as const;
 
 const ArticleModal: React.FC<{
   visible: boolean;
@@ -31,7 +31,7 @@ const ArticleModal: React.FC<{
   const { getProducts } = useProducts();
   const { createProduct, getProductResources } = useInvoice();
 
-  const [form, setForm] = useState<Article & { description?: string; reference?: string; category?: string; unit_id?: number; discount?: number }>({
+  const [form, setForm] = useState<Article & { description?: string; reference?: string; type?: string; unit_id?: number; discount?: number }>({
     designation: '',
     unitPriceHT: 0,
     quantity: 1,
@@ -39,16 +39,19 @@ const ArticleModal: React.FC<{
     tva: null as any,
     description: '',
     reference: '',
-    category: 'Product',
+    type: 'Product',
   });
   const [tvaOptions, setTvaOptions] = useState<{ id: number; name: string; rate: string }[]>([]);
   const [unitOptions, setUnitOptions] = useState<{ id: number; name: string }[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<{ id: number; name: string; type: string }[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [showTvaPicker, setShowTvaPicker] = useState(false);
   const [showUnitPicker, setShowUnitPicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [showTypePicker, setShowTypePicker] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<number | undefined>(undefined);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -64,6 +67,9 @@ const ArticleModal: React.FC<{
         }
         if (resources.units && Array.isArray(resources.units)) {
           setUnitOptions(resources.units);
+        }
+        if (resources.categories && Array.isArray(resources.categories)) {
+          setCategoryOptions(resources.categories);
         }
       }
     };
@@ -125,10 +131,11 @@ const ArticleModal: React.FC<{
       tva,
       description: product.description ?? '',
       reference: product.sku ?? product.reference ?? '',
-      category: product.type ?? product.category ?? 'product',
+      type: product.type ?? 'Product',
       unit_id: product.unit_id ?? undefined,
       discount: product.discount ? parseFloat(product.discount) : undefined,
     });
+    setSelectedCategoryId(product.category_id ?? null);
     setSuggestions([]);
     setShowSuggestions(false);
   };
@@ -145,7 +152,8 @@ const ArticleModal: React.FC<{
         designation: form.designation,
         description: form.description ?? '',
         reference: form.reference ?? '',
-        category: form.category ?? 'product',
+        type: form.type ?? 'Product',
+        category_id: selectedCategoryId,
         unit_price_ht: form.unitPriceHT,
         tva_percentage: form.tva,
         quantity: form.quantity,
@@ -159,8 +167,9 @@ const ArticleModal: React.FC<{
     }
     console.log('Confirming article with data:', { ...form, product_id });
     onConfirm({ ...form, product_id });
-    setForm({ designation: '', unitPriceHT: 0, quantity: 1, totalHT: 0, tva: null as any, description: '', reference: '', category: 'Product', unit_id: undefined, discount: undefined });
+    setForm({ designation: '', unitPriceHT: 0, quantity: 1, totalHT: 0, tva: null as any, description: '', reference: '', type: 'Product', unit_id: undefined, discount: undefined });
     setSelectedProductId(undefined);
+    setSelectedCategoryId(null);
     setSuggestions([]);
     setShowSuggestions(false);
   };
@@ -263,19 +272,34 @@ const ArticleModal: React.FC<{
               />
             </View>
 
+            {/* Type */}
+            <View style={styles.fieldGroup}>
+              <View style={styles.fieldLabelRow}>
+                <Text style={styles.fieldLabel}>{t('label_type')}</Text>
+                <Text style={styles.fieldRequired}>*</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.pickerRow}
+                onPress={() => setShowTypePicker(true)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.pickerValueText}>{form.type ?? 'Product'}</Text>
+                <ChevronDown size={18} color="#0B5FA5" />
+              </TouchableOpacity>
+            </View>
+
             {/* Category */}
             <View style={styles.fieldGroup}>
               <View style={styles.fieldLabelRow}>
                 <Text style={styles.fieldLabel}>{t('label_category')}</Text>
-                <Text style={styles.fieldRequired}>*</Text>
               </View>
               <TouchableOpacity
                 style={styles.pickerRow}
                 onPress={() => setShowCategoryPicker(true)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.pickerValueText}>
-                  {form.category || 'product'}
+                <Text style={selectedCategoryId ? styles.pickerValueText : styles.pickerPlaceholderText}>
+                  {categoryOptions.find(c => c.id === selectedCategoryId)?.name ?? t('placeholder_select')}
                 </Text>
                 <ChevronDown size={18} color="#0B5FA5" />
               </TouchableOpacity>
@@ -432,6 +456,32 @@ const ArticleModal: React.FC<{
             </TouchableOpacity>
           </View>
 
+          {/* Type Picker inline overlay */}
+          {showTypePicker && (
+            <TouchableOpacity
+              style={styles.inlinePickerOverlay}
+              activeOpacity={1}
+              onPress={() => setShowTypePicker(false)}
+            >
+              <View style={styles.inlinePickerSheet}>
+                <Text style={styles.pickerSheetTitle}>{t('label_type')}</Text>
+                {TYPE_OPTIONS.map(opt => (
+                  <TouchableOpacity
+                    key={opt}
+                    style={styles.pickerOption}
+                    onPress={() => { setForm(prev => ({ ...prev, type: opt })); setShowTypePicker(false); }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.pickerOptionText, form.type === opt && styles.pickerOptionSelected]}>
+                      {opt}
+                    </Text>
+                    {form.type === opt && <Check size={16} color="#0B5FA5" />}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </TouchableOpacity>
+          )}
+
           {/* Category Picker inline overlay */}
           {showCategoryPicker && (
             <TouchableOpacity
@@ -441,17 +491,17 @@ const ArticleModal: React.FC<{
             >
               <View style={styles.inlinePickerSheet}>
                 <Text style={styles.pickerSheetTitle}>{t('label_category')}</Text>
-                {CATEGORY_OPTIONS.map(cat => (
+                {categoryOptions.map(cat => (
                   <TouchableOpacity
-                    key={cat}
+                    key={cat.id}
                     style={styles.pickerOption}
-                    onPress={() => { setForm(prev => ({ ...prev, category: cat })); setShowCategoryPicker(false); }}
+                    onPress={() => { setSelectedCategoryId(cat.id); setShowCategoryPicker(false); }}
                     activeOpacity={0.7}
                   >
-                    <Text style={[styles.pickerOptionText, form.category === cat && styles.pickerOptionSelected]}>
-                      {cat}
+                    <Text style={[styles.pickerOptionText, selectedCategoryId === cat.id && styles.pickerOptionSelected]}>
+                      {cat.name}
                     </Text>
-                    {form.category === cat && <Check size={16} color="#0B5FA5" />}
+                    {selectedCategoryId === cat.id && <Check size={16} color="#0B5FA5" />}
                   </TouchableOpacity>
                 ))}
               </View>

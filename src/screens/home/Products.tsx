@@ -25,7 +25,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 
-const CATEGORY_OPTIONS = ['Product', 'Service'] as const;
+const TYPE_OPTIONS = ['Product', 'Service'] as const;
 
 interface Product {
   id: number;
@@ -38,13 +38,15 @@ interface Product {
   description?: string;
   sku?: string;
   type?: string;
+  category_id?: number | null;
 }
 
 const productSchema = yup.object({
   designation: yup.string().trim().required('error_designation_required'),
   description: yup.string().trim().required('error_description_required'),
   reference: yup.string().trim().required('error_reference_required'),
-  category: yup.string().trim().required('error_category_required'),
+  type: yup.string().trim().required('error_type_required'),
+  category_id: yup.string().default(''),
   unit_price_ht: yup
     .string()
     .trim()
@@ -67,7 +69,8 @@ interface ProductFormValues {
   designation: string;
   description: string;
   reference: string;
-  category: string;
+  type: string;
+  category_id: string;
   unit_price_ht: string;
   tva_percentage: string;
   quantity: string;
@@ -95,6 +98,8 @@ const Products: React.FC = ({ navigation }: any) => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [saving, setSaving] = useState(false);
+  const [categoryOptions, setCategoryOptions] = useState<{ id: number; name: string; type?: string }[]>([]);
+  const [showTypePicker, setShowTypePicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showTvaPicker, setShowTvaPicker] = useState(false);
   const [showUnitPicker, setShowUnitPicker] = useState(false);
@@ -112,7 +117,8 @@ const Products: React.FC = ({ navigation }: any) => {
       designation: '',
       description: '',
       reference: '',
-      category: 'Product',
+      type: 'Product',
+      category_id: '',
       unit_price_ht: '',
       tva_percentage: '20',
       quantity: '',
@@ -154,6 +160,9 @@ const Products: React.FC = ({ navigation }: any) => {
         if (resources.units && Array.isArray(resources.units)) {
           setUnitOptions(resources.units);
         }
+        if (resources.categories && Array.isArray(resources.categories)) {
+          setCategoryOptions(resources.categories);
+        }
       }
     };
     fetchResources();
@@ -170,7 +179,7 @@ const Products: React.FC = ({ navigation }: any) => {
   // Open modal
   const openCreate = () => {
     setEditingProduct(null);
-    reset({ designation: '', description: '', reference: '', category: 'Product', unit_price_ht: '', tva_percentage: '', quantity: '', total_price_ht: '', unit_id: '' });
+    reset({ designation: '', description: '', reference: '', type: 'Product', category_id: '', unit_price_ht: '', tva_percentage: '', quantity: '', total_price_ht: '', unit_id: '' });
     setModalVisible(true);
   };
 
@@ -180,7 +189,8 @@ const Products: React.FC = ({ navigation }: any) => {
       designation: item.name,
       description: item.description ?? '',
       reference: item.sku ?? '',
-      category: item.type ?? 'product',
+      type: item.type ?? 'Product',
+      category_id: item.category_id != null ? String(item.category_id) : '',
       unit_price_ht: item.sale_price,
       tva_percentage: item.tax_id,
       quantity: String(item.quantity),
@@ -209,7 +219,8 @@ const Products: React.FC = ({ navigation }: any) => {
       designation: data.designation,
       description: data.description,
       reference: data.reference,
-      category: data.category,
+      type: data.type,
+      category_id: data.category_id ? Number(data.category_id) : null,
       unit_price_ht: data.unit_price_ht,
       tva_percentage: data.tva_percentage,
       quantity: data.quantity,
@@ -578,31 +589,54 @@ const Products: React.FC = ({ navigation }: any) => {
                 )}
               </View>
 
-              {/* ── Category dropdown ───────────────────────────────────── */}
+              {/* ── Type dropdown (static) ──────────────────────────── */}
               <View style={styles.fieldGroup}>
                 <View style={styles.fieldLabelRow}>
-                  <Text style={styles.fieldLabel}>{t('label_category')}</Text>
+                  <Text style={styles.fieldLabel}>{t('label_type')}</Text>
                   <Text style={styles.fieldRequired}>*</Text>
                 </View>
                 <Controller
                   control={control}
-                  name="category"
+                  name="type"
                   render={({ field: { value } }) => (
                     <TouchableOpacity
-                      style={[styles.pickerRow, errors.category && styles.fieldInputError]}
-                      onPress={() => setShowCategoryPicker(true)}
+                      style={[styles.pickerRow, errors.type && styles.fieldInputError]}
+                      onPress={() => setShowTypePicker(true)}
                       activeOpacity={0.7}
                     >
                       <Text style={value ? styles.pickerValueText : styles.pickerPlaceholderText}>
-                        {value || t('placeholder_category')}
+                        {value || t('placeholder_select')}
                       </Text>
                       <ChevronDown size={18} color="#0B5FA5" />
                     </TouchableOpacity>
                   )}
                 />
-                {errors.category && (
-                  <Text style={styles.fieldError}>{t(errors.category.message ?? '')}</Text>
+                {errors.type && (
+                  <Text style={styles.fieldError}>{t(errors.type.message ?? '')}</Text>
                 )}
+              </View>
+
+              {/* ── Category dropdown (API-driven) ──────────────────── */}
+              <View style={styles.fieldGroup}>
+                <View style={styles.fieldLabelRow}>
+                  <Text style={styles.fieldLabel}>{t('label_category')}</Text>
+                </View>
+                <Controller
+                  control={control}
+                  name="category_id"
+                  render={({ field: { value } }) => (
+                    <TouchableOpacity
+                      style={styles.pickerRow}
+                      onPress={() => setShowCategoryPicker(true)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={value ? styles.pickerValueText : styles.pickerPlaceholderText}>
+                        {categoryOptions.find(c => String(c.id) === value)?.name ?? t('placeholder_select')}
+                      </Text>
+                      <ChevronDown size={18} color="#0B5FA5" />
+                    </TouchableOpacity>
+                  )}
+                />
               </View>
 
               {/* ── Prix H.T. ────────────────────────────────────────── */}
@@ -769,7 +803,34 @@ const Products: React.FC = ({ navigation }: any) => {
               </TouchableOpacity>
             </View>
 
-            {/* ── Category Picker inline overlay ─────────────────── */}
+            {/* ── Type Picker inline overlay ──────────────────────── */}
+            {showTypePicker && (
+              <TouchableOpacity
+                style={styles.inlinePickerOverlay}
+                activeOpacity={1}
+                onPress={() => setShowTypePicker(false)}
+              >
+                <View style={styles.inlinePickerSheet}>
+                  <Text style={styles.pickerSheetTitle}>{t('label_type')}</Text>
+                  {TYPE_OPTIONS.map(opt => {
+                    const isSelected = watch('type') === opt;
+                    return (
+                      <TouchableOpacity
+                        key={opt}
+                        style={styles.pickerOption}
+                        onPress={() => { setValue('type', opt, { shouldValidate: true }); setShowTypePicker(false); }}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.pickerOptionText, isSelected && styles.pickerOptionSelected]}>{opt}</Text>
+                        {isSelected && <Check size={16} color="#0B5FA5" />}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </TouchableOpacity>
+            )}
+
+            {/* ── Category Picker inline overlay (API-driven) ─────── */}
             {showCategoryPicker && (
               <TouchableOpacity
                 style={styles.inlinePickerOverlay}
@@ -778,16 +839,16 @@ const Products: React.FC = ({ navigation }: any) => {
               >
                 <View style={styles.inlinePickerSheet}>
                   <Text style={styles.pickerSheetTitle}>{t('label_category')}</Text>
-                  {CATEGORY_OPTIONS.map(cat => {
-                    const isSelected = watch('category') === cat;
+                  {categoryOptions.map(cat => {
+                    const isSelected = watch('category_id') === String(cat.id);
                     return (
                       <TouchableOpacity
-                        key={cat}
+                        key={cat.id}
                         style={styles.pickerOption}
-                        onPress={() => { setValue('category', cat, { shouldValidate: true }); setShowCategoryPicker(false); }}
+                        onPress={() => { setValue('category_id', String(cat.id), { shouldValidate: true }); setShowCategoryPicker(false); }}
                         activeOpacity={0.7}
                       >
-                        <Text style={[styles.pickerOptionText, isSelected && styles.pickerOptionSelected]}>{cat}</Text>
+                        <Text style={[styles.pickerOptionText, isSelected && styles.pickerOptionSelected]}>{cat.name}</Text>
                         {isSelected && <Check size={16} color="#0B5FA5" />}
                       </TouchableOpacity>
                     );
