@@ -20,10 +20,12 @@ export const createClient = async (data: ClientFormValues) => {
     client_name: data.clientName,
     email: data.email,
     telephone: data.telephone ?? '',
-    postal_code: data.postalCode,
-    city: data.city,
+    postal_code: data.postalCode ?? '',
+    city: data.city ?? '',
     commercial_register: data.commercialRegister ?? '',
     ice: data.ice ?? '',
+    customer_type: data.customerType ?? 'Company',
+    notes: data.notes ?? '',
   });
 };
 

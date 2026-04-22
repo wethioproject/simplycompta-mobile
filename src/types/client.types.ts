@@ -45,10 +45,12 @@ export type ClientFormValues = {
   clientName: string;
   email: string;
   telephone?: string;
-  postalCode: string;
-  city: string;
+  postalCode?: string;
+  city?: string;
   commercialRegister?: string;
   ice?: string;
+  customerType?: string;
+  notes?: string;
 };
 
 export const clientSchema = yup.object({
@@ -63,8 +65,10 @@ export const clientSchema = yup.object({
     )
     .required('Email is required'),
   telephone: yup.string().optional(),
-  postalCode: yup.string().required('Postal code is required'),
-  city: yup.string().required('City is required'),
+  postalCode: yup.string().optional(),
+  city: yup.string().optional(),
   commercialRegister: yup.string().optional(),
   ice: yup.string().optional(),
+  customerType: yup.string().optional(),
+  notes: yup.string().optional(),
 });

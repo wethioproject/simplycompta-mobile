@@ -12,7 +12,7 @@ import {
   ScrollView,
   TextInput,
 } from 'react-native';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, ChevronDown, Check } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useForm, Controller } from 'react-hook-form';
@@ -34,6 +34,7 @@ export const CreateClientModal: React.FC<CreateClientModalProps> = ({
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
+  const [showTypePicker, setShowTypePicker] = useState(false);
 
   const today = new Date().toLocaleDateString('fr-FR');
 
@@ -41,6 +42,8 @@ export const CreateClientModal: React.FC<CreateClientModalProps> = ({
     control,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors, isValid },
   } = useForm<ClientFormValues>({
     resolver: yupResolver(clientSchema) as any,
@@ -54,8 +57,12 @@ export const CreateClientModal: React.FC<CreateClientModalProps> = ({
       city: '',
       commercialRegister: '',
       ice: '',
+      customerType: 'Company',
+      notes: '',
     },
   });
+
+  const watchedType = watch('customerType') ?? 'Company';
 
   useEffect(() => {
     if (!visible) reset();
@@ -192,7 +199,7 @@ export const CreateClientModal: React.FC<CreateClientModalProps> = ({
 
               <View style={styles.fieldBlock}>
                 <Text style={styles.fieldLabel}>
-                  {t('label_postal_code')} <Text style={styles.required}>*</Text>
+                  {t('label_postal_code')}
                 </Text>
                 <Controller
                   control={control}
@@ -211,7 +218,7 @@ export const CreateClientModal: React.FC<CreateClientModalProps> = ({
 
               <View style={styles.fieldBlock}>
                 <Text style={styles.fieldLabel}>
-                  {t('label_city')} <Text style={styles.required}>*</Text>
+                  {t('label_city')}
                 </Text>
                 <Controller
                   control={control}
@@ -258,6 +265,41 @@ export const CreateClientModal: React.FC<CreateClientModalProps> = ({
                   )}
                 />
               </View>
+
+              <View style={styles.fieldBlock}>
+                <Text style={styles.fieldLabel}>{t('label_client_type')} <Text style={styles.required}>*</Text></Text>
+                <TouchableOpacity
+                  style={styles.pickerRow}
+                  onPress={() => setShowTypePicker(true)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.pickerValueText}>
+                    {watchedType === 'Individual' ? t('label_individual') : t('label_company')}
+                  </Text>
+                  <ChevronDown size={18} color="#1E5BAC" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.fieldBlock}>
+                <Text style={styles.fieldLabel}>{t('label_notes')}</Text>
+                <Controller
+                  control={control}
+                  name="notes"
+                  render={({ field: { value, onChange, onBlur } }) => (
+                    <TextInput
+                      style={[styles.fieldInput, styles.notesInput]}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      placeholder={t('placeholder_notes')}
+                      placeholderTextColor="#9CA3AF"
+                      multiline
+                      numberOfLines={3}
+                      textAlignVertical="top"
+                    />
+                  )}
+                />
+              </View>
             </View>
 
             {/* Bottom confirm button */}
@@ -273,6 +315,28 @@ export const CreateClientModal: React.FC<CreateClientModalProps> = ({
             </TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
+
+        {/* Client Type Picker */}
+        <Modal visible={showTypePicker} transparent animationType="fade" onRequestClose={() => setShowTypePicker(false)}>
+          <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowTypePicker(false)}>
+            <View style={styles.pickerSheet}>
+              <Text style={styles.pickerSheetTitle}>{t('label_client_type')}</Text>
+              {(['Company', 'Individual'] as const).map(type => (
+                <TouchableOpacity
+                  key={type}
+                  style={styles.pickerOption}
+                  onPress={() => { setValue('customerType', type, { shouldValidate: true }); setShowTypePicker(false); }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.pickerOptionText, watchedType === type && styles.pickerOptionSelected]}>
+                    {type === 'Individual' ? t('label_individual') : t('label_company')}
+                  </Text>
+                  {watchedType === type && <Check size={16} color="#1E5BAC" />}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </TouchableOpacity>
+        </Modal>
       </View>
     </Modal>
   );
@@ -351,4 +415,41 @@ const styles = StyleSheet.create({
   fieldInputError: { borderColor: '#DC2626', backgroundColor: '#FFF5F5' },
   modalConfirmBtnDisabled: { backgroundColor: '#93C5FD' },
   confirmBtnDisabled: { backgroundColor: '#93C5FD', shadowOpacity: 0, elevation: 0 },
+  pickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#EEF2FF',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  pickerValueText: { fontSize: 14, color: '#1F2937', fontWeight: '500' },
+  notesInput: { minHeight: 80, paddingTop: 12 },
+  pickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'flex-end',
+  },
+  pickerSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 40,
+  },
+  pickerSheetTitle: { fontSize: 14, fontWeight: '700', color: '#1F2937', marginBottom: 12 },
+  pickerOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 13,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  pickerOptionText: { fontSize: 15, color: '#374151' },
+  pickerOptionSelected: { color: '#1E5BAC', fontWeight: '600' },
 });
