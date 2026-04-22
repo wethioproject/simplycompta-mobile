@@ -69,8 +69,11 @@ const ArticleModal: React.FC<{
   }, [getProductResources]);
 
   useEffect(() => {
-    setForm(prev => ({ ...prev, totalHT: prev.unitPriceHT * prev.quantity }));
-  }, [form.unitPriceHT, form.quantity]);
+    setForm(prev => ({
+      ...prev,
+      totalHT: Math.max(0, prev.unitPriceHT * prev.quantity - (prev.discount ?? 0)),
+    }));
+  }, [form.unitPriceHT, form.quantity, form.discount]);
 
   useEffect(() => {
     if (!visible) {
@@ -350,6 +353,46 @@ const ArticleModal: React.FC<{
                 <ChevronDown size={18} color="#0B5FA5" />
               </TouchableOpacity>
             </View>
+
+            {/* Total H.T. computed box */}
+            {form.unitPriceHT > 0 && form.quantity > 0 && (
+              <View style={styles.computedBox}>
+                <View style={styles.computedRow}>
+                  <Text style={styles.computedLabel}>{t('label_subtotal_ht')}</Text>
+                  <Text style={styles.computedValue}>
+                    {(form.unitPriceHT * form.quantity).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
+                  </Text>
+                </View>
+                {(form.discount ?? 0) > 0 && (
+                  <View style={styles.computedRow}>
+                    <Text style={[styles.computedLabel, { color: '#EF4444' }]}>{t('label_discount')}</Text>
+                    <Text style={[styles.computedValue, { color: '#EF4444' }]}>
+                      - {(form.discount ?? 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
+                    </Text>
+                  </View>
+                )}
+                <View style={[styles.computedRow, { borderTopWidth: 1, borderTopColor: '#E5E7EB', marginTop: 6, paddingTop: 6 }]}>
+                  <Text style={[styles.computedLabel, { fontWeight: '700', color: '#1F2937' }]}>{t('label_price_ht_total')}</Text>
+                  <Text style={[styles.computedValue, { fontWeight: '700', color: '#1F2937' }]}>
+                    {form.totalHT.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            {/* T.T.C. computed box */}
+            {form.unitPriceHT > 0 && (
+              <View style={styles.ttcBox}>
+                <Text style={styles.ttcLabel}>{t('label_price_ttc')}</Text>
+                <Text style={styles.ttcValue}>
+                  {(() => {
+                    const selectedTax = tvaOptions.find(opt => opt.id === form.tva);
+                    const rate = selectedTax ? parseFloat(selectedTax.rate) : 0;
+                    return (form.totalHT * (1 + rate / 100)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                  })()} MAD
+                </Text>
+              </View>
+            )}
 
             <View style={{ height: 16 }} />
           </ScrollView>

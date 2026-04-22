@@ -136,6 +136,15 @@ class DashboardService {
             throw error;
         }
     }
+
+    async getQuoteChart(params?: { month?: number; year?: number }): Promise<{ success: boolean; data: QuoteChartItem[]; convertedQuotes?: number }> {
+        try {
+            const response = await api.get(Api_Endpoints.customerQuoteChart, { params });
+            return response.data;
+        } catch (error: any) {
+            throw error;
+        }
+    }
 }
 
 export interface GraphPoint {
@@ -156,6 +165,13 @@ export interface ExpenseCategoryItem {
     label: string;
     value: string;
     file_url: string | null;
+}
+
+export interface QuoteChartItem {
+    label: string;
+    value: number;
+    invoice_url: string | null;
+    pdf_url: string | null;
 }
 
 export default new DashboardService();

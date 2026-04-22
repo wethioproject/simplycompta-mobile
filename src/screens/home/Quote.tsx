@@ -29,6 +29,9 @@ import { useQuoteList } from '../../hooks/useQuoteList';
 import CreateQuoteModal from '../../components/quote/CreateQuoteModal';
 import DetailModal from '../../components/quote/DetailModal';
 import QuoteCard from '../../components/quote/QuoteCard';
+import QuotePieChart from '../../components/quote/QuotePieChart';
+import dashboardService from '../../services/dashboardService';
+import type { QuoteChartItem } from '../../services/dashboardService';
 import { calculateInvoiceTotals } from '../../utils/invoiceCalculations';
 import type { Account, Category, Client, StackNavigation } from '../../types/invoice.types';
 import type { InvoiceItem } from '../../types/quote.types';
@@ -94,6 +97,9 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [pieLoading, setPieLoading] = useState(true);
+  const [pieChartData, setPieChartData] = useState<QuoteChartItem[]>([]);
+  const [convertedQuotes, setConvertedQuotes] = useState<number>(0);
 
   const MONTHS = [t('month_january'), t('month_february'), t('month_march'), t('month_april'), t('month_may'), t('month_june'), t('month_july'), t('month_august'), t('month_september'), t('month_october'), t('month_november'), t('month_december')];
   const YEARS = ['2026', '2025', '2024'];
@@ -117,7 +123,10 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
 
   const fetchResources = async () => {
     try {
-      const resourcesResult = await getQuoteResources();
+      const [resourcesResult, pieChartResult] = await Promise.all([
+        getQuoteResources(),
+        dashboardService.getQuoteChart(),
+      ]);
       if (resourcesResult.success) {
         setAccounts(resourcesResult.resources?.accounts ?? []);
         setCategories(resourcesResult.resources?.categories ?? []);
@@ -128,8 +137,14 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
           }))
         );
       }
+      if (pieChartResult?.success) {
+        setPieChartData(pieChartResult.data ?? []);
+        setConvertedQuotes(pieChartResult.convertedQuotes ?? 0);
+      }
     } catch {
       Alert.alert(t('error_title'), t('error_generic'));
+    } finally {
+      setPieLoading(false);
     }
   };
 
@@ -430,6 +445,13 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
               <Receipt size={40} color="#D1D5DB" />
               <Text style={styles.emptyText}>{t('empty_no_quotes')}</Text>
             </View>
+          }
+          ListFooterComponent={
+            <QuotePieChart
+              loading={pieLoading}
+              chartData={pieChartData}
+              convertedQuotes={convertedQuotes}
+            />
           }
         />
       )}
