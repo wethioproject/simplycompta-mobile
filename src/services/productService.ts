@@ -25,7 +25,7 @@ class ProductService {
 
     async createCustomerProduct(payload: any): Promise<any> {
         try {
-            const body = {
+            const body: any = {
                 customer_id: String(payload.customer_id),
                 designation: payload.designation,
                 description: payload.description,
@@ -36,6 +36,7 @@ class ProductService {
                 quantity: String(payload.quantity),
                 total_price_ht: String(payload.total_price_ht),
             };
+            if (payload.unit_id != null) body.unit_id = String(payload.unit_id);
 
             const response = await api.post(
                 Api_Endpoints.customerProduct,
@@ -55,7 +56,7 @@ class ProductService {
 
     async updateCustomerProduct(id: number, payload: any): Promise<any> {
         try {
-            const body = {
+            const body: any = {
                 customer_id: String(payload.customer_id),
                 designation: payload.designation,
                 description: payload.description,
@@ -66,6 +67,7 @@ class ProductService {
                 quantity: String(payload.quantity),
                 total_price_ht: String(payload.total_price_ht),
             };
+            if (payload.unit_id != null) body.unit_id = String(payload.unit_id);
 
             const response = await api.put(
                 `${Api_Endpoints.customerProduct}/${id}`,

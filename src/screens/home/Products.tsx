@@ -20,24 +20,24 @@ import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import { ArrowLeft, Plus, Edit2, Trash2, Package, X, Search, ChevronDown, Check } from 'lucide-react-native';
 import { useProducts } from '../../hooks/useProduct';
+import { useInvoice } from '../../hooks/useInvoice';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 
-const CATEGORY_OPTIONS = ['Produit', 'Service'] as const;
-const TVA_OPTIONS = ['0', '7', '10', '14', '20'] as const;
+const CATEGORY_OPTIONS = ['Product', 'Service'] as const;
 
 interface Product {
   id: number;
   customer_id: number;
-  designation: string;
-  unit_price_ht: string;
-  tva_percentage: string;
-  quantity: string;
-  total_price_ht: string;
+  name: string;
+  sale_price: string;
+  tax_id: string;
+  quantity: string | number;
+  total_price_ht?: string;
   description?: string;
-  reference?: string;
-  category?: string;
+  sku?: string;
+  type?: string;
 }
 
 const productSchema = yup.object({
@@ -72,13 +72,17 @@ interface ProductFormValues {
   tva_percentage: string;
   quantity: string;
   total_price_ht: string;
+  unit_id: string;
 }
 
 const Products: React.FC = ({ navigation }: any) => {
   const { t } = useTranslation();
   const customer = useSelector((state: any) => state.user.customer);
   const { getProducts, createProduct, updateProduct, deleteProduct } = useProducts();
+  const { getProductResources } = useInvoice();
 
+  const [tvaOptions, setTvaOptions] = useState<{ id: number; name: string; rate: string }[]>([]);
+  const [unitOptions, setUnitOptions] = useState<{ id: number; name: string }[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -93,7 +97,7 @@ const Products: React.FC = ({ navigation }: any) => {
   const [saving, setSaving] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showTvaPicker, setShowTvaPicker] = useState(false);
-
+  const [showUnitPicker, setShowUnitPicker] = useState(false);
   const {
     control,
     handleSubmit,
@@ -108,11 +112,12 @@ const Products: React.FC = ({ navigation }: any) => {
       designation: '',
       description: '',
       reference: '',
-      category: 'Produit',
+      category: 'Product',
       unit_price_ht: '',
       tva_percentage: '20',
       quantity: '',
       total_price_ht: '',
+      unit_id: '',
     },
   });
 
@@ -138,6 +143,22 @@ const Products: React.FC = ({ navigation }: any) => {
     if (!silent) setLoading(false);
   }, [getProducts]);
 
+  useEffect(() => {
+    const fetchResources = async () => {
+      const result = await getProductResources();
+      if (result.success && result.resources) {
+        const resources = result.resources as any;
+        if (resources.tax && Array.isArray(resources.tax)) {
+          setTvaOptions(resources.tax);
+        }
+        if (resources.units && Array.isArray(resources.units)) {
+          setUnitOptions(resources.units);
+        }
+      }
+    };
+    fetchResources();
+  }, [getProductResources]);
+
   useEffect(() => { fetchProducts(); }, [fetchProducts]);
 
   const onRefresh = async () => {
@@ -149,21 +170,22 @@ const Products: React.FC = ({ navigation }: any) => {
   // Open modal
   const openCreate = () => {
     setEditingProduct(null);
-    reset({ designation: '', description: '', reference: '', category: 'Produit', unit_price_ht: '', tva_percentage: '20', quantity: '', total_price_ht: '' });
+    reset({ designation: '', description: '', reference: '', category: 'Product', unit_price_ht: '', tva_percentage: '', quantity: '', total_price_ht: '', unit_id: '' });
     setModalVisible(true);
   };
 
   const openEdit = (item: Product) => {
     setEditingProduct(item);
     reset({
-      designation: item.designation,
+      designation: item.name,
       description: item.description ?? '',
-      reference: item.reference ?? '',
-      category: item.category ?? 'Produit',
-      unit_price_ht: item.unit_price_ht,
-      tva_percentage: item.tva_percentage,
-      quantity: item.quantity,
-      total_price_ht: item.total_price_ht,
+      reference: item.sku ?? '',
+      category: item.type ?? 'product',
+      unit_price_ht: item.sale_price,
+      tva_percentage: item.tax_id,
+      quantity: String(item.quantity),
+      total_price_ht: item.total_price_ht ?? '',
+      unit_id: (item as any).unit_id ? String((item as any).unit_id) : '',
     });
     setModalVisible(true);
   };
@@ -184,7 +206,14 @@ const Products: React.FC = ({ navigation }: any) => {
     setSaving(true);
     const payload = {
       customer_id: customer?.id,
-      ...data,
+      designation: data.designation,
+      description: data.description,
+      reference: data.reference,
+      category: data.category,
+      unit_price_ht: data.unit_price_ht,
+      tva_percentage: data.tva_percentage,
+      quantity: data.quantity,
+      unit_id: data.unit_id ? Number(data.unit_id) : null,
     };
     const result = editingProduct
       ? await updateProduct(editingProduct.id, payload)
@@ -201,7 +230,7 @@ const Products: React.FC = ({ navigation }: any) => {
   const handleDelete = (item: Product) => {
     Alert.alert(
       t('alert_delete_product_title'),
-      t('alert_delete_product_message').replace('{product}', item.designation),
+      t('alert_delete_product_message').replace('{product}', item.name),
       [
         { text: t('button_cancel'), style: 'cancel' },
         {
@@ -225,7 +254,7 @@ const Products: React.FC = ({ navigation }: any) => {
   const filteredProducts = products.filter(product => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
-    return product.designation.toLowerCase().includes(query);
+    return product.name.toLowerCase().includes(query);
   });
 
   // ── Render product card ─────────────────────────────────────────────────────
@@ -266,8 +295,8 @@ const Products: React.FC = ({ navigation }: any) => {
       <View style={styles.productContent}>
         <View style={styles.productHeader}>
           <View style={styles.productInfo}>
-            <Text style={styles.productName} numberOfLines={1}>{item.designation}</Text>
-            <Text style={styles.productDesc} numberOfLines={1}>{item.total_price_ht}</Text>
+            <Text style={styles.productName} numberOfLines={1}>{item.name}</Text>
+            <Text style={styles.productDesc} numberOfLines={1}>{item.sku}</Text>
           </View>
         </View>
 
@@ -276,7 +305,7 @@ const Products: React.FC = ({ navigation }: any) => {
             <Text style={styles.categoryText}>{t('label_pill_unit_price')}</Text>
           </View>
           <View style={styles.priceSection}>
-            <Text style={styles.priceValue}>{item.unit_price_ht}</Text>
+            <Text style={styles.priceValue}>{item.sale_price}</Text>
             <Text style={styles.priceLabel}>{t('label_pill_vat')}</Text>
           </View>
         </View>
@@ -402,18 +431,23 @@ const Products: React.FC = ({ navigation }: any) => {
                   <View style={styles.detailIcon}>
                     <Package size={32} color="#0B5FA5" />
                   </View>
-                  <Text style={styles.detailName}>{selectedProduct.designation}</Text>
+                  <Text style={styles.detailName}>{selectedProduct.name}</Text>
                 </View>
 
                 {/* Details */}
                 <View style={styles.detailSection}>
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Prix H.T.</Text>
-                    <Text style={styles.detailValue}>{selectedProduct.unit_price_ht}</Text>
+                    <Text style={styles.detailValue}>{selectedProduct.sale_price}</Text>
                   </View>
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>TVA</Text>
-                    <Text style={styles.detailValue}>{selectedProduct.tva_percentage}%</Text>
+                    <Text style={styles.detailValue}>
+                      {(() => {
+                        const tax = tvaOptions.find(t => String(t.id) === String(selectedProduct.tax_id));
+                        return tax ? `${tax.name} (${tax.rate})` : selectedProduct.tax_id;
+                      })()}
+                    </Text>
                   </View>
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>Quantité</Text>
@@ -421,7 +455,9 @@ const Products: React.FC = ({ navigation }: any) => {
                   </View>
                   <View style={styles.detailRowTotal}>
                     <Text style={styles.detailLabelTotal}>Total H.T.</Text>
-                    <Text style={styles.detailValueTotal}>{selectedProduct.total_price_ht}</Text>
+                    <Text style={styles.detailValueTotal}>
+                      {(parseFloat(selectedProduct.sale_price) * Number(selectedProduct.quantity)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
+                    </Text>
                   </View>
                 </View>
               </ScrollView>
@@ -610,7 +646,10 @@ const Products: React.FC = ({ navigation }: any) => {
                       activeOpacity={0.7}
                     >
                       <Text style={value ? styles.pickerValueText : styles.pickerPlaceholderText}>
-                        {value ? `${value}%` : '0%'}
+                        {(() => {
+                          const selected = tvaOptions.find(t => String(t.id) === value);
+                          return selected ? `${selected.name} (${selected.rate})` : (value || t('placeholder_select'));
+                        })()}
                       </Text>
                       <ChevronDown size={18} color="#0B5FA5" />
                     </TouchableOpacity>
@@ -619,6 +658,32 @@ const Products: React.FC = ({ navigation }: any) => {
                 {errors.tva_percentage && (
                   <Text style={styles.fieldError}>{t(errors.tva_percentage.message ?? '')}</Text>
                 )}
+              </View>
+
+              {/* ── Unit dropdown ────────────────────────────────────────── */}
+              <View style={styles.fieldGroup}>
+                <View style={styles.fieldLabelRow}>
+                  <Text style={styles.fieldLabel}>{t('label_unit')}</Text>
+                </View>
+                <Controller
+                  control={control}
+                  name="unit_id"
+                  render={({ field: { value } }) => (
+                    <TouchableOpacity
+                      style={styles.pickerRow}
+                      onPress={() => setShowUnitPicker(true)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={value ? styles.pickerValueText : styles.pickerPlaceholderText}>
+                        {(() => {
+                          const selected = unitOptions.find(u => String(u.id) === value);
+                          return selected ? selected.name : t('placeholder_select');
+                        })()}
+                      </Text>
+                      <ChevronDown size={18} color="#0B5FA5" />
+                    </TouchableOpacity>
+                  )}
+                />
               </View>
 
               {/* ── Quantity ─────────────────────────────────────────── */}
@@ -665,10 +730,14 @@ const Products: React.FC = ({ navigation }: any) => {
                 <View style={styles.ttcBox}>
                   <Text style={styles.ttcLabel}>{t('label_price_ttc')}</Text>
                   <Text style={styles.ttcValue}>
-                    {(
-                      (parseFloat(watchedUnitPrice) * (parseFloat(watchedQty) || 1))
-                      * (1 + parseFloat(watchedTva || '0') / 100)
-                    ).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
+                    {(() => {
+                      const selectedTax = tvaOptions.find(t => String(t.id) === watchedTva);
+                      const rate = selectedTax ? parseFloat(selectedTax.rate) : 0;
+                      return (
+                        (parseFloat(watchedUnitPrice) * (parseFloat(watchedQty) || 1))
+                        * (1 + rate / 100)
+                      ).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    })()} MAD
                   </Text>
                 </View>
               )}
@@ -736,16 +805,43 @@ const Products: React.FC = ({ navigation }: any) => {
               >
                 <View style={styles.inlinePickerSheet}>
                   <Text style={styles.pickerSheetTitle}>{t('label_vat_percent')}</Text>
-                  {TVA_OPTIONS.map(opt => {
-                    const isSelected = watch('tva_percentage') === opt;
+                  {tvaOptions.map(opt => {
+                    const isSelected = watch('tva_percentage') === String(opt.id);
                     return (
                       <TouchableOpacity
-                        key={opt}
+                        key={opt.id}
                         style={styles.pickerOption}
-                        onPress={() => { setValue('tva_percentage', opt, { shouldValidate: true }); setShowTvaPicker(false); }}
+                        onPress={() => { setValue('tva_percentage', String(opt.id), { shouldValidate: true }); setShowTvaPicker(false); }}
                         activeOpacity={0.7}
                       >
-                        <Text style={[styles.pickerOptionText, isSelected && styles.pickerOptionSelected]}>{opt}%</Text>
+                        <Text style={[styles.pickerOptionText, isSelected && styles.pickerOptionSelected]}>{opt.name} ({opt.rate})</Text>
+                        {isSelected && <Check size={16} color="#0B5FA5" />}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </TouchableOpacity>
+            )}
+
+            {/* ── Unit Picker inline overlay ──────────────────────── */}
+            {showUnitPicker && (
+              <TouchableOpacity
+                style={styles.inlinePickerOverlay}
+                activeOpacity={1}
+                onPress={() => setShowUnitPicker(false)}
+              >
+                <View style={styles.inlinePickerSheet}>
+                  <Text style={styles.pickerSheetTitle}>{t('label_unit')}</Text>
+                  {unitOptions.map(opt => {
+                    const isSelected = watch('unit_id') === String(opt.id);
+                    return (
+                      <TouchableOpacity
+                        key={opt.id}
+                        style={styles.pickerOption}
+                        onPress={() => { setValue('unit_id', String(opt.id), { shouldValidate: true }); setShowUnitPicker(false); }}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.pickerOptionText, isSelected && styles.pickerOptionSelected]}>{opt.name}</Text>
                         {isSelected && <Check size={16} color="#0B5FA5" />}
                       </TouchableOpacity>
                     );
