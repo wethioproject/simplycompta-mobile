@@ -35,6 +35,7 @@ const AccountStatement: React.FC = ({ navigation, route }: any) => {
   const [error, setError] = useState<string | null>(null);
   const [selectedInvoice, setSelectedInvoice] = useState<ClientInvoiceItem | null>(null);
   const [selectedInvoiceDetail, setSelectedInvoiceDetail] = useState<any>(null);
+  const [selectedInvoiceTotals, setSelectedInvoiceTotals] = useState<any>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
 
   const fetchData = async () => {
@@ -58,10 +59,12 @@ const AccountStatement: React.FC = ({ navigation, route }: any) => {
   const fetchInvoiceDetail = async (id: number) => {
     setLoadingDetail(true);
     setSelectedInvoiceDetail(null);
+    setSelectedInvoiceTotals(null);
     try {
       const res = await getInvoiceDetail(id);
-      console.log('Invoice detail response:', JSON.stringify(res.data, null, 2));
+      console.log('Invoice detail response:', res);
       setSelectedInvoiceDetail(res.data?.data ?? res.data);
+      setSelectedInvoiceTotals(res.data?.totals ?? null);
     } catch (e: any) {
       console.error('Failed to fetch invoice detail:', e);
     } finally {
@@ -196,10 +199,12 @@ const AccountStatement: React.FC = ({ navigation, route }: any) => {
       <InvoiceDetailModal
         invoice={selectedInvoice}
         invoiceDetail={selectedInvoiceDetail}
+        invoiceTotals={selectedInvoiceTotals}
         loadingDetail={loadingDetail}
         onClose={() => {
           setSelectedInvoice(null);
           setSelectedInvoiceDetail(null);
+          setSelectedInvoiceTotals(null);
         }}
       />
     </SafeAreaView>

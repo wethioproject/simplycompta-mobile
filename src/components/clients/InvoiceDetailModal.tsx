@@ -17,6 +17,9 @@ import {
   Clock,
   Calendar,
   X,
+  TrendingDown,
+  Layers,
+  DollarSign,
 } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { ClientInvoiceItem } from '../../types/client.types';
@@ -59,6 +62,7 @@ const DetailRow: React.FC<{ icon: React.ReactNode; label: string; value: string 
 interface InvoiceDetailModalProps {
   invoice: ClientInvoiceItem | null;
   invoiceDetail: any | null;
+  invoiceTotals: { total_ht: number; total_discount: number; total_tva: number; total_ttc: number } | null;
   loadingDetail: boolean;
   onClose: () => void;
 }
@@ -66,10 +70,12 @@ interface InvoiceDetailModalProps {
 export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
   invoice,
   invoiceDetail,
+  invoiceTotals,
   loadingDetail,
   onClose,
 }) => {
   const { t, i18n } = useTranslation();
+  console.log('rendering daaag3333', invoice)
 
   return (
     <Modal
@@ -168,6 +174,40 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
                 />
               </>
             )}
+
+            {invoiceTotals && (
+              <>
+                <View style={styles.totalsSectionHeader}>
+                  <Text style={styles.totalsSectionTitle}>{t('label_totals')}</Text>
+                </View>
+                <DetailRow
+                  icon={<FileText size={16} color="#1E5BAC" />}
+                  label={t('label_total_ht')}
+                  value={`${invoiceTotals.total_ht.toLocaleString('fr-FR')} MAD`}
+                />
+                <DetailRow
+                  icon={<TrendingDown size={16} color="#1E5BAC" />}
+                  label={t('label_discount')}
+                  value={`${invoiceTotals.total_discount.toLocaleString('fr-FR')} MAD`}
+                />
+                <DetailRow
+                  icon={<Layers size={16} color="#1E5BAC" />}
+                  label={t('label_total_tva')}
+                  value={`${invoiceTotals.total_tva.toLocaleString('fr-FR')} MAD`}
+                />
+                <View style={styles.totalTtcRow}>
+                  <View style={styles.detailIconWrap}>
+                    <DollarSign size={16} color="#16A34A" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.detailLabel}>{t('label_total_ttc')}</Text>
+                    <Text style={[styles.detailValue, styles.totalTtcValue]}>
+                      {invoiceTotals.total_ttc.toLocaleString('fr-FR')} MAD
+                    </Text>
+                  </View>
+                </View>
+              </>
+            )}
           </ScrollView>
         </View>
       )}
@@ -264,4 +304,33 @@ const styles = StyleSheet.create({
   },
   detailLabel: { fontSize: 11, color: '#9CA3AF', fontWeight: '500', marginBottom: 3 },
   detailValue: { fontSize: 14, color: '#1F2937', fontWeight: '600' },
+  totalsSectionHeader: {
+    paddingTop: 16,
+    paddingBottom: 6,
+    // borderTopWidth: 1,
+    // borderTopColor: '#E5E7EB',
+    marginTop: 8,
+  },
+  totalsSectionTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  totalTtcRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingVertical: 12,
+    backgroundColor: '#F0FDF4',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    marginTop: 6,
+  },
+  totalTtcValue: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#16A34A',
+  },
 });
