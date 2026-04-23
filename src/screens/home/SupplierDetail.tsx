@@ -390,7 +390,7 @@ const SupplierDetail: React.FC = ({ navigation, route }: any) => {
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>{t('detail_expense_count')}</Text>
-              <Text style={styles.statValue}>{expenses.length} {t('text_expense_or_expenses', { count: expenses.length })}</Text>
+              <Text style={styles.statValue}>{t('text_expense_or_expenses', { count: expenses.length })}</Text>
             </View>
           </View>
 
