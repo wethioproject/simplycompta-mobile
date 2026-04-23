@@ -41,7 +41,7 @@ export interface SupplierItem {
   commercial_register: string;
   ice: string;
   total_ttc?: number;
-  late_expenses_count?: number;
+  expenses_count?: number;
   created_at?: string;
   updated_at?: string;
 }
