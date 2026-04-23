@@ -5,7 +5,7 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   Quotes:    { bg: '#4FA3D1', text: '#FFFFFF' },
   Payé:      { bg: '#6FB13F', text: '#FFFFFF' },
   Paid:      { bg: '#6FB13F', text: '#FFFFFF' },
-  Issued:    { bg: '#8d3fb1', text: '#FFFFFF' },
+  Issued:    { bg: '#3B82F6', text: '#FFFFFF' },
   Annulé:    { bg: '#FF0000', text: '#FFFFFF' },
   Canceled:  { bg: '#FF0000', text: '#FFFFFF' },
   Cancelled: { bg: '#FF0000', text: '#FFFFFF' },
