@@ -448,7 +448,8 @@ const handleDocOpen = async (doc: any) => {
                   </View>
                   <View style={styles.statementInfo}>
                     <Text style={styles.statementTitle}>
-                      {t('label_statement_prefix')} {monthName} {yearStr}
+                      {/* {t('label_statement_prefix')} {monthName} {yearStr} */}
+                      {monthName} {yearStr}
                     </Text>
                     {isTransmitted ? (
                       (() => {
@@ -480,29 +481,34 @@ const handleDocOpen = async (doc: any) => {
                     <Download size={15} color="#FFFFFF" />
                   </TouchableOpacity>
                 ) : (
-                  <View style={styles.uploadActions}>
-                    <TouchableOpacity
-                      style={[styles.uploadButton, uploadingSlot === slot && { opacity: 0.6 }]}
-                      activeOpacity={0.8}
-                      disabled={!!uploadingSlot}
-                      onPress={() => handleTakePhotoForSlot(slot)}
-                    >
-                      {uploadingSlot === slot
-                        ? <ActivityIndicator size="small" color="#4B5563" />
-                        : <Camera size={18} color="#4B5563" />}
-                      <Text style={styles.uploadButtonText}>{t('button_take_photo')}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.uploadButton, uploadingSlot === slot && { opacity: 0.6 }]}
-                      activeOpacity={0.8}
-                      disabled={!!uploadingSlot}
-                      onPress={() => handleUpload(slot)}
-                    >
-                      {uploadingSlot === slot
-                        ? <ActivityIndicator size="small" color="#4B5563" />
-                        : <Upload size={18} color="#4B5563" />}
-                      <Text style={styles.uploadButtonText}>{t('button_upload')}</Text>
-                    </TouchableOpacity>
+                  <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                    <Text style={{ fontSize: 10, color: '#9CA3AF', fontStyle: 'italic' }}>
+                      {'Max 1 MB'}
+                    </Text>
+                    <View style={styles.uploadActions}>
+                      <TouchableOpacity
+                        style={[styles.uploadButton, uploadingSlot === slot && { opacity: 0.6 }]}
+                        activeOpacity={0.8}
+                        disabled={!!uploadingSlot}
+                        onPress={() => handleTakePhotoForSlot(slot)}
+                      >
+                        {uploadingSlot === slot
+                          ? <ActivityIndicator size="small" color="#4B5563" />
+                          : <Camera size={18} color="#4B5563" />}
+                        <Text style={styles.uploadButtonText}>{t('button_take_photo')}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.uploadButton, uploadingSlot === slot && { opacity: 0.6 }]}
+                        activeOpacity={0.8}
+                        disabled={!!uploadingSlot}
+                        onPress={() => handleUpload(slot)}
+                      >
+                        {uploadingSlot === slot
+                          ? <ActivityIndicator size="small" color="#4B5563" />
+                          : <Upload size={18} color="#4B5563" />}
+                        <Text style={styles.uploadButtonText}>{t('button_upload')}</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 )}
               </View>
