@@ -127,10 +127,7 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
 
   const fetchResources = async () => {
     try {
-      const [resourcesResult, pieChartResult] = await Promise.all([
-        getQuoteResources(),
-        dashboardService.getQuoteChart(),
-      ]);
+      const resourcesResult = await getQuoteResources();
       if (resourcesResult.success) {
         setAccounts(resourcesResult.resources?.accounts ?? []);
         setCategories(resourcesResult.resources?.categories ?? []);
@@ -141,12 +138,21 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
           }))
         );
       }
+    } catch {
+      Alert.alert(t('error_title'), t('error_generic'));
+    }
+  };
+
+  const fetchChartData = async () => {
+    try {
+      setPieLoading(true);
+      const pieChartResult = await dashboardService.getQuoteChart();
       if (pieChartResult?.success) {
         setPieChartData(pieChartResult.data ?? []);
         setConvertedQuotes(pieChartResult.convertedQuotes ?? 0);
       }
     } catch {
-      Alert.alert(t('error_title'), t('error_generic'));
+      // chart failure is non-blocking
     } finally {
       setPieLoading(false);
     }
@@ -168,6 +174,7 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
 
   useEffect(() => {
     fetchResources();
+    fetchChartData();
   }, []);
 
   const handleEditInvoice = (item: InvoiceItem) => {
@@ -420,7 +427,10 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => fetchQuotes(getFilterParams())}
+              onRefresh={() => {
+                fetchQuotes(getFilterParams());
+                fetchChartData();
+              }}
               tintColor="#1E5BAC"
             />
           }
