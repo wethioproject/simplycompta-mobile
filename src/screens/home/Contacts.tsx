@@ -182,20 +182,25 @@ const Contacts: React.FC = ({ navigation: navProp }: any) => {
           <Text style={styles.cardName}>{item.company_name}</Text>
           <Text style={styles.cardMeta}>{item.client_name}</Text>
         </View>
-        <View style={styles.cardRight}>
-          <View style={lateCount > 0 ? styles.badgeLate : styles.badgePending}>
-            <Clock size={14} color={lateCount > 0 ? '#EF4444' : '#EA580C'} />
-            <Text style={lateCount > 0 ? styles.badgeLateText : styles.badgePendingText}>{lateCount} {t('contacts_pending')}</Text>
-          </View>
-          <Text style={displayRevenue > 0 ? styles.amountGreen : styles.amountGray}>+{displayRevenue.toLocaleString('fr-FR')} MAD</Text>
-        </View>
+        {
+          lateCount > 0 && (
+            <View style={styles.cardRight}>
+              <View style={lateCount > 0 ? styles.badgeLate : styles.badgePending}>
+                <Clock size={14} color={lateCount > 0 ? '#EF4444' : '#EA580C'} />
+                <Text style={lateCount > 0 ? styles.badgeLateText : styles.badgePendingText}>{lateCount} {t('contacts_pending')}</Text>
+              </View>
+              <Text style={displayRevenue > 0 ? styles.amountGreen : styles.amountGray}>+{displayRevenue.toLocaleString('fr-FR')} MAD</Text>
+            </View>
+          )
+        }
+
       </TouchableOpacity>
     );
   };
 
   const renderSupplierItem = ({ item }: { item: SupplierItem }) => {
     const total = item.total_ttc ?? 0;
-    const lateCount = item.late_expenses_count ?? 0;
+    const lateCount = item.expenses_count ?? 0;
     return (
       <TouchableOpacity
         style={styles.card}
@@ -213,7 +218,7 @@ const Contacts: React.FC = ({ navigation: navProp }: any) => {
           {lateCount > 0 ? (
             <View style={styles.badgePending}>
               <Clock size={14} color="#EA580C" />
-              <Text style={styles.badgePendingText}>{lateCount} {t('contacts_pending')}</Text>
+              <Text style={styles.badgePendingText}>{lateCount} {t('label_expenses')}</Text>
             </View>
           ) : (
             <View style={styles.badgePaid}>
