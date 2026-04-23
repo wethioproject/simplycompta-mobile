@@ -529,6 +529,7 @@
   "button_edit": "Modifier",
   "action_duplicate": "Dupliquer",
   "action_mark_paid": "Marquer comme payée",
+  "action_mark_accepted": "Marquer comme accepté",
   "action_mark_unpaid": "Marquer comme non payée",
   "placeholder_search_invoice": "Rechercher par numéro, client ou montant...",
   "success_invoice_duplicated": "Facture dupliquée avec succès.",

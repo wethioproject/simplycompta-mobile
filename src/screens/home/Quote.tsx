@@ -69,7 +69,7 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
   const navigation = useNavigation<StackNavigation>();
   const nav = navProp ?? navigation;
   const route = useRoute<any>();
-  const { createQuote, updateQuote, deleteQuote, getQuoteResources, duplicateQuote } = useQuote();
+  const { createQuote, updateQuote, deleteQuote, getQuoteResources, duplicateQuote, updateQuoteStatus } = useQuote();
   const token = useSelector((state: any) => state.user.token);
   const user = useSelector((state: any) => state.user.customer);
 
@@ -216,6 +216,15 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
     }
   };
 
+  const handleMarkAccepted = async (item: InvoiceItem) => {
+    const result = await updateQuoteStatus(item.id, 'accepted');
+    if (result.success) {
+      fetchQuotes(getFilterParams());
+    } else {
+      Alert.alert(t('error'), result.error ?? t('error_generic'));
+    }
+  };
+
   const handleRelancerAll = () => {
     Alert.alert(t('invoice_relancer_tout'), t('error_generic'));
   };
@@ -254,6 +263,7 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
       openMenuId={openMenuId}
       onMenuToggle={setOpenMenuId}
       onDuplicate={handleDuplicate}
+      onMarkAccepted={handleMarkAccepted}
     />
   );
 

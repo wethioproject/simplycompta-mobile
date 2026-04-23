@@ -20,6 +20,7 @@ interface InvoiceCardProps {
   openMenuId: number | null;
   onMenuToggle: (id: number | null) => void;
   onDuplicate: (item: InvoiceItem) => void;
+  onMarkAccepted: (item: InvoiceItem) => void;
 }
 
 const InvoiceCard: React.FC<InvoiceCardProps> = ({
@@ -28,6 +29,7 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
   openMenuId,
   onMenuToggle,
   onDuplicate,
+  onMarkAccepted,
 }) => {
   const { t } = useTranslation();
 
@@ -51,6 +53,7 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
   const { bg, label } = STATUS_CONFIG[item.status] ?? DEFAULT_STATUS;
   const amountColor = AMOUNT_COLORS[item.status] ?? '#111827';
   const isMenuOpen = openMenuId === item.id;
+  const isFinalState = item.status === 'accepted' || item.status === 'rejected';
 
   const dotsRef = useRef<View>(null);
   const [menuPos, setMenuPos] = React.useState({ top: 0, right: 0 });
@@ -113,6 +116,19 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
               <Copy size={15} color="#374151" />
               <Text style={styles.invoiceActionMenuText}>{t('action_duplicate')}</Text>
             </TouchableOpacity>
+            {!isFinalState && (
+              <>
+                <View style={styles.invoiceActionMenuDivider} />
+                <TouchableOpacity
+                  style={styles.invoiceActionMenuItem}
+                  onPress={() => { onMenuToggle(null); onMarkAccepted(item); }}
+                  activeOpacity={0.7}
+                >
+                  <CheckCircle size={15} color="#16A34A" />
+                  <Text style={[styles.invoiceActionMenuText, { color: '#16A34A' }]}>{t('action_mark_accepted')}</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         </Pressable>
       </Modal>

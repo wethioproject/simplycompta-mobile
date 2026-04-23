@@ -529,6 +529,7 @@
   "button_edit": "Edit",
   "action_duplicate": "Duplicate",
   "action_mark_paid": "Mark as Paid",
+  "action_mark_accepted": "Mark as Accepted",
   "action_mark_unpaid": "Mark as Unpaid",
   "placeholder_search_invoice": "Search by number, client or amount...",
   "success_invoice_duplicated": "Invoice duplicated successfully.",
