@@ -29,14 +29,14 @@ const QuotePieChart: React.FC<QuotePieChartProps> = ({ loading, chartData, conve
 
   return (
     <View style={styles.pieCard}>
-      <Text style={styles.pieTitle}>{t('pie_title_distribution')}</Text>
+      <Text style={styles.pieTitle}>{t('quote_pie_title_distribution')}</Text>
       {loading ? (
         <View style={styles.pieLoader}>
           <ActivityIndicator size="large" color="#1E5BAC" />
         </View>
       ) : pieData.length === 0 ? (
         <View style={styles.pieEmpty}>
-          <Text style={styles.pieEmptyText}>{t('pie_empty_message')}</Text>
+          <Text style={styles.pieEmptyText}>{t('quote_pie_empty_message')}</Text>
         </View>
       ) : (
         <>
