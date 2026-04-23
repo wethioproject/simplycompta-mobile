@@ -234,7 +234,7 @@ const ClientDetail: React.FC = ({ navigation, route }: any) => {
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>{t('detail_invoice_count')}</Text>
-              <Text style={styles.statValue}>{invoiceCount} {t('text_expense_or_expenses', { count: invoiceCount })}</Text>
+              <Text style={styles.statValue}>{t('label_3_factures', { count: invoiceCount })}</Text>
             </View>
           </View>
 
