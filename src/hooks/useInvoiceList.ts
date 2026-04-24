@@ -4,8 +4,17 @@ import { useTranslation } from 'react-i18next';
 import type { InvoiceItem } from '../types/invoice.types';
 import { useInvoice } from './useInvoice';
 
+interface InvoiceStats {
+  total_sum_all: number;
+  total_sum_paid: number;
+  total_sum_issued: number;
+  total_sum_cancelled: number;
+  total_sum_overdue: number;
+}
+
 interface UseInvoiceListReturn {
   invoices: InvoiceItem[];
+  stats: InvoiceStats | null;
   loading: boolean;
   refreshing: boolean;
   selectedMonth: string | null;
@@ -25,6 +34,7 @@ export const useInvoiceList = (): UseInvoiceListReturn => {
   const { getInvoices } = useInvoice();
 
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
+  const [stats, setStats] = useState<InvoiceStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
@@ -60,6 +70,7 @@ export const useInvoiceList = (): UseInvoiceListReturn => {
       const invoicesResult = await getInvoices(params);
       if (invoicesResult.success) {
         setInvoices(invoicesResult.invoices ?? []);
+        setStats(invoicesResult.stats ?? null);
       }
     } catch (error) {
       Alert.alert(t('error_title'), t('error_generic'));
@@ -86,6 +97,7 @@ export const useInvoiceList = (): UseInvoiceListReturn => {
 
   return {
     invoices,
+    stats,
     loading,
     refreshing,
     selectedMonth,

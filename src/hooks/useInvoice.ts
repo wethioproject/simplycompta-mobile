@@ -7,7 +7,8 @@ export const useInvoice = () => {
         try {
             const response = await invoiceService.getInvoices(params);
             return {
-                invoices: response.data,
+                invoices: response.data?.invoices ?? response.data ?? [],
+                stats: response.data?.stats ?? null,
                 success: true
             }
         } catch (error: any) {

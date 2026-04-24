@@ -33,7 +33,6 @@ import { useInvoiceList } from '../../hooks/useInvoiceList';
 import CreateInvoiceModal from '../../components/invoice/CreateInvoiceModal';
 import DetailModal from '../../components/invoice/DetailModal';
 import InvoiceCard from '../../components/invoice/InvoiceCard';
-import { calculateInvoiceTotals } from '../../utils/invoiceCalculations';
 import type { Account, Category, Client, InvoiceItem, InvoiceTabType, StackNavigation } from '../../types/invoice.types';
 import { invoiceStyles as styles } from '../../styles/invoice.styles';
 import { INVOICE_TABS } from '../../types/invoice.types';
@@ -42,19 +41,17 @@ import i18n from '../../i18n/i18n';
 /** i18n key for each tab */
 const TAB_LABEL_KEYS: Record<InvoiceTabType, string> = {
   Tous:      'tab_all',
-  // Quotes:    'status_quotes',
-  Issued:    'status_issued',
-  Paid:      'status_paid',
-  Cancelled: 'status_cancelled',
+  issued:    'status_issued',
+  paid:      'status_paid',
+  cancelled: 'status_cancelled',
 };
 
 /** Active background color for each tab */
 const TAB_COLORS: Record<InvoiceTabType, string> = {
   Tous:      '#1E5BAC',
-  // Quotes:    '#6B7280',
-  Issued:    '#3B82F6',
-  Paid:      '#16A34A',
-  Cancelled: '#EF4444',
+  issued:    '#3B82F6',
+  paid:      '#16A34A',
+  cancelled: '#EF4444',
 };
 
 const Invoice: React.FC = ({ navigation: navProp }: any) => {
@@ -68,6 +65,7 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
 
   const {
     invoices,
+    stats,
     loading,
     refreshing,
     selectedMonth,
@@ -97,14 +95,12 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
   const MONTHS = [t('month_january'), t('month_february'), t('month_march'), t('month_april'), t('month_may'), t('month_june'), t('month_july'), t('month_august'), t('month_september'), t('month_october'), t('month_november'), t('month_december')];
   const YEARS = ['2026', '2025', '2024'];
 
-  /* ─── Derived stats ─── */
-  const getTotal = (item: InvoiceItem) => calculateInvoiceTotals(item.articles).totalTTC;
-
-  const totalRevenue   = invoices.reduce((s, i) => s + getTotal(i), 0);
-  const collectedAmt   = invoices.filter(i => i.status === 'Paid').reduce((s, i) => s + getTotal(i), 0);
-  const pendingAmt     = invoices.filter(i => i.status === 'Issued').reduce((s, i) => s + getTotal(i), 0);
-  const overdueAmt     = invoices.filter(i => i.status === 'Cancelled').reduce((s, i) => s + getTotal(i), 0);
-  const overdueCount   = invoices.filter(i => i.status === 'Cancelled').length;
+  /* ─── Derived stats (from API) ─── */
+  const totalRevenue = stats?.total_sum_all ?? 0;
+  const collectedAmt = stats?.total_sum_paid ?? 0;
+  const pendingAmt   = stats?.total_sum_issued ?? 0;
+  const overdueAmt   = stats?.total_sum_cancelled ?? 0;
+  const overdueCount = invoices.filter(i => i.status === 'cancelled').length;
 
   /* ─── Month button label ─── */
   const now = new Date();
@@ -204,7 +200,7 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
   };
 
   const handleMarkPaid = async (item: InvoiceItem) => {
-    const newStatus = item.status === 'Paid' ? 'Issued' : 'Paid';
+    const newStatus = item.status === 'paid' ? 'issued' : 'paid';
     const result = await updateInvoiceStatus(item.id, newStatus);
     if (result.success) {
       fetchInvoices(getFilterParams());
@@ -227,7 +223,7 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
   const filtered = invoices.filter(item => {
     const q = searchQuery.toLowerCase();
     const matchesSearch = !q || item.invoice_number.toLowerCase().includes(q) || (item.client?.client_name ?? '').toLowerCase().includes(q);
-    const matchesTab = activeTab === 'Tous' || item.status === activeTab;
+    const matchesTab = activeTab === 'Tous' || item.status.toLowerCase() === activeTab;
     return matchesSearch && matchesTab;
   });
 
@@ -366,7 +362,7 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
         >
           {INVOICE_TABS.map(tab => {
             const isActive = activeTab === tab;
-            const isCancelled = tab === 'Cancelled';
+            const isCancelled = tab === 'cancelled';
             const tabColor = TAB_COLORS[tab];
             return (
               <TouchableOpacity
@@ -425,12 +421,12 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
                 </Text>
                 <View style={styles.summaryIndicatorsRow}>
                   <View style={styles.summaryIndicator}>
-                    <View style={[styles.summaryDot, { backgroundColor: '#1E5BAC' }]} />
+                    <View style={[styles.summaryDot, { backgroundColor: '#16A34A' }]} />
                     <Text style={styles.summaryIndicatorText}>
                       <Text style={styles.summaryIndicatorAmount}>
                         {collectedAmt.toLocaleString('fr-FR')}
                       </Text>
-                      {' '}{t('invoice_summary_encaisse')}
+                      {' '}{t('status_paid')}
                     </Text>
                   </View>
                   <View style={styles.summaryIndicator}>
@@ -439,7 +435,7 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
                       <Text style={styles.summaryIndicatorAmount}>
                         {pendingAmt.toLocaleString('fr-FR')}
                       </Text>
-                      {' '}{t('invoice_summary_envoyee')}
+                      {' '}{t('status_issued')}
                     </Text>
                   </View>
                   <View style={styles.summaryIndicator}>
@@ -448,7 +444,7 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
                       <Text style={styles.summaryIndicatorAmount}>
                         {overdueAmt.toLocaleString('fr-FR')}
                       </Text>
-                      {' '}{t('invoice_summary_retard')}
+                      {' '}{t('status_cancelled')}
                     </Text>
                   </View>
                 </View>
