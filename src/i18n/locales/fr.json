@@ -347,7 +347,7 @@
   "label_statement_prefix": "Relevé",
   "badge_transmitted": "Transmis",
   "label_no_document": "Aucun document en ligne",
-  "button_upload": "Mettre en ligne",
+  "button_upload": "Télécharger",
   "success_statement_uploaded": "Relevé bancaire uploadé avec succès.",
   "error_load_statements": "Impossible de charger les relevés bancaires.",
   "error_upload_statement": "Impossible d'uploader le fichier.",
