@@ -367,7 +367,7 @@ const ActivitiesSection: React.FC<{
     {/* Devis en cours */}
     <TouchableOpacity
       style={styles.activityCard}
-      onPress={() => onNavigate('invoices')}
+      onPress={() => onNavigate('quotes')}
       activeOpacity={0.8}
     >
       <View style={[styles.activityIcon, { backgroundColor: '#EFF6FF' }]}>
@@ -550,6 +550,7 @@ const Home: React.FC = () => {
       notifications: 'Notifications',
       documentsList: 'Documents List',
       invoices: 'Invoice',
+      quotes: 'Quote',
       'contact-comptable': 'Contact',
     };
     const route = routes[page];
