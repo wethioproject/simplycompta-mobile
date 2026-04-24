@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -28,9 +28,8 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import RNShare from 'react-native-share';
 import { useInvoice } from '../../hooks/useInvoice';
 import { invoiceStyles as styles } from '../../styles/invoice.styles';
-import type { InvoiceArticle, InvoiceItem } from '../../types/invoice.types';
+import type { InvoiceItem } from '../../types/invoice.types';
 import { STATUT_OPTIONS_DETAIL_MODAL, resolvePaymentMethod } from '../../types/invoice.types';
-import { calculateInvoiceTotals } from '../../utils/invoiceCalculations';
 
 interface DetailModalProps {
   item: InvoiceItem;
@@ -48,23 +47,52 @@ const DetailModal: React.FC<DetailModalProps> = ({
   onUpdate,
 }) => {
   const { t, i18n } = useTranslation();
-  const { totalHT, totalTVA, totalTTC } = calculateInvoiceTotals(item.articles);
-  // Aggregate raw backend values from articles
-  const totalPriceHT = item.articles.reduce((s, a) => s + parseFloat(a.total_price_ht ?? '0'), 0);
-  const uniqueVatRates = [...new Set(item.articles.map(a => a.tva_percentage))].join(' / ');
-  const formattedDate = new Date(item.date).toLocaleDateString('fr-FR');
-  const rawFileName = item.document_path?.split('/').pop() || 'Document';
+  const token = useSelector((state: any) => state.user.token);
+  const { getPdfDownloadUrl, duplicateInvoice, getInvoice } = useInvoice();
+
+  // ── Fetched detail state ──────────────────────────────────────────
+  const [detail, setDetail] = useState<any>(null);
+  const [totals, setTotals] = useState<{ total_ht: number; total_discount: number; total_tva: number; total_ttc: number } | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoadingDetail(true);
+      const result = await getInvoice(item.id);
+      if (!cancelled) {
+        if (result.success && result.invoice) {
+          setDetail(result.invoice);
+          setTotals(result.totals ?? null);
+        } else {
+          // fall back to list data
+          setDetail(item);
+        }
+        setLoadingDetail(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [item.id]);
+
+  // Derived display values (from fetched detail or list item as fallback)
+  const src = detail ?? item;
+  const formattedDate = new Date(src.date).toLocaleDateString('fr-FR');
+  const rawFileName = src.document_path?.split('/').pop() || 'Document';
   const attachmentName = rawFileName.length > 24 ? `${rawFileName.slice(0, 24)}...` : rawFileName;
+
   const [deleting, setDeleting] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [currentStatus, setCurrentStatus] = useState(item.status);
-  const token = useSelector((state: any) => state.user.token);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
-  const { getPdfDownloadUrl, duplicateInvoice } = useInvoice();
   const [duplicating, setDuplicating] = useState(false);
+
+  // Keep currentStatus in sync if detail loads a different status
+  useEffect(() => {
+    if (detail?.status) setCurrentStatus(detail.status);
+  }, [detail?.status]);
 
   const handleStatusChange = async (newStatus: string) => {
     if (newStatus === currentStatus) {
@@ -74,24 +102,24 @@ const DetailModal: React.FC<DetailModalProps> = ({
     setShowStatusPicker(false);
     setUpdatingStatus(true);
     try {
-      const datePart = item.date.split('T')[0];
+      const datePart = (src.date ?? item.date).split('T')[0];
       const payload = {
-        customer_id: item.customer_id,
-        client_id: item.client_id,
+        customer_id: src.customer_id ?? item.customer_id,
+        client_id: src.client_id ?? item.client_id,
         date: datePart,
-        invoice_number: item.invoice_number,
-        payment_method: item.payment_method,
+        invoice_number: src.invoice_number ?? item.invoice_number,
+        payment_method: src.payment_method ?? item.payment_method,
         status: newStatus,
-        notes: item.notes || null,
+        notes: (src.notes && src.notes !== 'null') ? src.notes : null,
         document: null,
-        articles: item.articles.map(a => ({
+        articles: (src.articles ?? item.articles).map((a: any) => ({
           designation: a.designation,
           unit_price_ht: parseFloat(a.unit_price_ht),
           quantity: a.quantity,
           total_price_ht: parseFloat(a.total_price_ht),
           tva_percentage: parseFloat(a.tva_percentage),
           product_id: a.product_id,
-          unit_id: (a as any).unit_id ?? null,
+          unit_id: a.unit_id ?? null,
         })),
       };
       const result = await onUpdate(item.id, payload);
@@ -110,7 +138,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
   const handleDelete = () => {
     Alert.alert(
       t('alert_delete_invoice'),
-      t('message_confirm_delete').replace('{invoice_number}', item.invoice_number),
+      t('message_confirm_delete').replace('{invoice_number}', src.invoice_number ?? item.invoice_number),
       [
         { text: t('button_cancel'), style: 'cancel' },
         {
@@ -131,7 +159,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
   };
 
   const handleDownload = async () => {
-    if (!item.invoice_url) return;
+    if (!src.invoice_url) return;
 
     setDownloading(true);
 
@@ -142,7 +170,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
       const res = await config({
         fileCache: true,
         path: filePath,
-      }).fetch('GET', item.invoice_url, {
+      }).fetch('GET', src.invoice_url, {
         Authorization: `Bearer ${token}`,
         Accept: 'application/octet-stream',
       });
@@ -185,7 +213,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
     setSharing(true);
     try {
       const { fs, config } = ReactNativeBlobUtil;
-      const safeNumber = item.invoice_number.replace(/[^a-zA-Z0-9]/g, '_');
+      const safeNumber = (src.invoice_number ?? item.invoice_number).replace(/[^a-zA-Z0-9]/g, '_');
       const filePath = `${fs.dirs.CacheDir}/invoice_pdf_${safeNumber}.pdf`;
 
       if (await fs.exists(filePath)) await fs.unlink(filePath);
@@ -206,8 +234,8 @@ const DetailModal: React.FC<DetailModalProps> = ({
         return;
       }
 
-      const subject = t('subject_share_invoice').replace('{invoice_number}', item.invoice_number);
-      const message = t('message_share_invoice').replace('{invoice_number}', item.invoice_number);
+      const subject = t('subject_share_invoice').replace('{invoice_number}', src.invoice_number ?? item.invoice_number);
+      const message = t('message_share_invoice').replace('{invoice_number}', src.invoice_number ?? item.invoice_number);
 
       await RNShare.open({
         url: `file://${filePath}`,
@@ -235,7 +263,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
     try {
       const url = getPdfDownloadUrl(item.id);
       const { fs, config } = ReactNativeBlobUtil;
-      const safeNumber = item.invoice_number.replace(/[^a-zA-Z0-9]/g, '_');
+      const safeNumber = (src.invoice_number ?? item.invoice_number).replace(/[^a-zA-Z0-9]/g, '_');
       const filePath =
         Platform.OS === 'ios'
           ? `${fs.dirs.DocumentDir}/invoice_pdf_${safeNumber}.pdf`
@@ -315,6 +343,11 @@ const DetailModal: React.FC<DetailModalProps> = ({
           </View>
         </View>
 
+        {loadingDetail ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color="#1E5BAC" />
+          </View>
+        ) : (
         <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
           {/* Amount hero */}
           <View style={styles.detailHero}>
@@ -330,28 +363,29 @@ const DetailModal: React.FC<DetailModalProps> = ({
               ) : (
                 <>
                   <Text>{currentStatus}</Text>
-
                   <ChevronDown size={14} color="#6B7280" style={{ marginLeft: 4 }} />
                 </>
               )}
             </TouchableOpacity>
-            <Text style={styles.detailAmount}>{totalTTC.toLocaleString('fr-FR')} MAD</Text>
+            <Text style={styles.detailAmount}>
+              {(totals?.total_ttc ?? 0).toLocaleString('fr-FR')} MAD
+            </Text>
             <Text style={styles.detailDate}>{formattedDate}</Text>
           </View>
 
           {/* Detail rows */}
           <View style={styles.detailCard}>
             {[
-              { label: t('label_invoice_number'), value: item.invoice_number },
-              { label: t('label_client'), value: item.client?.client_name ?? '—' },
-              { label: t('label_payment_method'), value: resolvePaymentMethod(item.payment_method, i18n.language) },
+              { label: t('label_invoice_number'), value: src.invoice_number },
+              { label: t('label_client'), value: src.client?.client_name ?? '—' },
+              { label: t('label_payment_method'), value: resolvePaymentMethod(src.payment_method, i18n.language) },
+              { label: t('label_due_date'), value: src.due_date ? new Date(src.due_date).toLocaleDateString('fr-FR') : '—' },
               { label: t('label_status'), value: currentStatus },
-              { label: t('label_total_ht'),  value: `${totalHT.toLocaleString('fr-FR')} MAD` },
-              { label: t('label_total_tva'), value: `${totalTVA.toLocaleString('fr-FR')} MAD` },
-              { label: t('label_total_ttc'), value: `${totalTTC.toLocaleString('fr-FR')} MAD` },
-              // { label: t('label_total_ht'),    value: `${totalPriceHT.toLocaleString('fr-FR')} MAD` },
-              // { label: t('label_tva_percent'), value: uniqueVatRates ? `${uniqueVatRates}%` : '—' },
-              { label: t('label_notes'), value: item.notes || '-' },
+              { label: t('label_total_ht'),       value: `${(totals?.total_ht ?? 0).toLocaleString('fr-FR')} MAD` },
+              { label: t('label_discount'),        value: `${(totals?.total_discount ?? 0).toLocaleString('fr-FR')} MAD` },
+              { label: t('label_total_tva'),       value: `${(totals?.total_tva ?? 0).toLocaleString('fr-FR')} MAD` },
+              { label: t('label_total_ttc'),       value: `${(totals?.total_ttc ?? 0).toLocaleString('fr-FR')} MAD` },
+              { label: t('label_notes'), value: (src.notes && src.notes !== 'null') ? src.notes : '-' },
             ].map(row => (
               <View key={row.label} style={styles.detailRow}>
                 <Text style={styles.detailRowLabel}>{row.label}</Text>
@@ -361,32 +395,33 @@ const DetailModal: React.FC<DetailModalProps> = ({
           </View>
 
           {/* Articles */}
-          {item.articles.length > 0 && (
+          {(src.articles ?? []).length > 0 && (
             <View style={styles.detailCard}>
               <View style={[styles.detailRow, { borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }]}>
                 <Text style={[styles.detailRowLabel, { fontWeight: '700', color: '#1F2937' }]}>
                   {t('label_articles')}
                 </Text>
               </View>
-              {item.articles.map(a => (
+              {(src.articles ?? []).map((a: any) => (
                 <View key={a.id} style={styles.detailRow}>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.detailRowLabel, { fontWeight: '600', color: '#1F2937' }]}>
                       {a.designation}
                     </Text>
                     <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>
-                      {a.quantity} × {parseFloat(a.unit_price_ht).toLocaleString('fr-FR')} MAD HT  •  TVA{' '}
-                      {a.tva_percentage}%
+                      {a.quantity} × {parseFloat(a.unit_price_ht).toLocaleString('fr-FR')} MAD HT
+                      {' '}•{'  TVA '}{a.tax.rate}%
+                      {parseFloat(a.discount ?? '0') > 0 ? `  •  ${t('label_discount')} ${parseFloat(a.discount).toLocaleString('fr-FR')} MAD` : ''}
                     </Text>
                   </View>
-                  <Text style={styles.detailRowValue}>{parseFloat(a.total_price_ht).toLocaleString('fr-FR')} MAD</Text>
+                  <Text style={styles.detailRowValue}>{parseFloat(a.total_ttc).toLocaleString('fr-FR')} MAD</Text>
                 </View>
               ))}
             </View>
           )}
 
           {/* Attachment */}
-          {item.document_path ? (
+          {src.document_path ? (
             <TouchableOpacity
               style={styles.attachmentCard}
               onPress={handleDownload}
@@ -433,6 +468,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
             )}
           </TouchableOpacity>
         </ScrollView>
+        )}
 
         {/* Footer */}
         <View style={styles.detailFooter}>
@@ -452,9 +488,9 @@ const DetailModal: React.FC<DetailModalProps> = ({
             )}
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.detailShareBtn, (!item.invoice_url || sharing) && { opacity: 0.5 }]}
+            style={[styles.detailShareBtn, sharing && { opacity: 0.5 }]}
             onPress={handleShare}
-            disabled={!item.invoice_url || sharing}
+            disabled={sharing}
             activeOpacity={0.8}
           >
             {sharing ? (

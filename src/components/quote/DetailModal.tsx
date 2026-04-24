@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -33,9 +33,8 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import RNShare from 'react-native-share';
 import { useQuote } from '../../hooks/useQuote';
 import { invoiceStyles as styles } from '../../styles/quote.styles';
-import type { InvoiceArticle, InvoiceItem } from '../../types/quote.types';
+import type { InvoiceItem } from '../../types/quote.types';
 import { STATUT_OPTIONS, resolvePaymentMethod, resolveStatus } from '../../types/quote.types';
-import { calculateInvoiceTotals } from '../../utils/invoiceCalculations';
 
 interface DetailModalProps {
   item: InvoiceItem;
@@ -54,29 +53,52 @@ const DetailModal: React.FC<DetailModalProps> = ({
 }) => {
   console.log('Rendering DetailModal for quote:', item);
   const { t, i18n } = useTranslation();
-  const { totalHT, totalTVA, totalTTC } = calculateInvoiceTotals(
-    item.articles.map(a => ({
-      ...a,
-      invoice_id: a.invoice_id ?? a.quotes_id ?? 0,
-    })) as any
-  );
-  // Aggregate raw backend values from articles
-  const totalPriceHT = item.articles.reduce((s, a) => s + parseFloat(a.total_price_ht ?? '0'), 0);
-  const uniqueVatRates = [...new Set(item.articles.map(a => a.tva_percentage))].join(' / ');
-  const formattedDate = new Date(item.date).toLocaleDateString('fr-FR');
-  const rawFileName = item.document_path?.split('/').pop() || 'Document';
+  const token = useSelector((state: any) => state.user.token);
+  const { getPdfDownloadUrl, convertToInvoice, duplicateQuote, getQuote } = useQuote();
+
+  // ── Fetched detail state ──────────────────────────────────────────
+  const [detail, setDetail] = useState<any>(null);
+  const [totals, setTotals] = useState<{ total_ht: number; total_discount: number; total_tva: number; total_ttc: number } | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoadingDetail(true);
+      const result = await getQuote(item.id);
+      if (!cancelled) {
+        if (result.success && result.quote) {
+          setDetail(result.quote);
+          setTotals(result.totals ?? null);
+        } else {
+          setDetail(item);
+        }
+        setLoadingDetail(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [item.id]);
+
+  // Derived display values (from fetched detail or list item as fallback)
+  const src = detail ?? item;
+  const formattedDate = new Date(src.date).toLocaleDateString('fr-FR');
+  const rawFileName = src.document_path?.split('/').pop() || 'Document';
   const attachmentName = rawFileName.length > 24 ? `${rawFileName.slice(0, 24)}...` : rawFileName;
+
   const [deleting, setDeleting] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [currentStatus, setCurrentStatus] = useState(item.status);
-  const token = useSelector((state: any) => state.user.token);
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
-  const { getPdfDownloadUrl, convertToInvoice, duplicateQuote } = useQuote();
   const [converting, setConverting] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
+
+  // Keep currentStatus in sync if detail loads a different status
+  useEffect(() => {
+    if (detail?.status) setCurrentStatus(detail.status);
+  }, [detail?.status]);
 
   const handleConvertToInvoice = async () => {
     Alert.alert(
@@ -113,27 +135,26 @@ const DetailModal: React.FC<DetailModalProps> = ({
   /** Check if a sent quote has passed its due date → should be expired */
   const checkAndAutoExpire = React.useCallback(async () => {
     if (currentStatus !== 'sent') return;
-    const dueDate = item.due_date ?? item.valid_until;
+    const dueDate = src.due_date ?? src.valid_until;
     if (!dueDate) return;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const due = new Date(dueDate);
     due.setHours(0, 0, 0, 0);
     if (due < today) {
-      // Auto-expire: sent quote past its due date
       setUpdatingStatus(true);
       try {
-        const datePart = item.date.split('T')[0];
+        const datePart = (src.date ?? item.date).split('T')[0];
         const payload = {
-          customer_id: item.customer_id,
-          client_id: item.client_id,
+          customer_id: src.customer_id ?? item.customer_id,
+          client_id: src.client_id ?? item.client_id,
           date: datePart,
-          ...(item.quote_number ? { quote_number: item.quote_number } : { invoice_number: item.invoice_number }),
-          payment_method: item.payment_method,
+          ...(src.quote_number ? { quote_number: src.quote_number } : { invoice_number: src.invoice_number }),
+          payment_method: src.payment_method ?? item.payment_method,
           status: 'expired',
-          notes: item.notes || null,
+          notes: (src.notes && src.notes !== 'null') ? src.notes : null,
           document: null,
-          articles: item.articles.map(a => ({
+          articles: (src.articles ?? item.articles).map((a: any) => ({
             designation: a.designation,
             unit_price_ht: parseFloat(a.unit_price_ht),
             quantity: a.quantity,
@@ -148,16 +169,16 @@ const DetailModal: React.FC<DetailModalProps> = ({
           setCurrentStatus('expired');
         }
       } catch {
-        // silently fail — status will be refreshed on next list fetch
+        // silently fail
       } finally {
         setUpdatingStatus(false);
       }
     }
-  }, []);
+  }, [src]);
 
   React.useEffect(() => {
-    checkAndAutoExpire();
-  }, []);
+    if (!loadingDetail) checkAndAutoExpire();
+  }, [loadingDetail]);
 
   const handleStatusChange = async (newStatus: string) => {
     if (isFinalState) return; 
@@ -168,17 +189,17 @@ const DetailModal: React.FC<DetailModalProps> = ({
     setShowStatusPicker(false);
     setUpdatingStatus(true);
     try {
-      const datePart = item.date.split('T')[0];
+      const datePart = (src.date ?? item.date).split('T')[0];
       const payload = {
-        customer_id: item.customer_id,
-        client_id: item.client_id,
+        customer_id: src.customer_id ?? item.customer_id,
+        client_id: src.client_id ?? item.client_id,
         date: datePart,
-        ...(item.quote_number ? { quote_number: item.quote_number } : { invoice_number: item.invoice_number }),
-        payment_method: item.payment_method,
+        ...(src.quote_number ? { quote_number: src.quote_number } : { invoice_number: src.invoice_number }),
+        payment_method: src.payment_method ?? item.payment_method,
         status: newStatus,
-        notes: item.notes || null,
+        notes: (src.notes && src.notes !== 'null') ? src.notes : null,
         document: null,
-        articles: item.articles.map(a => ({
+        articles: (src.articles ?? item.articles).map((a: any) => ({
           designation: a.designation,
           unit_price_ht: parseFloat(a.unit_price_ht),
           quantity: a.quantity,
@@ -204,7 +225,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
   const handleDelete = () => {
     Alert.alert(
       t('alert_delete_invoice'),
-      t('message_confirm_delete').replace('{invoice_number}', item.quote_number || item.invoice_number || ''),
+      t('message_confirm_delete').replace('{invoice_number}', src.quote_number ?? src.invoice_number ?? item.quote_number ?? item.invoice_number ?? ''),
       [
         { text: t('button_cancel'), style: 'cancel' },
         {
@@ -225,21 +246,21 @@ const DetailModal: React.FC<DetailModalProps> = ({
   };
 
   const handleDownload = async () => {
-    console.log('Initiating document download for quote:101', item);
-    if (!item.invoice_url) return;
+    console.log('Initiating document download for quote:101', src);
+    if (!src.invoice_url) return;
 
     setDownloading(true);
-console.log('Initiating document download for quote:102', item);
+console.log('Initiating document download for quote:102', src);
     try {
       const { fs, config } = ReactNativeBlobUtil;
       const filePath = `${fs.dirs.CacheDir}/invoice_${item.id}`;
       console.log('Initiating document download for quote:103', filePath);
 
-      console.log('Downloading document from URL:', item.invoice_url);
+      console.log('Downloading document from URL:', src.invoice_url);
       const res = await config({
         fileCache: true,
         path: filePath,
-      }).fetch('GET', item.invoice_url, {
+      }).fetch('GET', src.invoice_url, {
         Authorization: `Bearer ${token}`,
         Accept: 'application/octet-stream',
       });
@@ -283,7 +304,7 @@ console.log('Initiating document download for quote:102', item);
     setSharing(true);
     try {
       const { fs, config } = ReactNativeBlobUtil;
-      const numberField = item.quote_number || item.invoice_number || 'document';
+      const numberField = src.quote_number ?? src.invoice_number ?? item.quote_number ?? item.invoice_number ?? 'document';
       const safeNumber = numberField.replace(/[^a-zA-Z0-9]/g, '_');
       const filePath = `${fs.dirs.CacheDir}/invoice_pdf_${safeNumber}.pdf`;
 
@@ -337,7 +358,7 @@ console.log('Initiating document download for quote:102', item);
       const url = getPdfDownloadUrl(item.id);
       console.log('Downloading PDF from URL:jjj', url);
       const { fs, config } = ReactNativeBlobUtil;
-      const numberField = item.quote_number || item.invoice_number || 'document';
+      const numberField = src.quote_number ?? src.invoice_number ?? item.quote_number ?? item.invoice_number ?? 'document';
       const safeNumber = numberField.replace(/[^a-zA-Z0-9]/g, '_');
       const filePath =
         Platform.OS === 'ios'
@@ -429,6 +450,11 @@ console.log('Initiating document download for quote:102', item);
           </View>
         </View>
 
+        {loadingDetail ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="large" color="#D97706" />
+          </View>
+        ) : (
         <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
           {/* Amount hero */}
           <View style={styles.detailHero}>
@@ -455,7 +481,7 @@ console.log('Initiating document download for quote:102', item);
             </View>
             {/* Amount + date */}
             <View style={{ alignItems: 'center' }}>
-              <Text style={styles.detailAmount}>{totalTTC.toLocaleString('fr-FR')} MAD</Text>
+              <Text style={styles.detailAmount}>{(totals?.total_ttc ?? 0).toLocaleString('fr-FR')} MAD</Text>
               <Text style={[styles.detailDate, { marginTop: 4 }]}>{formattedDate}</Text>
             </View>
           </View>
@@ -468,7 +494,7 @@ console.log('Initiating document download for quote:102', item);
                 <FileText size={18} color="#9CA3AF" />
                 <Text style={styles.detailRowLabel}>{t('label_quote_number')}</Text>
               </View>
-              <Text style={styles.detailRowValue}>{item.quote_number ?? item.invoice_number}</Text>
+              <Text style={styles.detailRowValue}>{src.quote_number ?? src.invoice_number}</Text>
             </View>
             {/* Client */}
             <View style={styles.detailRow}>
@@ -476,7 +502,7 @@ console.log('Initiating document download for quote:102', item);
                 <User size={18} color="#9CA3AF" />
                 <Text style={styles.detailRowLabel}>{t('label_client')}</Text>
               </View>
-              <Text style={styles.detailRowValue}>{item.client?.client_name ?? '—'}</Text>
+              <Text style={styles.detailRowValue}>{src.client?.client_name ?? '—'}</Text>
             </View>
             {/* Validity */}
             <View style={styles.detailRow}>
@@ -485,7 +511,7 @@ console.log('Initiating document download for quote:102', item);
                 <Text style={styles.detailRowLabel}>{t('label_validity')}</Text>
               </View>
               <Text style={styles.detailRowValue}>
-                {(item.due_date ?? item.valid_until) ? new Date(item.due_date ?? item.valid_until ?? '').toLocaleDateString('fr-FR') : '—'}
+                {(src.due_date ?? src.valid_until) ? new Date(src.due_date ?? src.valid_until ?? '').toLocaleDateString('fr-FR') : '—'}
               </Text>
             </View>
             {/* Status */}
@@ -506,7 +532,15 @@ console.log('Initiating document download for quote:102', item);
                 <FileText size={18} color="#9CA3AF" />
                 <Text style={styles.detailRowLabel}>{t('label_total_ht')}</Text>
               </View>
-              <Text style={styles.detailRowValue}>{totalHT.toLocaleString('fr-FR')} MAD</Text>
+              <Text style={styles.detailRowValue}>{(totals?.total_ht ?? 0).toLocaleString('fr-FR')} MAD</Text>
+            </View>
+            {/* Discount */}
+            <View style={styles.detailRow}>
+              <View style={styles.detailRowLeft}>
+                <Layers size={18} color="#9CA3AF" />
+                <Text style={styles.detailRowLabel}>{t('label_discount')}</Text>
+              </View>
+              <Text style={styles.detailRowValue}>{(totals?.total_discount ?? 0).toLocaleString('fr-FR')} MAD</Text>
             </View>
             {/* TVA */}
             <View style={styles.detailRow}>
@@ -514,7 +548,7 @@ console.log('Initiating document download for quote:102', item);
                 <Layers size={18} color="#9CA3AF" />
                 <Text style={styles.detailRowLabel}>{t('label_total_tva')}</Text>
               </View>
-              <Text style={styles.detailRowValue}>{totalTVA.toLocaleString('fr-FR')} MAD</Text>
+              <Text style={styles.detailRowValue}>{(totals?.total_tva ?? 0).toLocaleString('fr-FR')} MAD</Text>
             </View>
             {/* Total TTC — last row, bolder */}
             <View style={[styles.detailRow, { borderBottomWidth: 0 }]}>
@@ -522,29 +556,30 @@ console.log('Initiating document download for quote:102', item);
                 <FileText size={18} color="#9CA3AF" />
                 <Text style={[styles.detailRowLabel, { fontWeight: '700', color: '#374151' }]}>{t('label_total_ttc')}</Text>
               </View>
-              <Text style={[styles.detailRowValue, { fontSize: 16, fontWeight: '700' }]}>{totalTTC.toLocaleString('fr-FR')} MAD</Text>
+              <Text style={[styles.detailRowValue, { fontSize: 16, fontWeight: '700' }]}>{(totals?.total_ttc ?? 0).toLocaleString('fr-FR')} MAD</Text>
             </View>
           </View>
 
           {/* Articles */}
-          {item.articles.length > 0 && (
+          {(src.articles ?? []).length > 0 && (
             <View style={[styles.detailCard, { padding: 16 }]}>
               <Text style={{ fontSize: 15, fontWeight: '600', color: '#1F2937', marginBottom: 12 }}>
                 {t('label_articles')}
               </Text>
               <View style={{ gap: 12 }}>
-                {item.articles.map(a => (
+                {(src.articles ?? []).map((a: any) => (
                   <View key={a.id} style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                     <View style={{ flex: 1, marginRight: 16 }}>
                       <Text style={{ fontSize: 14, fontWeight: '600', color: '#1F2937', marginBottom: 4 }}>
                         {a.designation}
                       </Text>
                       <Text style={{ fontSize: 12, color: '#6B7280' }}>
-                        {a.quantity} × {parseFloat(a.unit_price_ht).toLocaleString('fr-FR')} MAD HT  •  TVA {a.tva_percentage}%
+                        {a.quantity} × {parseFloat(a.unit_price_ht).toLocaleString('fr-FR')} MAD HT  •  TVA {a.tax.rate}%
+                        {parseFloat(a.discount ?? '0') > 0 ? `  •  ${t('label_discount')} ${parseFloat(a.discount).toLocaleString('fr-FR')} MAD` : ''}
                       </Text>
                     </View>
                     <Text style={{ fontSize: 15, fontWeight: '700', color: '#1F2937' }}>
-                      {parseFloat(a.total_price_ht).toLocaleString('fr-FR')} MAD
+                      {parseFloat(a.total_ttc).toLocaleString('fr-FR')} MAD
                     </Text>
                   </View>
                 ))}
@@ -553,7 +588,7 @@ console.log('Initiating document download for quote:102', item);
           )}
 
           {/* Attachment */}
-          {item.document_path ? (
+          {src.document_path ? (
             <TouchableOpacity
               style={styles.attachmentCard}
               onPress={handleDownload}
@@ -618,6 +653,7 @@ console.log('Initiating document download for quote:102', item);
             )}
           </TouchableOpacity>
         </ScrollView>
+        )}
 
         {/* Footer */}
         <View style={styles.detailFooter}>
@@ -637,9 +673,9 @@ console.log('Initiating document download for quote:102', item);
             )}
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.detailShareBtn, (!item.invoice_url || sharing) && { opacity: 0.5 }]}
+            style={[styles.detailShareBtn, sharing && { opacity: 0.5 }]}
             onPress={handleShare}
-            disabled={!item.invoice_url || sharing}
+            disabled={sharing}
             activeOpacity={0.8}
           >
             {sharing ? (
