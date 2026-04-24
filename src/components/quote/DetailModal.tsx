@@ -54,7 +54,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
   console.log('Rendering DetailModal for quote:', item);
   const { t, i18n } = useTranslation();
   const token = useSelector((state: any) => state.user.token);
-  const { getPdfDownloadUrl, convertToInvoice, duplicateQuote, getQuote } = useQuote();
+  const { getPdfDownloadUrl, convertToInvoice, duplicateQuote, getQuote, updateQuoteStatus } = useQuote();
 
   // ── Fetched detail state ──────────────────────────────────────────
   const [detail, setDetail] = useState<any>(null);
@@ -144,27 +144,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
     if (due < today) {
       setUpdatingStatus(true);
       try {
-        const datePart = (src.date ?? item.date).split('T')[0];
-        const payload = {
-          customer_id: src.customer_id ?? item.customer_id,
-          client_id: src.client_id ?? item.client_id,
-          date: datePart,
-          ...(src.quote_number ? { quote_number: src.quote_number } : { invoice_number: src.invoice_number }),
-          payment_method: src.payment_method ?? item.payment_method,
-          status: 'expired',
-          notes: (src.notes && src.notes !== 'null') ? src.notes : null,
-          document: null,
-          articles: (src.articles ?? item.articles).map((a: any) => ({
-            designation: a.designation,
-            unit_price_ht: parseFloat(a.unit_price_ht),
-            quantity: a.quantity,
-            total_price_ht: parseFloat(a.total_price_ht),
-            tva_percentage: typeof a.tva_percentage === 'string' ? a.tva_percentage : String(a.tva_percentage),
-            ...(a.product_id ? { product_id: a.product_id } : {}),
-            ...((a as any).unit_id != null ? { unit_id: (a as any).unit_id } : {}),
-          })),
-        };
-        const result = await onUpdate(item.id, payload);
+        const result = await updateQuoteStatus(item.id, 'expired');
         if (result.success) {
           setCurrentStatus('expired');
         }
