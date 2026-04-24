@@ -4,8 +4,18 @@ import { useTranslation } from 'react-i18next';
 import type { InvoiceItem } from '../types/invoice.types';
 import { useQuote } from './useQuote';
 
+
+
+interface QuoteStats {
+  total_sum_all: number;
+  total_sum_accepted: number;
+  total_sum_sent: number;
+  total_sum_overdue: number;
+}
+
 interface UseQuoteListReturn {
   quotes: InvoiceItem[];
+  stats: QuoteStats | null;
   loading: boolean;
   refreshing: boolean;
   selectedMonth: string | null;
@@ -25,6 +35,7 @@ export const useQuoteList = (): UseQuoteListReturn => {
   const { getQuotes } = useQuote();
 
   const [quotes, setQuotes] = useState<InvoiceItem[]>([]);
+  const [stats, setStats] = useState<QuoteStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null);
@@ -60,6 +71,7 @@ export const useQuoteList = (): UseQuoteListReturn => {
       const quotesResult = await getQuotes(params);
       if (quotesResult.success) {
         setQuotes(quotesResult.quotes ?? []);
+        setStats(quotesResult.stats ?? null);
       }
     } catch (error) {
       Alert.alert(t('error_title'), t('error_generic'));
@@ -86,6 +98,7 @@ export const useQuoteList = (): UseQuoteListReturn => {
 
   return {
     quotes,
+    stats,
     loading,
     refreshing,
     selectedMonth,

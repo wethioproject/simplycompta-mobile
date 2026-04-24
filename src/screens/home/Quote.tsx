@@ -35,7 +35,6 @@ import QuoteCard from '../../components/quote/QuoteCard';
 import QuotePieChart from '../../components/quote/QuotePieChart';
 import dashboardService from '../../services/dashboardService';
 import type { QuoteChartItem } from '../../services/dashboardService';
-import { calculateInvoiceTotals } from '../../utils/invoiceCalculations';
 import type { Account, Category, Client, StackNavigation } from '../../types/invoice.types';
 import type { InvoiceItem } from '../../types/quote.types';
 import { invoiceStyles as styles } from '../../styles/quote.styles';
@@ -69,12 +68,13 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
   const navigation = useNavigation<StackNavigation>();
   const nav = navProp ?? navigation;
   const route = useRoute<any>();
-  const { createQuote, updateQuote, deleteQuote, getQuoteResources, duplicateQuote, updateQuoteStatus } = useQuote();
+  const { createQuote, updateQuote, deleteQuote, getQuoteResources, duplicateQuote, updateQuoteStatus, exportQuotes } = useQuote();
   const token = useSelector((state: any) => state.user.token);
   const user = useSelector((state: any) => state.user.customer);
 
   const {
     quotes,
+    stats,
     loading,
     refreshing,
     selectedMonth,
@@ -108,14 +108,12 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
   const MONTHS = [t('month_january'), t('month_february'), t('month_march'), t('month_april'), t('month_may'), t('month_june'), t('month_july'), t('month_august'), t('month_september'), t('month_october'), t('month_november'), t('month_december')];
   const YEARS = ['2026', '2025', '2024'];
 
-  /* ─── Derived stats ─── */
-  const getTotal = (item: InvoiceItem) => calculateInvoiceTotals(item.articles as any).totalTTC;
-
-  const totalRevenue   = quotes.reduce((s: number, i: InvoiceItem) => s + getTotal(i), 0);
-  const collectedAmt   = quotes.filter((i: InvoiceItem) => i.status === 'accepted').reduce((s: number, i: InvoiceItem) => s + getTotal(i), 0);
-  const pendingAmt     = quotes.filter((i: InvoiceItem) => i.status === 'sent').reduce((s: number, i: InvoiceItem) => s + getTotal(i), 0);
-  const overdueAmt     = quotes.filter((i: InvoiceItem) => i.status === 'rejected' || i.status === 'expired').reduce((s: number, i: InvoiceItem) => s + getTotal(i), 0);
-  const overdueCount   = quotes.filter((i: InvoiceItem) => i.status === 'expired').length;
+  /* ─── Derived stats (from API) ─── */
+  const totalRevenue = stats?.total_sum_all ?? 0;
+  const collectedAmt = stats?.total_sum_accepted ?? 0;
+  const pendingAmt   = stats?.total_sum_sent ?? 0;
+  const overdueAmt   = stats?.total_sum_overdue ?? 0;
+  const overdueCount = quotes.filter((i: InvoiceItem) => i.status === 'expired').length;
 
   /* ─── Month button label ─── */
   const now = new Date();
@@ -197,9 +195,22 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
     if (exporting) return;
     setExporting(true);
     try {
-      Alert.alert(t('info_title'), 'Export functionality not yet available for quotes.');
-    } catch (e) {
-      console.error('Export error:', e);
+      const result = await exportQuotes();
+      if (result.success && result.csvData) {
+        const { fs } = ReactNativeBlobUtil;
+        const fileName = result.fileName || 'quotes_export.csv';
+        const filePath = `${fs.dirs.CacheDir}/${fileName}`;
+        if (await fs.exists(filePath)) await fs.unlink(filePath);
+        await fs.writeFile(filePath, result.csvData, 'utf8');
+        if (Platform.OS === 'ios') {
+          await Share.share({ url: `file://${filePath}` });
+        } else {
+          await ReactNativeBlobUtil.android.actionViewIntent(filePath, 'text/csv');
+        }
+      } else {
+        Alert.alert(t('error_title'), result.error ?? t('error_generic'));
+      }
+    } catch {
       Alert.alert(t('error_title'), t('error_generic'));
     } finally {
       setExporting(false);
@@ -453,21 +464,21 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
                 </Text>
                 <View style={styles.summaryIndicatorsRow}>
                   <View style={styles.summaryIndicator}>
-                    <View style={[styles.summaryDot, { backgroundColor: '#1E5BAC' }]} />
+                    <View style={[styles.summaryDot, { backgroundColor: '#16A34A' }]} />
                     <Text style={styles.summaryIndicatorText}>
                       <Text style={styles.summaryIndicatorAmount}>
                         {collectedAmt.toLocaleString('fr-FR')}
                       </Text>
-                      {' '}{t('invoice_summary_encaisse')}
+                      {' '}{t('status_accepted')}
                     </Text>
                   </View>
                   <View style={styles.summaryIndicator}>
-                    <View style={[styles.summaryDot, { backgroundColor: '#3B82F6' }]} />
+                    <View style={[styles.summaryDot, { backgroundColor: '#F59E0B' }]} />
                     <Text style={styles.summaryIndicatorText}>
                       <Text style={styles.summaryIndicatorAmount}>
                         {pendingAmt.toLocaleString('fr-FR')}
                       </Text>
-                      {' '}{t('invoice_summary_envoyee')}
+                      {' '}{t('status_sent')}
                     </Text>
                   </View>
                   <View style={styles.summaryIndicator}>
@@ -477,6 +488,7 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
                         {overdueAmt.toLocaleString('fr-FR')}
                       </Text>
                       {' '}{t('invoice_summary_retard')}
+                      {/* {' '}{t('status_expired')} */}
                     </Text>
                   </View>
                 </View>

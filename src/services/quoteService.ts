@@ -172,6 +172,27 @@ class QuoteService {
             throw error;
         }
     }
+
+    async exportQuotes(): Promise<{ csvData: string; fileName: string }> {
+        try {
+            const response = await api.get(Api_Endpoints.customerQuoteExport, {
+                responseType: 'text',
+            });
+            const csvData: string = typeof response.data === 'string'
+                ? response.data
+                : JSON.stringify(response.data);
+            const disposition: string =
+                response.headers?.['content-disposition'] ||
+                response.headers?.['Content-Disposition'] || '';
+            const match = disposition.match(/filename=([^;\s]+)/);
+            const fileName = match ? match[1].replace(/"/g, '') : 'quotes_export.csv';
+            return { csvData, fileName };
+        } catch (error: any) {
+            console.error('Export quotes error:', error.response?.data || error.message);
+            throw error;
+        }
+    }
+
     async duplicateQuote(id: number): Promise<any> {
         try {
             const response = await api.post(`${Api_Endpoints.customerQuoteDuplicate}/${id}`);

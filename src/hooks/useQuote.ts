@@ -7,7 +7,8 @@ export const useQuote = () => {
         try {
             const response = await quoteService.getQuotes(params);
             return {
-                quotes: response.data,
+                quotes: response.data?.quotes ?? response.data ?? [],
+                stats: response.data?.stats ?? null,
                 success: true
             }
         } catch (error: any) {
@@ -124,6 +125,16 @@ export const useQuote = () => {
         }            
     }, [])
 
+    const exportQuotes = useCallback(async () => {
+        try {
+            const { csvData, fileName } = await quoteService.exportQuotes();
+            return { success: true, csvData, fileName };
+        } catch (error: any) {
+            const errorMessage = error.response?.data?.message || 'Failed to export quotes.';
+            return { success: false, error: errorMessage, csvData: '', fileName: '' };
+        }
+    }, []);
+
     const deleteQuote = useCallback(async (id: number) => {
         try {
             await quoteService.deleteQuote(id);
@@ -176,6 +187,7 @@ export const useQuote = () => {
         createQuote,
         createProduct,
         updateQuote,
+        exportQuotes,
         updateQuoteStatus,
         deleteQuote,
         duplicateQuote,

@@ -19,6 +19,7 @@ export const Api_Endpoints = {
   customerExpenseDuplicate: 'customer/duplicate-expense',
   customerExpenseResources: 'customer/transaction-resources',
   customerExpenseExport: 'customer/export-expenses',
+  customerQuoteExport: 'customer/export-quotes',
   customerProfile: '/customer/profile',
   sendAccountantEmail: 'customer/send-accountant-email',
   customerClientInvoice: 'customer/customer-client-invoice',
