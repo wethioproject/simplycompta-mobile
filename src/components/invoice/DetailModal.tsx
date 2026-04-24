@@ -29,7 +29,7 @@ import RNShare from 'react-native-share';
 import { useInvoice } from '../../hooks/useInvoice';
 import { invoiceStyles as styles } from '../../styles/invoice.styles';
 import type { InvoiceItem } from '../../types/invoice.types';
-import { STATUT_OPTIONS_DETAIL_MODAL, resolvePaymentMethod } from '../../types/invoice.types';
+import { STATUT_OPTIONS_DETAIL_MODAL, resolvePaymentMethod, resolveStatus } from '../../types/invoice.types';
 
 interface DetailModalProps {
   item: InvoiceItem;
@@ -48,7 +48,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
 }) => {
   const { t, i18n } = useTranslation();
   const token = useSelector((state: any) => state.user.token);
-  const { getPdfDownloadUrl, duplicateInvoice, getInvoice } = useInvoice();
+  const { getPdfDownloadUrl, duplicateInvoice, getInvoice, updateInvoiceStatus } = useInvoice();
 
   // ── Fetched detail state ──────────────────────────────────────────
   const [detail, setDetail] = useState<any>(null);
@@ -102,27 +102,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
     setShowStatusPicker(false);
     setUpdatingStatus(true);
     try {
-      const datePart = (src.date ?? item.date).split('T')[0];
-      const payload = {
-        customer_id: src.customer_id ?? item.customer_id,
-        client_id: src.client_id ?? item.client_id,
-        date: datePart,
-        invoice_number: src.invoice_number ?? item.invoice_number,
-        payment_method: src.payment_method ?? item.payment_method,
-        status: newStatus,
-        notes: (src.notes && src.notes !== 'null') ? src.notes : null,
-        document: null,
-        articles: (src.articles ?? item.articles).map((a: any) => ({
-          designation: a.designation,
-          unit_price_ht: parseFloat(a.unit_price_ht),
-          quantity: a.quantity,
-          total_price_ht: parseFloat(a.total_price_ht),
-          tva_percentage: parseFloat(a.tva_percentage),
-          product_id: a.product_id,
-          unit_id: a.unit_id ?? null,
-        })),
-      };
-      const result = await onUpdate(item.id, payload);
+      const result = await updateInvoiceStatus(item.id, newStatus);
       if (result.success) {
         setCurrentStatus(newStatus);
       } else {
