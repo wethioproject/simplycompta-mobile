@@ -59,12 +59,14 @@ export const useInvoice = () => {
             const result = await invoiceService.getInvoice(id);
             return {
                 invoice: result.data,
+                totals: result.totals ?? null,
                 success: true
             }
         } catch (error: any) {
             const errorMessage = error.response?.data?.message || 'Failed to fetch invoice.';
             return {
                 invoice: null,
+                totals: null,
                 success: false,
                 error: errorMessage
             }

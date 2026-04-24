@@ -42,6 +42,7 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
   onMarkPaid,
   onDuplicate,
 }) => {
+  console.log('Rendering InvoiceCard for invoice:', item);
   const { t } = useTranslation();
   const { totalTTC } = calculateInvoiceTotals(item.articles);
   const formattedDate = new Date(item.date).toLocaleDateString('fr-FR');
@@ -77,7 +78,7 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
             {t('label_invoice')} #{item.invoice_number} • {formattedDate}
           </Text>
           <Text style={[styles.invoiceAmount, { fontSize: 17, color: amountColor }]}>
-            + {totalTTC.toLocaleString('fr-FR')} MAD
+            + {item.total_ttc.toLocaleString('fr-FR')} MAD
           </Text>
         </View>
 

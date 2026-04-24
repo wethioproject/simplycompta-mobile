@@ -59,12 +59,14 @@ export const useQuote = () => {
             const result = await quoteService.getQuote(id);
             return {
                 quote: result.data,
+                totals: result.totals ?? null,
                 success: true
             }
         } catch (error: any) {
             const errorMessage = error.response?.data?.message || 'Failed to fetch quote.';
             return {
                 quote: null,
+                totals: null,
                 success: false,
                 error: errorMessage
             }

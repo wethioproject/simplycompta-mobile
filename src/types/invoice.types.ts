@@ -44,6 +44,7 @@ export interface InvoiceItem {
   client: { id: number; client_name: string } | null;
   articles: InvoiceArticle[];
   notes?: string | null;
+  total_ttc: number;
 }
 
 export interface Article {
