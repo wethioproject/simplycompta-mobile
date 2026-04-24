@@ -182,8 +182,8 @@ const Contacts: React.FC = ({ navigation: navProp }: any) => {
           <Text style={styles.cardName}>{item.company_name}</Text>
           <Text style={styles.cardMeta}>{item.client_name}</Text>
         </View>
-        {
-          lateCount > 0 && (
+        {/* {
+          revenue > 0 && (
             <View style={styles.cardRight}>
               <View style={lateCount > 0 ? styles.badgeLate : styles.badgePending}>
                 <Clock size={14} color={lateCount > 0 ? '#EF4444' : '#EA580C'} />
@@ -192,7 +192,52 @@ const Contacts: React.FC = ({ navigation: navProp }: any) => {
               <Text style={displayRevenue > 0 ? styles.amountGreen : styles.amountGray}>+{displayRevenue.toLocaleString('fr-FR')} MAD</Text>
             </View>
           )
-        }
+        } */}
+
+
+{(revenue > 0 || lateCount > 0) && (
+  <View style={styles.cardRight}>
+    
+    {lateCount > 0 && (
+      <View style={styles.badgeLate}>
+        <Clock size={14} color="#EF4444" />
+        <Text style={styles.badgeLateText}>
+          {lateCount} {t('contacts_pending')}
+        </Text>
+      </View>
+    )}
+
+    {revenue > 0 && (
+      <Text style={styles.amountGreen}>
+        +{revenue.toLocaleString('fr-FR')} MAD
+      </Text>
+    )}
+
+    {lateCount > 0 && (
+      <Text style={styles.amountGray}>
+        +{lateCount.toLocaleString('fr-FR')} MAD
+      </Text>
+    )}
+
+  </View>
+)}
+
+
+
+
+        
+            {/* <View style={styles.cardRight}>
+              {
+                lateCount > 0 && (
+              <View style={lateCount > 0 ? styles.badgeLate : styles.badgePending}>
+                <Clock size={14} color={lateCount > 0 ? '#EF4444' : '#EA580C'} />
+                <Text style={lateCount > 0 ? styles.badgeLateText : styles.badgePendingText}>{lateCount} {t('contacts_pending')}</Text>
+              </View>
+                )
+              }
+              <Text style={displayRevenue > 0 ? styles.amountGreen : styles.amountGray}>+{displayRevenue.toLocaleString('fr-FR')} MAD</Text>
+            </View> */}
+
 
       </TouchableOpacity>
     );
