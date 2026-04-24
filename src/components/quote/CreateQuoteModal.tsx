@@ -223,7 +223,7 @@ const CreateQuoteModal: React.FC<{
       setTempDueDate(tomorrow);
       (async () => {
         const resourcesResult = await getQuoteResources();
-        const autoQuoteNumber = (resourcesResult.resources as any)?.invoice_number ?? '';
+        const autoQuoteNumber = (resourcesResult.resources as any)?.quote_number ?? '';
         reset({
           quoteNumber: autoQuoteNumber,
           date: `${y}-${mo}-${d}`,
