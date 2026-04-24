@@ -451,7 +451,7 @@ const handleDocOpen = async (doc: any) => {
                       {/* {t('label_statement_prefix')} {monthName} {yearStr} */}
                       {monthName} {yearStr}
                     </Text>
-                    {isTransmitted ? (
+                    {isTransmitted && (
                       (() => {
                         const colors = STATEMENT_STATUS_COLORS[item!.status] ?? DEFAULT_STMT_STATUS;
                         const labelKey = STATEMENT_STATUS_KEYS[item!.status];
@@ -464,8 +464,6 @@ const handleDocOpen = async (doc: any) => {
                           </View>
                         );
                       })()
-                    ) : (
-                      <Text style={styles.missingText}>{t('label_no_document')}</Text>
                     )}
                   </View>
                 </View>
