@@ -8,21 +8,19 @@ import { calculateInvoiceTotals } from '../../utils/invoiceCalculations';
 import { t } from 'i18next';
 
 const STATUS_CONFIG: Record<string, { bg: string; label: string }> = {
-  Quotes:    { bg: '#6B7280', label: t('status_quotes')    },
-  Issued:    { bg: '#3B82F6', label: t('status_issued') },
-  Paid:      { bg: '#16A34A', label: t('status_paid') },
-  Cancelled: { bg: '#EF4444', label: t('status_cancelled') },
-  Canceled:  { bg: '#EF4444', label: t('status_cancelled') },
+  issued:    { bg: '#3B82F6', label: t('status_issued') },
+  paid:      { bg: '#16A34A', label: t('status_paid') },
+  cancelled: { bg: '#EF4444', label: t('status_cancelled') },
+  canceled:  { bg: '#EF4444', label: t('status_cancelled') },
 };
 
 const DEFAULT_STATUS = { bg: '#E5E7EB', label: t('status_unknown') };
 
 const AMOUNT_COLORS: Record<string, string> = {
-  Quotes:    '#6B7280',
-  Issued:    '#3B82F6',
-  Paid:      '#16A34A',
-  Cancelled: '#EF4444',
-  Canceled:  '#EF4444',
+  issued:    '#3B82F6',
+  paid:      '#16A34A',
+  cancelled: '#EF4444',
+  canceled:  '#EF4444',
 };
 
 interface InvoiceCardProps {
@@ -49,7 +47,7 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
   const { bg, label } = STATUS_CONFIG[item.status] ?? DEFAULT_STATUS;
   const amountColor = AMOUNT_COLORS[item.status] ?? '#111827';
   const isMenuOpen = openMenuId === item.id;
-  const isPaid = item.status === 'Paid';
+  const isPaid = item.status === 'paid';
 
   const dotsRef = useRef<View>(null);
   const [menuPos, setMenuPos] = React.useState({ top: 0, right: 0 });

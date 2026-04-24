@@ -66,14 +66,28 @@ export interface InvoiceFormValues {
   notes: string;
 }
 
-// export type InvoiceTabType = 'Tous' | 'Quotes' | 'Issued' | 'Paid' | 'Cancelled';
-export type InvoiceTabType = 'Tous' | 'Issued' | 'Paid' | 'Cancelled';
+export type InvoiceTabType = 'Tous' | 'issued' | 'paid' | 'cancelled';
 
-// export const INVOICE_TABS: InvoiceTabType[] = ['Tous', 'Quotes', 'Issued', 'Paid', 'Cancelled'];
-export const INVOICE_TABS: InvoiceTabType[] = ['Tous', 'Issued', 'Paid', 'Cancelled'];
-// export const STATUT_OPTIONS = ['Quotes', 'Issued', 'Paid', 'Cancelled'];
-export const STATUT_OPTIONS = ['Issued', 'Paid'];
-export const STATUT_OPTIONS_DETAIL_MODAL = ['Issued', 'Paid', 'Cancelled'];
+export const INVOICE_TABS: InvoiceTabType[] = ['Tous', 'issued', 'paid', 'cancelled'];
+
+export const STATUT_OPTIONS = [
+  { key: 'issued',    fr: 'Émise',    en: 'Issued' },
+  { key: 'paid',      fr: 'Payée',    en: 'Paid' },
+] as const;
+
+export const STATUT_OPTIONS_DETAIL_MODAL = [
+  { key: 'issued',    fr: 'Émise',    en: 'Issued' },
+  { key: 'paid',      fr: 'Payée',    en: 'Paid' },
+  { key: 'cancelled', fr: 'Annulée',  en: 'Cancelled' },
+] as const;
+
+/** Resolves a status key (e.g. "issued") to a display label. */
+export const resolveStatus = (key: string | null | undefined, locale: string): string => {
+  if (!key) return '—';
+  const match = STATUT_OPTIONS_DETAIL_MODAL.find(s => s.key === key);
+  if (!match) return key;
+  return locale.startsWith('fr') ? match.fr : match.en;
+};
 
 export const PAYMENT_METHODS = [
   { key: 'cash',             fr: 'Espèces',                   en: 'Cash' },

@@ -146,7 +146,7 @@ const CreateInvoiceModal: React.FC<{
       validUntil: '',
       clientId: undefined,
       accountId: undefined,
-      status: 'Issued',
+      status: 'issued',
       articles: [],
       notes: '',
     },
@@ -223,7 +223,7 @@ const CreateInvoiceModal: React.FC<{
           validUntil: `${ty}-${tmo}-${td}`,
           clientId: defaultClientId ?? undefined,
           accountId: undefined,
-          status: 'Issued',
+          status: 'issued',
           notes: '',
           articles: [],
         });
@@ -768,15 +768,17 @@ const CreateInvoiceModal: React.FC<{
               <Text style={styles.pickerSheetTitle}>{t('modal_title_status')}</Text>
               {STATUT_OPTIONS.map(s => (
                 <TouchableOpacity
-                  key={s}
+                  key={s.key}
                   style={styles.pickerOption}
                   onPress={() => {
-                    setValue('status', s, { shouldValidate: true });
+                    setValue('status', s.key, { shouldValidate: true });
                     setShowStatusPicker(false);
                   }}
                 >
-                  <Text style={[styles.pickerOptionText, watchedStatus === s && styles.pickerOptionSelected]}>{s}</Text>
-                  {watchedStatus === s && <Text style={styles.pickerCheck}>✓</Text>}
+                  <Text style={[styles.pickerOptionText, watchedStatus === s.key && styles.pickerOptionSelected]}>
+                    {i18n.language.startsWith('fr') ? s.fr : s.en}
+                  </Text>
+                  {watchedStatus === s.key && <Text style={styles.pickerCheck}>✓</Text>}
                 </TouchableOpacity>
               ))}
             </View>

@@ -524,15 +524,15 @@ const DetailModal: React.FC<DetailModalProps> = ({
               <Text style={styles.pickerSheetTitle}>{t('modal_title_change_status')}</Text>
               {STATUT_OPTIONS_DETAIL_MODAL.map(s => (
                 <TouchableOpacity
-                  key={s}
+                  key={s.key}
                   style={styles.pickerOption}
-                  onPress={() => handleStatusChange(s)}
+                  onPress={() => handleStatusChange(s.key)}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.pickerOptionText, currentStatus === s && styles.pickerOptionSelected]}>
-                    {s}
+                  <Text style={[styles.pickerOptionText, currentStatus === s.key && styles.pickerOptionSelected]}>
+                    {resolveStatus(s.key, i18n.language)}
                   </Text>
-                  {currentStatus === s && <Text style={styles.pickerCheck}>✓</Text>}
+                  {currentStatus === s.key && <Text style={styles.pickerCheck}>✓</Text>}
                 </TouchableOpacity>
               ))}
             </View>
