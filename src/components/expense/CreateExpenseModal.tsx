@@ -31,7 +31,10 @@ import {
   Eye,
   Search,
   Plus,
+  AlertTriangle,
+  CheckCircle2,
 } from 'lucide-react-native';
+
 import { useSupplier } from '../../hooks/useSupplier';
 import { getMimeType } from '../../utils/helpers';
 import { CreateSupplierModal } from '../../screens/home/Suppliers';
@@ -39,6 +42,7 @@ import type { Account, Category, Supplier, ExpenseItem, ExpenseFormValues } from
 import { PAYMENT_METHODS } from '../../types/invoice.types';
 import { styles } from '../../styles/expenses.styles';
 
+const OCR_API_URL = 'http://192.168.1.3:3001/api/expenses/ocr';
 
 const expenseSchema = yup.object({
   date: yup.string().required('Date is required'),
@@ -60,8 +64,31 @@ const expenseSchema = yup.object({
     .required('Category is required')
     .positive('Category is required'),
   supplierId: yup.number().nullable().optional(),
+  expenseReference: yup.string().nullable().optional(),
+  description: yup.string().nullable().optional(),
 });
 
+type OcrItem = {
+  name?: string;
+  quantity?: number;
+  unit_price?: number;
+  total?: number;
+};
+
+type OcrSuggestion = {
+  date?: string;
+  amountTTC?: string;
+  amountTVA?: string;
+  paymentMethod?: string;
+  supplierName?: string;
+  categoryName?: string;
+  confidenceScore?: number;
+  warnings?: string[];
+  reference?: string;
+  description?: string;
+  items?: OcrItem[];
+  duplicateWarning?: string;
+};
 
 interface CreateExpenseModalProps {
   visible: boolean;
@@ -76,8 +103,20 @@ interface CreateExpenseModalProps {
   onUpdate?: (id: number, payload: any) => Promise<{ success: boolean; error?: string }>;
   onSuppliersRefresh?: () => void;
   defaultSupplierId?: number;
+  expenses?: ExpenseItem[];
 }
 
+const normalizeText = (value: any) =>
+  String(value ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[’']/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+
+const includesAny = (text: string, keywords: string[]) =>
+  keywords.some(k => text.includes(normalizeText(k)));
 
 const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   visible,
@@ -92,13 +131,14 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   onUpdate,
   onSuppliersRefresh,
   defaultSupplierId,
+  expenses = [],
 }) => {
   const insets = useSafeAreaInsets();
   const { t, i18n } = useTranslation();
   const { getSuppliers } = useSupplier();
 
-
   const [saving, setSaving] = useState(false);
+  const [ocrLoading, setOcrLoading] = useState(false);
   const [showAccountPicker, setShowAccountPicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showSupplierPicker, setShowSupplierPicker] = useState(false);
@@ -106,14 +146,16 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   const [document, setDocument] = useState<any>(null);
   const [tempDate, setTempDate] = useState<Date>(new Date());
   const [showCreateSupplierModal, setShowCreateSupplierModal] = useState(false);
+  const [pendingSupplierName, setPendingSupplierName] = useState('');
   const [showImagePreview, setShowImagePreview] = useState(false);
-
+  const [ocrSuggestion, setOcrSuggestion] = useState<OcrSuggestion | null>(null);
+  const [ocrRaw, setOcrRaw] = useState<any>(null);
+  const [ocrApplied, setOcrApplied] = useState(false);
   const [showSupplierSearch, setShowSupplierSearch] = useState(false);
   const [supplierSearchQuery, setSupplierSearchQuery] = useState('');
   const [supplierSearchResults, setSupplierSearchResults] = useState<Supplier[] | null>(null);
   const [supplierSearchLoading, setSupplierSearchLoading] = useState(false);
   const supplierSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
 
   const {
     control,
@@ -122,7 +164,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
     watch,
     reset,
     formState: { errors, isValid },
-  } = useForm<ExpenseFormValues>({
+  } = useForm<ExpenseFormValues & { expenseReference?: string; description?: string }>({
     resolver: yupResolver(expenseSchema) as any,
     mode: 'onChange',
     defaultValues: {
@@ -132,6 +174,8 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
       accountId: undefined,
       categoryId: undefined,
       supplierId: null,
+      expenseReference: '',
+      description: '',
     },
   });
 
@@ -151,11 +195,390 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   const ttcDisplay = parseFloat(watchedAmountTTC) || 0;
   const tvaDisplay = parseFloat(watchedAmountTVA) || 0;
 
+  const normalizeAmount = (value: any) => {
+    if (value === null || value === undefined) return '';
+    return String(value).replace(',', '.').replace(/[^\d.]/g, '');
+  };
+
+  const normalizeDate = (value: any) => {
+    if (!value) return '';
+    const raw = String(value).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+    const frMatch = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (frMatch) {
+      const [, d, m, y] = frMatch;
+      return `${y}-${m}-${d}`;
+    }
+    return raw;
+  };
+
+  const getCategoryKeywordsTarget = (sourceText: string) => {
+    const text = normalizeText(sourceText);
+
+    const rules: Array<{ keywords: string[]; targets: string[] }> = [
+      {
+        keywords: ['restaurant', 'restauration', 'brunch', 'cafe', 'coffee', 'beldi', 'meal', 'meals', 'entertainment', 'hotel', 'food', 'snack'],
+        targets: ['Restaurant', 'Meals and Entertainment', 'Meals & Entertainment'],
+      },
+      {
+        keywords: ['carburant', 'fuel', 'essence', 'diesel', 'station', 'shell', 'afriquia', 'totalenergies', 'winxo'],
+        targets: ['Carburant / Transport', 'Carburant', 'Transport'],
+      },
+      {
+        keywords: ['taxi', 'transport', 'train', 'oncf', 'tram', 'bus', 'parking', 'peage', 'autoroute'],
+        targets: ['Transport', 'Carburant / Transport'],
+      },
+      {
+        keywords: ['internet', 'telecom', 'orange', 'inwi', 'maroc telecom', 'wifi', 'fibre'],
+        targets: ['Internet'],
+      },
+      {
+        keywords: ['logiciel', 'software', 'cloud', 'hosting', 'serveur', 'subscription', 'abonnement', 'openai', 'google cloud', 'aws', 'azure', 'saas'],
+        targets: ['Logiciels / Abonnements', 'Cloud Services'],
+      },
+      {
+        keywords: ['marketing', 'publicite', 'ads', 'facebook', 'instagram', 'meta', 'google ads', 'tiktok'],
+        targets: ['Marketing / Publicités'],
+      },
+      {
+        keywords: ['fourniture', 'fournitures', 'papier', 'stylo', 'office', 'bureau', 'printer', 'imprimante'],
+        targets: ['Fournitures', 'Office Supplies'],
+      },
+      {
+        keywords: ['loyer', 'rent', 'bail'],
+        targets: ['Loyer'],
+      },
+      {
+        keywords: ['eau', 'electricite', 'lydec', 'onee', 'radeema'],
+        targets: ['Eau / Électricité'],
+      },
+      {
+        keywords: ['salaire', 'salaires', 'paie', 'cnss'],
+        targets: ['Salaires'],
+      },
+      {
+        keywords: ['banque', 'assurance', 'bank', 'insurance', 'frais bancaire'],
+        targets: ['Banque / Assurance'],
+      },
+      {
+        keywords: ['comptable', 'juridique', 'avocat', 'notaire', 'honoraire', 'legal'],
+        targets: ['Comptable / Juridiques'],
+      },
+      {
+        keywords: ['impot', 'taxe', 'taxes', 'dgi'],
+        targets: ['Impôts / Taxes'],
+      },
+      {
+        keywords: ['maintenance', 'reparation', 'repair', 'entretien'],
+        targets: ['Maintenance / Réparation'],
+      },
+    ];
+
+    const matchedRule = rules.find(rule => includesAny(text, rule.keywords));
+    return matchedRule?.targets ?? ['Autres dépenses', 'Autre'];
+  };
+
+  const findCategoryByOcr = (categoryName?: string, supplierName?: string, description?: string) => {
+    if (!categories?.length) return null;
+
+    const categoryText = normalizeText(categoryName);
+    const searchText = `${categoryName ?? ''} ${supplierName ?? ''} ${description ?? ''}`;
+
+    const exactOrContains = categories.find((c: any) => {
+      const name = normalizeText(c.name);
+      return name === categoryText || name.includes(categoryText) || categoryText.includes(name);
+    });
+
+    if (exactOrContains && categoryText && categoryText !== 'autre') return exactOrContains;
+
+    const targetNames = getCategoryKeywordsTarget(searchText);
+    for (const target of targetNames) {
+      const targetNorm = normalizeText(target);
+      const found = categories.find((c: any) => {
+        const name = normalizeText(c.name);
+        return name === targetNorm || name.includes(targetNorm) || targetNorm.includes(name);
+      });
+      if (found) return found;
+    }
+
+    const fallback = categories.find((c: any) => {
+      const name = normalizeText(c.name);
+      return ['autres depenses', 'autre'].includes(name);
+    });
+
+    return fallback ?? null;
+  };
+
+  const findSupplier = (supplierName?: string) => {
+    if (!supplierName || !suppliers?.length) return null;
+    const supplier = normalizeText(supplierName);
+
+    return suppliers.find((s: any) => {
+      const name = normalizeText(s.name || s.supplier_name || s.company_name);
+      return name === supplier || name.includes(supplier) || supplier.includes(name);
+    }) ?? null;
+  };
+
+  const findPayment = (paymentMethod?: string) => {
+    if (!paymentMethod) return null;
+    const payment = normalizeText(paymentMethod);
+
+    return PAYMENT_METHODS.find(p => {
+      const key = normalizeText(p.key);
+      const fr = normalizeText(p.fr);
+      const en = normalizeText(p.en);
+
+      const synonyms: Record<string, string[]> = {
+        cash: ['cash', 'espece', 'espèces', 'liquide'],
+        carte: ['carte', 'card', 'cb', 'visa', 'mastercard', 'tpe'],
+        virement: ['virement', 'transfer', 'bank transfer', 'wire'],
+      };
+
+      const values = [key, fr, en, ...(synonyms[key] ?? [])].map(normalizeText);
+      return values.some(v => v && (payment === v || payment.includes(v) || v.includes(payment)));
+    }) ?? null;
+  };
+
+  const buildDescriptionFromItems = (data: any) => {
+    const items = data?.items || data?.articles || data?.line_items || data?.products || [];
+    if (data?.description) return String(data.description);
+
+    if (Array.isArray(items) && items.length > 0) {
+      return items
+        .map((item: any) => {
+          const name = item?.name || item?.label || item?.description || 'Article';
+          const qty = item?.quantity || item?.qty || 1;
+          const total = item?.total || item?.amount || item?.price || '';
+          return `- ${name} x${qty}${total ? ` — ${total} MAD` : ''}`;
+        })
+        .join('\n');
+    }
+
+    return data?.supplier_name ? `Dépense chez ${data.supplier_name}` : '';
+  };
+
+  const detectDuplicate = (date?: string, amount?: string, supplierName?: string) => {
+    if (!expenses?.length || !date || !amount) return '';
+
+    const amountNumber = parseFloat(normalizeAmount(amount)) || 0;
+    const supplierNorm = normalizeText(supplierName);
+
+    const found = expenses.find((expense: any) => {
+      const expenseDate = String(expense.date || '').split('T')[0];
+      const expenseAmount = parseFloat(String(expense.ttc || expense.total_ttc || 0)) || 0;
+      const expenseSupplier = normalizeText(expense.supplier?.name || expense.supplier_name || expense.supplier?.company_name);
+
+      const sameDate = expenseDate === date;
+      const sameAmount = Math.abs(expenseAmount - amountNumber) < 0.01;
+      const sameSupplier = !supplierNorm || !expenseSupplier || expenseSupplier.includes(supplierNorm) || supplierNorm.includes(expenseSupplier);
+
+      return sameDate && sameAmount && sameSupplier;
+    });
+
+    return found ? 'Dépense potentiellement déjà ajoutée : même date, même montant et même fournisseur.' : '';
+  };
+
+  const buildOcrSuggestion = (response: any, file?: any): OcrSuggestion => {
+    const data =
+      response?.extracted ||
+      response?.data ||
+      response?.result ||
+      response?.expense ||
+      response;
+
+    const date = normalizeDate(
+      data?.date ||
+      data?.invoice_date ||
+      data?.expense_date ||
+      data?.document_date
+    );
+
+    const amountTTC = normalizeAmount(
+      data?.amountTTC ||
+      data?.amount_ttc ||
+      data?.total_ttc ||
+      data?.ttc ||
+      data?.amount ||
+      data?.total ||
+      data?.total_amount
+    );
+
+    const amountTVA = normalizeAmount(
+      data?.amountTVA ??
+      data?.amount_tva ??
+      data?.total_tva ??
+      data?.tva ??
+      data?.vat ??
+      data?.tax ??
+      0
+    );
+
+    const supplierName =
+      data?.supplier_name ||
+      data?.supplier ||
+      data?.vendor ||
+      data?.merchant ||
+      '';
+
+    const categoryName =
+      data?.category_label ||
+      data?.category ||
+      data?.category_name ||
+      data?.expense_category ||
+      '';
+
+    const description = buildDescriptionFromItems(data);
+    const reference =
+      data?.reference ||
+      data?.invoice_reference ||
+      data?.receipt_number ||
+      file?.name ||
+      file?.fileName ||
+      '';
+
+    return {
+      date,
+      amountTTC,
+      amountTVA,
+      paymentMethod: data?.payment_method || data?.paymentMethod || data?.mode_paiement || data?.payment || '',
+      supplierName,
+      categoryName,
+      confidenceScore: typeof data?.confidence_score === 'number' ? data.confidence_score : undefined,
+      warnings: Array.isArray(data?.warnings) ? data.warnings : [],
+      reference,
+      description,
+      items: data?.items || data?.articles || data?.line_items || data?.products || [],
+      duplicateWarning: detectDuplicate(date, amountTTC, supplierName),
+    };
+  };
+
+  const applyOcrSuggestionToForm = (suggestion: OcrSuggestion) => {
+    if (suggestion.date) {
+      setValue('date', suggestion.date, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
+      setTempDate(new Date(suggestion.date));
+    }
+
+    if (suggestion.amountTTC !== undefined && suggestion.amountTTC !== '') {
+      setValue('amountTTC', suggestion.amountTTC, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
+    }
+
+    if (suggestion.amountTVA !== undefined && suggestion.amountTVA !== '') {
+      setValue('amountTVA', suggestion.amountTVA, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
+    }
+
+    if (suggestion.reference) {
+      setValue('expenseReference' as any, suggestion.reference, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
+    }
+
+    if (suggestion.description) {
+      setValue('description' as any, suggestion.description, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
+    }
+
+    const matchedPayment = findPayment(suggestion.paymentMethod);
+    if (matchedPayment) {
+      setValue('accountId', matchedPayment.key, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
+    }
+
+    const matchedCategory = findCategoryByOcr(suggestion.categoryName, suggestion.supplierName, suggestion.description);
+    if (matchedCategory) {
+      setValue('categoryId', matchedCategory.id, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
+    }
+
+    if (suggestion.supplierName) {
+      const matchedSupplier = findSupplier(suggestion.supplierName);
+      if (matchedSupplier) {
+        setValue('supplierId', matchedSupplier.id, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
+      } else {
+        setPendingSupplierName(String(suggestion.supplierName));
+        setShowCreateSupplierModal(true);
+      }
+    }
+
+    setOcrApplied(true);
+  };
+
+  const applyOcrDataToForm = (response: any, file?: any) => {
+    console.log('🔥 OCR FULL RESPONSE:', JSON.stringify(response, null, 2));
+
+    const suggestion = buildOcrSuggestion(response, file);
+    setOcrSuggestion(suggestion);
+    setOcrRaw(response);
+    setOcrApplied(false);
+
+    const confidence = suggestion.confidenceScore ?? 0;
+    if (confidence >= 0.85 && !suggestion.duplicateWarning) {
+      applyOcrSuggestionToForm(suggestion);
+    }
+  };
+
+  const sendToOcr = async (file: any) => {
+    try {
+      setOcrLoading(true);
+
+      console.log('🚀 OCR START');
+      console.log('📄 OCR FILE:', JSON.stringify(file, null, 2));
+
+      const fileUri = file.uri ?? file.fileCopyUri;
+      const fileName = file.name || file.fileName || `document_${Date.now()}.jpg`;
+      const fileType = file.type || getMimeType(fileName) || 'application/octet-stream';
+
+      console.log('📦 OCR NORMALIZED FILE:', { uri: fileUri, name: fileName, type: fileType });
+
+      const formData = new FormData();
+
+      formData.append('file', {
+        uri: fileUri,
+        type: fileType,
+        name: fileName,
+      } as any);
+
+      const response = await fetch(OCR_API_URL, {
+        method: 'POST',
+        body: formData,
+      });
+
+      console.log('📡 OCR HTTP STATUS:', response.status);
+
+      const rawText = await response.text();
+      console.log('📨 OCR RAW RESPONSE:', rawText);
+
+      let data: any = null;
+      try {
+        data = JSON.parse(rawText);
+      } catch (jsonError) {
+        console.log('❌ OCR JSON PARSE ERROR:', jsonError);
+        Alert.alert('OCR Error', 'Réponse OCR invalide');
+        return;
+      }
+
+      console.log('✅ OCR JSON RESPONSE:', JSON.stringify(data, null, 2));
+
+      if (!response.ok) {
+        console.log('❌ OCR BACKEND ERROR:', data);
+        Alert.alert('OCR Error', data?.error || data?.message || 'OCR failed');
+        return;
+      }
+
+      applyOcrDataToForm(data, { ...file, name: fileName });
+
+      Alert.alert('OCR', 'Données extraites avec succès');
+    } catch (e: any) {
+      console.log('❌ OCR FETCH ERROR:', e?.message || e);
+      Alert.alert('OCR Error', e?.message || 'OCR failed');
+    } finally {
+      setOcrLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!visible) return;
     setShowDatePicker(false);
     setSaving(false);
+    setOcrLoading(false);
+    setOcrSuggestion(null);
+    setOcrRaw(null);
+    setOcrApplied(false);
+    setPendingSupplierName('');
 
     if (editItem) {
       const datePart = editItem.date.split('T')[0];
@@ -163,12 +586,14 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
       setTempDate(new Date(ey, em - 1, ed));
       const cat = (categories as Category[]).find(c => c.id === editItem.category_id) ?? null;
       const sup = suppliers.find(s => s.id === editItem.supplier_id) ?? null;
+
       if (editItem.file) {
         const fileName = editItem.file.split('/').pop() ?? 'document';
         setDocument({ name: fileName, isExisting: true });
       } else {
         setDocument(null);
       }
+
       reset({
         date: datePart,
         amountTTC: editItem.ttc,
@@ -176,14 +601,18 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
         accountId: editItem.payment_method ?? undefined,
         categoryId: cat?.id ?? undefined,
         supplierId: sup?.id ?? null,
-      });
+        expenseReference: (editItem as any).reference ?? (editItem as any).expense_reference ?? '',
+        description: (editItem as any).description ?? '',
+      } as any);
     } else {
       const today = new Date();
       const y = today.getFullYear();
       const mo = String(today.getMonth() + 1).padStart(2, '0');
       const d = String(today.getDate()).padStart(2, '0');
+
       setDocument(null);
       setTempDate(today);
+
       reset({
         date: `${y}-${mo}-${d}`,
         amountTTC: '',
@@ -191,10 +620,11 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
         accountId: undefined,
         categoryId: undefined,
         supplierId: defaultSupplierId ?? null,
-      });
+        expenseReference: '',
+        description: '',
+      } as any);
     }
   }, [visible]);
-
 
   useEffect(() => {
     if (supplierSearchTimer.current) clearTimeout(supplierSearchTimer.current);
@@ -251,8 +681,37 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
 
   const handlePickDocument = async () => {
     try {
-      const [file] = await pick({ type: [types.pdf, types.docx, types.doc, types.images] });
+      Alert.alert(
+        'Ajouter un justificatif',
+        'Choisir la source du fichier',
+        [
+          { text: 'Galerie', onPress: handlePickFromGallery },
+          { text: 'Fichiers', onPress: handlePickFromFiles },
+          { text: 'Annuler', style: 'cancel' },
+        ],
+      );
+    } catch (e: any) {
+      if (isErrorWithCode(e) && e.code === errorCodes.OPERATION_CANCELED) return;
+      Alert.alert(t('error_title'), t('error_select_file'));
+    }
+  };
+
+  const handlePickFromGallery = async () => {
+    try {
+      const [file] = await pick({ type: [types.images] });
       setDocument(file);
+      await sendToOcr(file);
+    } catch (e: any) {
+      if (isErrorWithCode(e) && e.code === errorCodes.OPERATION_CANCELED) return;
+      Alert.alert(t('error_title'), t('error_select_file'));
+    }
+  };
+
+  const handlePickFromFiles = async () => {
+    try {
+      const [file] = await pick({ type: [types.pdf, types.images] });
+      setDocument(file);
+      await sendToOcr(file);
     } catch (e: any) {
       if (isErrorWithCode(e) && e.code === errorCodes.OPERATION_CANCELED) return;
       Alert.alert(t('error_title'), t('error_select_file'));
@@ -260,16 +719,20 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   };
 
   const handleTakePhoto = async () => {
-    launchCamera({ mediaType: 'photo', saveToPhotos: false, quality: 0.8 }, response => {
+    launchCamera({ mediaType: 'photo', saveToPhotos: false, quality: 0.8 }, async response => {
       if (response.didCancel || response.errorCode) return;
       const asset = response.assets?.[0];
       if (!asset?.uri) return;
-      setDocument({
+
+      const photoFile = {
         uri: asset.uri,
         fileCopyUri: asset.uri,
         name: asset.fileName ?? `photo_${Date.now()}.jpg`,
         type: asset.type ?? 'image/jpeg',
-      });
+      };
+
+      setDocument(photoFile);
+      await sendToOcr(photoFile);
     });
   };
 
@@ -285,7 +748,23 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
     setShowDatePicker(false);
   };
 
-  const onSubmit = async (data: ExpenseFormValues) => {
+  const onSubmit = async (data: ExpenseFormValues & { expenseReference?: string; description?: string }) => {
+    if (ocrSuggestion?.duplicateWarning) {
+      Alert.alert(
+        'Doublon possible',
+        ocrSuggestion.duplicateWarning,
+        [
+          { text: 'Annuler', style: 'cancel' },
+          { text: 'Continuer', onPress: () => submitExpense(data) },
+        ],
+      );
+      return;
+    }
+
+    await submitExpense(data);
+  };
+
+  const submitExpense = async (data: ExpenseFormValues & { expenseReference?: string; description?: string }) => {
     setSaving(true);
     try {
       const ttc = parseFloat(data.amountTTC) || 0;
@@ -300,8 +779,16 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
         supplier_id: data.supplierId ?? null,
         total_ttc: ttc,
         total_tva: tva,
+        reference: data.expenseReference ?? '',
+        expense_reference: data.expenseReference ?? '',
+        description: data.description ?? '',
+        ocr_raw: ocrRaw,
+        ocr_confidence_score: ocrSuggestion?.confidenceScore ?? null,
+        ocr_warnings: ocrSuggestion?.warnings ?? [],
+        ocr_items: ocrSuggestion?.items ?? [],
         document: document?.isExisting ? null : document,
       };
+
       if (editItem && onUpdate) {
         const result = await onUpdate(editItem.id, payload);
         if (result.success) {
@@ -326,11 +813,14 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
     }
   };
 
+  const confidencePercent = ocrSuggestion?.confidenceScore !== undefined
+    ? Math.round((ocrSuggestion.confidenceScore ?? 0) * 100)
+    : null;
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={[styles.modalContainer, { paddingTop: insets.top }]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          {/* Header */}
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={onClose} activeOpacity={0.7}>
               <Text style={styles.modalCancelText}>{t('button_cancel')}</Text>
@@ -341,10 +831,10 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
             <TouchableOpacity
               style={[styles.modalConfirmBtn, !isValid && styles.modalConfirmBtnDisabled]}
               onPress={handleSubmit(onSubmit as any)}
-              disabled={saving}
+              disabled={saving || ocrLoading}
               activeOpacity={0.8}
             >
-              {saving
+              {saving || ocrLoading
                 ? <ActivityIndicator size="small" color="#FFFFFF" />
                 : <Text style={styles.modalConfirmText}>{t('modal_confirm_text')}</Text>
               }
@@ -353,7 +843,54 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
 
           <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
             <View style={styles.formCard}>
-              {/* Document upload */}
+              {ocrLoading && (
+                <View style={{ padding: 12, marginBottom: 12, borderRadius: 10, backgroundColor: '#EFF6FF' }}>
+                  <Text style={{ color: '#1E5BAC', fontWeight: '600', textAlign: 'center' }}>
+                    Extraction OCR en cours...
+                  </Text>
+                </View>
+              )}
+
+              {ocrSuggestion && (
+                <View style={{ padding: 12, marginBottom: 12, borderRadius: 12, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E5E7EB' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    {ocrSuggestion.duplicateWarning ? (
+                      <AlertTriangle size={18} color="#DC2626" />
+                    ) : (
+                      <CheckCircle2 size={18} color="#16A34A" />
+                    )}
+                    <Text style={{ fontWeight: '700', color: '#111827', flex: 1 }}>
+                      Données OCR détectées {confidencePercent !== null ? `(${confidencePercent}%)` : ''}
+                    </Text>
+                  </View>
+
+                  {!!ocrSuggestion.duplicateWarning && (
+                    <Text style={{ color: '#DC2626', fontSize: 12, marginBottom: 8 }}>
+                      {ocrSuggestion.duplicateWarning}
+                    </Text>
+                  )}
+
+                  {!!ocrSuggestion.warnings?.length && (
+                    <View style={{ marginBottom: 8 }}>
+                      {ocrSuggestion.warnings.map((warning, index) => (
+                        <Text key={`${warning}-${index}`} style={{ color: '#92400E', fontSize: 12 }}>
+                          • {warning}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
+
+                  {!ocrApplied && (
+                    <TouchableOpacity
+                      style={{ backgroundColor: '#1E5BAC', borderRadius: 8, paddingVertical: 10, alignItems: 'center' }}
+                      onPress={() => applyOcrSuggestionToForm(ocrSuggestion)}
+                    >
+                      <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>Appliquer les données OCR</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              )}
+
               {document ? (
                 <View style={styles.attachmentPreview}>
                   {(document.type ?? '').startsWith('image/') && (document.uri ?? document.fileCopyUri) ? (
@@ -396,18 +933,64 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                 </View>
               ) : (
                 <View style={styles.uploadArea}>
-                  <TouchableOpacity style={styles.uploadBtn} activeOpacity={0.8} onPress={handleTakePhoto}>
+                  <TouchableOpacity
+                    style={styles.uploadBtn}
+                    activeOpacity={0.8}
+                    onPress={handleTakePhoto}
+                    disabled={ocrLoading}
+                  >
                     <Camera size={20} color="#1E5BAC" />
                     <Text style={styles.uploadBtnText}>{t('button_take_photo')}</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.uploadBtn} activeOpacity={0.8} onPress={handlePickDocument}>
+                  <TouchableOpacity
+                    style={styles.uploadBtn}
+                    activeOpacity={0.8}
+                    onPress={handlePickDocument}
+                    disabled={ocrLoading}
+                  >
                     <FileText size={20} color="#16A34A" />
                     <Text style={styles.uploadBtnText}>{t('button_select_file')}</Text>
                   </TouchableOpacity>
                 </View>
               )}
 
-              {/* Date */}
+              <View style={styles.fieldBlock}>
+                <Text style={styles.fieldLabel}>Référence dépense</Text>
+                <Controller
+                  control={control}
+                  name={'expenseReference' as any}
+                  render={({ field: { value, onChange, onBlur } }) => (
+                    <TextInput
+                      style={styles.fieldInput}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      placeholder="Référence du reçu / facture"
+                      placeholderTextColor="#9CA3AF"
+                    />
+                  )}
+                />
+              </View>
+
+              <View style={styles.fieldBlock}>
+                <Text style={styles.fieldLabel}>Description / articles</Text>
+                <Controller
+                  control={control}
+                  name={'description' as any}
+                  render={({ field: { value, onChange, onBlur } }) => (
+                    <TextInput
+                      style={[styles.fieldInput, { minHeight: 90, textAlignVertical: 'top' }]}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      multiline
+                      placeholder="Articles détectés par OCR"
+                      placeholderTextColor="#9CA3AF"
+                    />
+                  )}
+                />
+              </View>
+
               <View style={styles.fieldBlock}>
                 <Text style={styles.fieldLabel}>{t('label_date')} <Text style={styles.required}>*</Text></Text>
                 <TouchableOpacity
@@ -423,7 +1006,6 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                 {errors.date && <Text style={styles.fieldError}>{errors.date.message}</Text>}
               </View>
 
-              {/* Amount TTC */}
               <View style={styles.fieldBlock}>
                 <Text style={styles.fieldLabel}>{t('label_amount_ttc')} <Text style={styles.required}>*</Text></Text>
                 <View style={styles.fieldInputRow}>
@@ -447,7 +1029,6 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                 {errors.amountTTC && <Text style={styles.fieldError}>{errors.amountTTC.message}</Text>}
               </View>
 
-              {/* Amount TVA */}
               <View style={styles.fieldBlock}>
                 <Text style={styles.fieldLabel}>{t('label_amount_tva')}</Text>
                 <View style={styles.fieldInputRow}>
@@ -471,7 +1052,6 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                 {errors.amountTVA && <Text style={styles.fieldError}>{errors.amountTVA.message}</Text>}
               </View>
 
-              {/* Payment Method */}
               <View style={styles.fieldBlock}>
                 <Text style={styles.fieldLabel}>{t('label_payment_method')} <Text style={styles.required}>*</Text></Text>
                 <TouchableOpacity
@@ -487,7 +1067,6 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                 {errors.accountId && <Text style={styles.fieldError}>{errors.accountId.message}</Text>}
               </View>
 
-              {/* Category */}
               <View style={styles.fieldBlock}>
                 <Text style={styles.fieldLabel}>{t('label_category')} <Text style={styles.required}>*</Text></Text>
                 <TouchableOpacity
@@ -503,7 +1082,6 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                 {errors.categoryId && <Text style={styles.fieldError}>{errors.categoryId.message}</Text>}
               </View>
 
-              {/* Supplier */}
               <View style={styles.fieldBlock}>
                 <Text style={styles.fieldLabel}>{t('label_supplier')}</Text>
                 <TouchableOpacity
@@ -518,7 +1096,6 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                 </TouchableOpacity>
               </View>
 
-              {/* Totals */}
               <View style={styles.totalsBlock}>
                 <View style={styles.totalRow}>
                   <Text style={styles.totalLabel}>{t('label_total_tva')}</Text>
@@ -530,14 +1107,13 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                 </View>
               </View>
 
-              {/* Bottom submit button */}
               <TouchableOpacity
                 style={[styles.confirmBtn, !isValid && styles.confirmBtnDisabled]}
                 onPress={handleSubmit(onSubmit as any)}
-                disabled={saving}
+                disabled={saving || ocrLoading}
                 activeOpacity={0.85}
               >
-                {saving
+                {saving || ocrLoading
                   ? <ActivityIndicator size="small" color="#FFFFFF" />
                   : <Text style={styles.confirmBtnText}>{t('modal_confirm_text')}</Text>
                 }
@@ -546,19 +1122,8 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
           </ScrollView>
         </KeyboardAvoidingView>
 
-
-        {/* Category Picker */}
-        <Modal
-          visible={showCategoryPicker}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowCategoryPicker(false)}
-        >
-          <TouchableOpacity
-            style={styles.pickerOverlay}
-            activeOpacity={1}
-            onPress={() => setShowCategoryPicker(false)}
-          >
+        <Modal visible={showCategoryPicker} transparent animationType="fade" onRequestClose={() => setShowCategoryPicker(false)}>
+          <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowCategoryPicker(false)}>
             <View style={styles.pickerSheet}>
               <Text style={styles.pickerSheetTitle}>{t('label_category')}</Text>
               <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 360 }} showsVerticalScrollIndicator>
@@ -577,18 +1142,8 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
           </TouchableOpacity>
         </Modal>
 
-        {/* Account / Payment Method Picker */}
-        <Modal
-          visible={showAccountPicker}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowAccountPicker(false)}
-        >
-          <TouchableOpacity
-            style={styles.pickerOverlay}
-            activeOpacity={1}
-            onPress={() => setShowAccountPicker(false)}
-          >
+        <Modal visible={showAccountPicker} transparent animationType="fade" onRequestClose={() => setShowAccountPicker(false)}>
+          <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowAccountPicker(false)}>
             <View style={styles.pickerSheet}>
               <Text style={styles.pickerSheetTitle}>{t('label_payment_method')}</Text>
               <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 320 }} showsVerticalScrollIndicator>
@@ -607,13 +1162,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
           </TouchableOpacity>
         </Modal>
 
-        {/* Supplier Picker */}
-        <Modal
-          visible={showSupplierPicker}
-          transparent
-          animationType="fade"
-          onRequestClose={closeSupplierPicker}
-        >
+        <Modal visible={showSupplierPicker} transparent animationType="fade" onRequestClose={closeSupplierPicker}>
           <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={closeSupplierPicker}>
             <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ width: '100%' }}>
               <View style={styles.pickerSheet}>
@@ -693,7 +1242,6 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
           </TouchableOpacity>
         </Modal>
 
-        {/* Date Picker — iOS */}
         <Modal
           visible={Platform.OS === 'ios' && showDatePicker}
           transparent
@@ -712,18 +1260,12 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                 </TouchableOpacity>
               </View>
               <View style={{ alignItems: 'center', paddingBottom: 8 }}>
-                <DateTimePicker
-                  value={tempDate}
-                  mode="date"
-                  display="inline"
-                  onChange={handleDateChange}
-                />
+                <DateTimePicker value={tempDate} mode="date" display="inline" onChange={handleDateChange} />
               </View>
             </View>
           </View>
         </Modal>
 
-        {/* Date Picker — Android */}
         {Platform.OS === 'android' && showDatePicker && (
           <DateTimePicker
             value={tempDate}
@@ -741,36 +1283,29 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
           />
         )}
 
-        {/* Full-screen image preview */}
-        <Modal
-          visible={showImagePreview}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowImagePreview(false)}
-        >
+        <Modal visible={showImagePreview} transparent animationType="fade" onRequestClose={() => setShowImagePreview(false)}>
           <View style={styles.imagePreviewOverlay}>
-            <TouchableOpacity
-              style={styles.imagePreviewClose}
-              onPress={() => setShowImagePreview(false)}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity style={styles.imagePreviewClose} onPress={() => setShowImagePreview(false)} activeOpacity={0.7}>
               <X size={24} color="#FFFFFF" />
             </TouchableOpacity>
-            <Image
-              source={{ uri: document?.uri ?? document?.fileCopyUri }}
-              style={styles.imagePreviewFull}
-              resizeMode="contain"
-            />
+            <Image source={{ uri: document?.uri ?? document?.fileCopyUri }} style={styles.imagePreviewFull} resizeMode="contain" />
           </View>
         </Modal>
 
-        {/* Create Supplier inline */}
         <CreateSupplierModal
           visible={showCreateSupplierModal}
-          onClose={() => setShowCreateSupplierModal(false)}
+          initialSupplier={{
+            companyName: pendingSupplierName,
+            supplierName: pendingSupplierName,
+          }}
+          onClose={() => {
+            setShowCreateSupplierModal(false);
+            setPendingSupplierName('');
+          }}
           onCreated={() => {
             onSuppliersRefresh?.();
             setShowCreateSupplierModal(false);
+            setPendingSupplierName('');
             closeSupplierPicker();
             setShowSupplierPicker(true);
           }}
