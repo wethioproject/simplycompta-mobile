@@ -220,12 +220,6 @@ const Contacts: React.FC = ({ navigation: navProp }: any) => {
       </Text>
     )}
 
-    {lateCount > 0 && (
-      <Text style={styles.amountGray}>
-        +{lateCount.toLocaleString('fr-FR')} MAD
-      </Text>
-    )}
-
   </View>
 )}
 
