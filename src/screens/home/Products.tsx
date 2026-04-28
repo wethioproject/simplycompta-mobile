@@ -46,7 +46,7 @@ const productSchema = yup.object({
   description: yup.string().trim().required('error_description_required'),
   reference: yup.string().trim().required('error_reference_required'),
   type: yup.string().trim().required('error_type_required'),
-  category_id: yup.string().default(''),
+  category_id: yup.string().trim().required('error_category_required'),
   unit_price_ht: yup
     .string()
     .trim()
@@ -63,6 +63,7 @@ const productSchema = yup.object({
     .required('error_quantity_required')
     .test('is-number', 'error_quantity_invalid', v => !v || !isNaN(parseFloat(v))),
   total_price_ht: yup.string().default(''),
+  unit_id: yup.string().trim().required('error_unit_required'),
 });
 
 interface ProductFormValues {
@@ -692,13 +693,14 @@ const Products: React.FC = ({ navigation }: any) => {
               <View style={styles.fieldGroup}>
                 <View style={styles.fieldLabelRow}>
                   <Text style={styles.fieldLabel}>{t('label_category')}</Text>
+                  <Text style={styles.fieldRequired}>*</Text>
                 </View>
                 <Controller
                   control={control}
                   name="category_id"
                   render={({ field: { value } }) => (
                     <TouchableOpacity
-                      style={styles.pickerRow}
+                      style={[styles.pickerRow, errors.category_id && styles.fieldInputError]}
                       onPress={() => setShowCategoryPicker(true)}
                       activeOpacity={0.7}
                     >
@@ -709,6 +711,9 @@ const Products: React.FC = ({ navigation }: any) => {
                     </TouchableOpacity>
                   )}
                 />
+                {errors.category_id && (
+                  <Text style={styles.fieldError}>{t(errors.category_id.message ?? '')}</Text>
+                )}
               </View>
 
               {/* ── Prix H.T. ────────────────────────────────────────── */}
@@ -770,13 +775,14 @@ const Products: React.FC = ({ navigation }: any) => {
               <View style={styles.fieldGroup}>
                 <View style={styles.fieldLabelRow}>
                   <Text style={styles.fieldLabel}>{t('label_unit')}</Text>
+                  <Text style={styles.fieldRequired}>*</Text>
                 </View>
                 <Controller
                   control={control}
                   name="unit_id"
                   render={({ field: { value } }) => (
                     <TouchableOpacity
-                      style={styles.pickerRow}
+                      style={[styles.pickerRow, errors.unit_id && styles.fieldInputError]}
                       onPress={() => setShowUnitPicker(true)}
                       activeOpacity={0.7}
                     >
@@ -790,6 +796,9 @@ const Products: React.FC = ({ navigation }: any) => {
                     </TouchableOpacity>
                   )}
                 />
+                {errors.unit_id && (
+                  <Text style={styles.fieldError}>{t(errors.unit_id.message ?? '')}</Text>
+                )}
               </View>
 
               {/* ── Quantity ─────────────────────────────────────────── */}
