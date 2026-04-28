@@ -219,8 +219,8 @@ const Contacts: React.FC = ({ navigation: navProp }: any) => {
               </Text>
             )}
 
-  </View>
-)}
+          </View>
+        )}
 
 
 
