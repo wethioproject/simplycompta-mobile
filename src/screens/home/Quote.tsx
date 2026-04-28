@@ -156,24 +156,24 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
     }
   };
 
-  const refreshClients = async () => {
-    try {
-      const resourcesResult = await getQuoteResources();
-      if (resourcesResult.success) {
-        setClients(
-          (resourcesResult.resources?.clients ?? []).map((c: any) => ({
+    const refreshClients = async (): Promise<Client[]> => {
+      try {
+        const resourcesResult = await getQuoteResources();
+        if (resourcesResult.success) {
+          const newClients = (resourcesResult.resources?.clients ?? []).map((c: any) => ({
             id: c.id,
             name: c.client_name,
-          }))
-        );
-      }
-    } catch {}
-  };
-
-  useEffect(() => {
-    fetchResources();
-    fetchChartData();
-  }, []);
+          }));
+          setClients(newClients);
+          return newClients;
+        }
+      } catch {}
+      return clients;
+    };
+  
+    useEffect(() => {
+      Promise.all([fetchResources(), fetchChartData(), fetchQuotes(getFilterParams())]);
+    }, []);
 
   const handleEditInvoice = (item: InvoiceItem) => {
     setSelectedItem(null);

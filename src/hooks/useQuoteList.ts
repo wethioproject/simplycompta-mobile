@@ -81,10 +81,6 @@ export const useQuoteList = (): UseQuoteListReturn => {
     }
   };
 
-  // Initial load
-  useEffect(() => {
-    fetchQuotes();
-  }, []);
 
   // Filter-triggered reload
   useEffect(() => {

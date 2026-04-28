@@ -101,7 +101,7 @@ const CreateQuoteModal: React.FC<{
   onSave: (payload: any) => Promise<{ success: boolean; error?: string }>;
   editItem?: InvoiceItem;
   onUpdate?: (id: number, payload: any) => Promise<{ success: boolean; error?: string }>;
-  onClientsRefresh?: () => void;
+  onClientsRefresh?: () => Promise<Client[]>;
   defaultClientId?: number;
 }> = ({
   visible,
@@ -132,6 +132,9 @@ const CreateQuoteModal: React.FC<{
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [showCreateClientModal, setShowCreateClientModal] = useState(false);
   const [showImagePreview, setShowImagePreview] = useState(false);
+
+  const [localClients, setLocalClients] = useState<Client[]>(clients);
+  React.useEffect(() => { setLocalClients(clients); }, [clients]);
 
   const [showClientSearch, setShowClientSearch] = useState(false);
   const [clientSearchQuery, setClientSearchQuery] = useState('');
@@ -168,7 +171,7 @@ const CreateQuoteModal: React.FC<{
   const watchedValidUntil = watch('validUntil');
   const watchedArticles = watch('articles') ?? [];
 
-  const selectedClient = clients.find(c => c.id === watchedClientId) ?? null;
+  const selectedClient = localClients.find(c => c.id === watchedClientId) ?? null;
   const selectedPaymentMethod = PAYMENT_METHODS.find(p => p.key === watchedAccountId) ?? null;
   const pmLabel = (pm: { key: string; fr: string; en: string }) =>
     i18n.language.startsWith('fr') ? pm.fr : pm.en;
@@ -184,7 +187,7 @@ const CreateQuoteModal: React.FC<{
       const datePart = editItem.date.split('T')[0];
       const [ey, em, ed] = datePart.split('-').map(Number);
       setTempDate(new Date(ey, em - 1, ed));
-      const client = clients.find(c => c.id === editItem.client_id) ?? null;
+      const client = localClients.find(c => c.id === editItem.client_id) ?? null;
       if (editItem.document_path) {
         const fileName = editItem.document_path.split('/').pop() ?? 'document';
         setDocument({ name: fileName, isExisting: true });
@@ -690,7 +693,7 @@ const CreateQuoteModal: React.FC<{
                       <ActivityIndicator size="small" color="#1E5BAC" />
                     </View>
                   ) : (
-                    (clientSearchResults ?? clients).map(c => (
+                    (clientSearchResults ?? localClients).map(c => (
                       <TouchableOpacity
                         key={c.id}
                         style={styles.pickerOption}
@@ -872,15 +875,16 @@ const CreateQuoteModal: React.FC<{
         </Modal>
 
         {/* ── Create Client Modal ── */}
-        <CreateClientModal
-          visible={showCreateClientModal}
-          onClose={() => setShowCreateClientModal(false)}
-          onCreated={() => {
-            onClientsRefresh?.();
-            setShowCreateClientModal(false);
-            setShowClientPicker(true);
-          }}
-        />
+          <CreateClientModal
+            visible={showCreateClientModal}
+            onClose={() => setShowCreateClientModal(false)}
+            onCreated={async () => {
+              const newClients = await onClientsRefresh?.();
+              if (newClients) setLocalClients(newClients);
+              setShowCreateClientModal(false);
+              setShowClientPicker(true);
+            }}
+          />
 
       </View>
     </Modal>
