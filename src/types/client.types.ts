@@ -63,7 +63,7 @@ export const clientSchema = yup.object({
       'Invalid email address',
       v => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
     )
-    .required('Email is required'),
+    .optional(),
   telephone: yup.string().optional(),
   postalCode: yup.string().optional(),
   city: yup.string().optional(),
