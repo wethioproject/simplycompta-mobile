@@ -40,7 +40,7 @@ import { CreateClientModal } from '../../components/clients/CreateClientModal';
 import ArticleModal from './ArticleModal';
 import { invoiceStyles as styles } from '../../styles/invoice.styles';
 import type { Account, Client, InvoiceArticle, InvoiceItem, Article } from '../../types/invoice.types';
-import { STATUT_OPTIONS, PAYMENT_METHODS } from '../../types/invoice.types';
+import { STATUT_OPTIONS, STATUT_OPTIONS_DETAIL_MODAL, PAYMENT_METHODS } from '../../types/invoice.types';
 
 const invoiceSchema = yup.object({
   invoiceNumber: yup.string().trim().required('Invoice number is required'),
@@ -554,7 +554,9 @@ const CreateInvoiceModal: React.FC<{
                   activeOpacity={0.7}
                 >
                   <Text style={[watchedStatus ? styles.pickerValueText : styles.pickerPlaceholderText, editItem ? { color: '#1F2937' } : { color: '#9CA3AF' }]}>
-                    {watchedStatus || t('placeholder_status')}
+                    {watchedStatus
+                      ? (STATUT_OPTIONS_DETAIL_MODAL.find((s: {key: string; fr: string; en: string}) => s.key === watchedStatus)?.[i18n.language.startsWith('fr') ? 'fr' : 'en'] ?? watchedStatus)
+                      : t('placeholder_status')}
                   </Text>
                   <ChevronDown size={18} color="#1E5BAC" />
                 </TouchableOpacity>
