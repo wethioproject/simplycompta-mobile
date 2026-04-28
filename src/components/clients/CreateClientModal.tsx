@@ -159,7 +159,7 @@ export const CreateClientModal: React.FC<CreateClientModalProps> = ({
 
               <View style={styles.fieldBlock}>
                 <Text style={styles.fieldLabel}>
-                  {t('label_email')} <Text style={styles.required}>*</Text>
+                  {t('label_email')}
                 </Text>
                 <Controller
                   control={control}
@@ -267,7 +267,7 @@ export const CreateClientModal: React.FC<CreateClientModalProps> = ({
               </View>
 
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>{t('label_client_type')} <Text style={styles.required}>*</Text></Text>
+                <Text style={styles.fieldLabel}>{t('label_client_type')}</Text>
                 <TouchableOpacity
                   style={styles.pickerRow}
                   onPress={() => setShowTypePicker(true)}
