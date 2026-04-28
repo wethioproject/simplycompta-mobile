@@ -50,11 +50,11 @@ export interface SupplierItem {
 // ─── Yup schema (Supplier) ─────────────────────────────────────────────────────
 const supplierSchema = yup.object({
   companyName: yup.string().required('Company name is required'),
-  supplierName: yup.string().required('Supplier name is required'),
+  supplierName: yup.string().optional(),
   email: yup.string().test('email-format', 'Invalid email address', v => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)).optional(),
   telephone: yup.string().optional(),
-  postalCode: yup.string().required('Postal code is required'),
-  city: yup.string().required('City is required'),
+  postalCode: yup.string().optional(),
+  city: yup.string().optional(),
   commercialRegister: yup.string().optional(),
   ice: yup.string().optional(),
 });
@@ -236,7 +236,7 @@ export const CreateSupplierModal: React.FC<{
                                 {errors.companyName && <Text style={styles.fieldError}>{errors.companyName.message}</Text>}
               </View>
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>{t('label_supplier_name')} <Text style={styles.required}>*</Text></Text>
+                <Text style={styles.fieldLabel}>{t('label_supplier_name')}</Text>
                 <Controller
                   control={control}
                   name="supplierName"
@@ -290,7 +290,7 @@ export const CreateSupplierModal: React.FC<{
                 {errors.telephone && <Text style={styles.fieldError}>{errors.telephone.message}</Text>}
               </View>
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>{t('label_postal_code')} <Text style={styles.required}>*</Text></Text>
+                <Text style={styles.fieldLabel}>{t('label_postal_code')}</Text>
                 <Controller
                   control={control}
                   name="postalCode"
@@ -309,7 +309,7 @@ export const CreateSupplierModal: React.FC<{
                 {errors.postalCode && <Text style={styles.fieldError}>{errors.postalCode.message}</Text>}
               </View>
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>{t('label_city')} <Text style={styles.required}>*</Text></Text>
+                <Text style={styles.fieldLabel}>{t('label_city')}</Text>
                 <Controller
                   control={control}
                   name="city"
