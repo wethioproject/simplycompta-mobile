@@ -43,8 +43,8 @@ interface Product {
 
 const productSchema = yup.object({
   designation: yup.string().trim().required('error_designation_required'),
-  description: yup.string().trim().required('error_description_required'),
-  reference: yup.string().trim().required('error_reference_required'),
+  description: yup.string().trim().optional(),
+  reference: yup.string().trim().optional(),
   type: yup.string().trim().required('error_type_required'),
   category_id: yup.string().trim().required('error_category_required'),
   unit_price_ht: yup
@@ -597,7 +597,6 @@ const Products: React.FC = ({ navigation }: any) => {
               <View style={styles.fieldGroup}>
                 <View style={styles.fieldLabelRow}>
                   <Text style={styles.fieldLabel}>{t('label_description')}</Text>
-                  <Text style={styles.fieldRequired}>*</Text>
                 </View>
                 <Controller
                   control={control}
@@ -620,11 +619,10 @@ const Products: React.FC = ({ navigation }: any) => {
                 )}
               </View>
 
-              {/* ── Reference (required) ──────────────────────────────── */}
+              {/* ── Reference ────────────────────────────────────────── */}
               <View style={styles.fieldGroup}>
                 <View style={styles.fieldLabelRow}>
                   <Text style={styles.fieldLabel}>{t('label_reference')}</Text>
-                  <Text style={styles.fieldRequired}>*</Text>
                 </View>
                 <Controller
                   control={control}
