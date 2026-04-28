@@ -42,4 +42,6 @@ export const Api_Endpoints = {
   botRequestDeactivation: 'customer/bot/request-deactivation',
   customerInvoiceDuplicate: 'customer/duplicate-invoice',
   customerQuoteDuplicate: 'customer/duplicate-quote',
+  customerRevenues: 'customer/customer-revenues',
+  customerRevenue: 'customer/customer-revenue',
 }

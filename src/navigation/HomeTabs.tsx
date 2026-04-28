@@ -19,6 +19,7 @@ import PlusScreen from '../screens/home/Plus';
 import Expenses from '../screens/home/Expenses';
 import Contacts from '../screens/home/Contacts';
 import BankStatements from '../screens/home/BankStatements';
+import ReceiptScreen from '../screens/home/Receipt';
 import {
   House,
   BarChart3,
@@ -29,7 +30,8 @@ import {
   FileText,
   TrendingDown,
   Building2,
-  Receipt,
+  Receipt as ReceiptIcon,
+  Wallet,
 } from 'lucide-react-native';
 
 const Tab = createBottomTabNavigator();
@@ -62,7 +64,7 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, navigation }) => {
     {
       key: 'devis',
       label: t('status_quotes'),
-      Icon: Receipt,
+      Icon: ReceiptIcon,
       iconBg: '#FEF3C7',
       iconColor: '#D97706',
       onPress: () => { setShowMenu(false); navigation.navigate('Quote' as never); },
@@ -74,6 +76,14 @@ const CustomTabBar: React.FC<BottomTabBarProps> = ({ state, navigation }) => {
       iconBg: '#FFF7ED',
       iconColor: '#EA580C',
       onPress: () => { setShowMenu(false); navigation.navigate('Expenses' as never); },
+    },
+    {
+      key: 'receipt',
+      label: t('receipt_screen_title'),
+      Icon: Wallet,
+      iconBg: '#ECFDF5',
+      iconColor: '#16A34A',
+      onPress: () => { setShowMenu(false); navigation.navigate('Receipt' as never); },
     },
     {
       key: 'documents',
@@ -285,6 +295,7 @@ const HomeTabs: React.FC = () => (
     <Tab.Screen name="Quote"      component={Quote}      />
     <Tab.Screen name="Expenses"   component={Expenses}   />
     <Tab.Screen name="Bank statements"   component={BankStatements}   />
+    <Tab.Screen name="Receipt"       component={ReceiptScreen}       />
     <Tab.Screen name="Contacts"   component={Contacts}   />
     <Tab.Screen name="Plus"       component={PlusScreen} />
   </Tab.Navigator>
