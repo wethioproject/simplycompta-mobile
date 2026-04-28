@@ -291,7 +291,7 @@ const ArticleModal: React.FC<{
                 onPress={() => setShowTypePicker(true)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.pickerValueText}>{form.type ?? 'Product'}</Text>
+                <Text style={styles.pickerValueText}>{form.type === 'Product' ? t('category_product') : form.type === 'Service' ? t('category_service') : form.type ?? t('category_product')}</Text>
                 <ChevronDown size={18} color="#0B5FA5" />
               </TouchableOpacity>
             </View>
@@ -483,7 +483,7 @@ const ArticleModal: React.FC<{
                     activeOpacity={0.7}
                   >
                     <Text style={[styles.pickerOptionText, form.type === opt && styles.pickerOptionSelected]}>
-                      {opt}
+                      {opt === 'Product' ? t('category_product') : t('category_service')}
                     </Text>
                     {form.type === opt && <Check size={16} color="#0B5FA5" />}
                   </TouchableOpacity>
