@@ -142,6 +142,14 @@ const ArticleModal: React.FC<{
       Alert.alert(t('alert_field_required'), t('message_designation_required'));
       return;
     }
+    if (selectedCategoryId == null) {
+      Alert.alert(t('alert_field_required'), t('message_category_required'));
+      return;
+    }
+    if ((form as any).unit_id == null) {
+      Alert.alert(t('alert_field_required'), t('message_unit_required'));
+      return;
+    }
     let product_id: number | undefined = selectedProductId;
     if (customerId) {
       const result = await createProduct({
@@ -278,6 +286,7 @@ const ArticleModal: React.FC<{
             <View style={styles.fieldGroup}>
               <View style={styles.fieldLabelRow}>
                 <Text style={styles.fieldLabel}>{t('label_category')}</Text>
+                <Text style={styles.fieldRequired}>*</Text>
               </View>
               <TouchableOpacity
                 style={styles.pickerRow}
@@ -339,6 +348,7 @@ const ArticleModal: React.FC<{
             <View style={styles.fieldGroup}>
               <View style={styles.fieldLabelRow}>
                 <Text style={styles.fieldLabel}>{t('label_unit')}</Text>
+                <Text style={styles.fieldRequired}>*</Text>
               </View>
               <TouchableOpacity style={styles.pickerRow} onPress={() => setShowUnitPicker(true)} activeOpacity={0.7}>
                 <Text style={form.unit_id ? styles.pickerValueText : styles.pickerPlaceholderText}>
@@ -432,9 +442,9 @@ const ArticleModal: React.FC<{
               <Text style={styles.cancelBtnText}>{t('modal_cancel_text')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.saveBtn, (!form.designation.trim() || !form.unitPriceHT || form.tva == null) && styles.saveBtnDisabled]}
+            style={[styles.saveBtn, (!form.designation.trim() || !form.unitPriceHT || form.tva == null || selectedCategoryId == null || (form as any).unit_id == null) && styles.saveBtnDisabled]}
               onPress={handleConfirm}
-              disabled={!form.designation.trim() || !form.unitPriceHT || form.tva == null}
+              disabled={!form.designation.trim() || !form.unitPriceHT || form.tva == null || selectedCategoryId == null || (form as any).unit_id == null}
               activeOpacity={0.8}
             >
               <Text style={styles.saveBtnText}>{t('button_add')}</Text>
