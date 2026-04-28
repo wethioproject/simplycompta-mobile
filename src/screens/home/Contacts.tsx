@@ -138,16 +138,16 @@ const Contacts: React.FC = ({ navigation: navProp }: any) => {
   const sortedClients = [...clients].sort((a, b) => {
     if (sortOption === 'name-asc')    return a.company_name.localeCompare(b.company_name);
     if (sortOption === 'name-desc')   return b.company_name.localeCompare(a.company_name);
-    if (sortOption === 'amount-desc') return (b.total_revenue_ht ?? 0) - (a.total_revenue_ht ?? 0);
-    if (sortOption === 'amount-asc')  return (a.total_revenue_ht ?? 0) - (b.total_revenue_ht ?? 0);
+    if (sortOption === 'amount-desc') return (parseFloat(String(b.total_revenue_ht ?? 0)) || 0) - (parseFloat(String(a.total_revenue_ht ?? 0)) || 0);
+    if (sortOption === 'amount-asc')  return (parseFloat(String(a.total_revenue_ht ?? 0)) || 0) - (parseFloat(String(b.total_revenue_ht ?? 0)) || 0);
     return 0;
   });
 
   const sortedSuppliers = [...suppliers].sort((a, b) => {
     if (sortOption === 'name-asc')    return a.company_name.localeCompare(b.company_name);
     if (sortOption === 'name-desc')   return b.company_name.localeCompare(a.company_name);
-    if (sortOption === 'amount-desc') return (b.total_ttc ?? 0) - (a.total_ttc ?? 0);
-    if (sortOption === 'amount-asc')  return (a.total_ttc ?? 0) - (b.total_ttc ?? 0);
+    if (sortOption === 'amount-desc') return (parseFloat(String(b.total_ttc ?? 0)) || 0) - (parseFloat(String(a.total_ttc ?? 0)) || 0);
+    if (sortOption === 'amount-asc')  return (parseFloat(String(a.total_ttc ?? 0)) || 0) - (parseFloat(String(b.total_ttc ?? 0)) || 0);
     return 0;
   });
 
@@ -173,9 +173,8 @@ const Contacts: React.FC = ({ navigation: navProp }: any) => {
 
 
   const renderClientItem = ({ item }: { item: ClientItem }) => {
-    const revenue = item.total_revenue_ht ?? 0;
+    const revenue = parseFloat(String(item.total_revenue_ht ?? 0)) || 0;
     const lateCount = item.late_invoices_count ?? 0;
-    const displayRevenue = lateCount <= 0 ? 0 : revenue;
     return (
       <TouchableOpacity
         style={styles.card}
@@ -245,7 +244,7 @@ const Contacts: React.FC = ({ navigation: navProp }: any) => {
   };
 
   const renderSupplierItem = ({ item }: { item: SupplierItem }) => {
-    const total = item.total_ttc ?? 0;
+    const total = parseFloat(String(item.total_ttc ?? 0)) || 0;
     const lateCount = item.expenses_count ?? 0;
     return (
       <TouchableOpacity
@@ -471,7 +470,7 @@ const Contacts: React.FC = ({ navigation: navProp }: any) => {
       <CreateClientModal
         visible={showCreateClientModal}
         onClose={() => setShowCreateClientModal(false)}
-        onCreated={() => fetchClients()}
+        onCreated={async () => { await fetchClients(); }}
       />
       <CreateSupplierModal
         visible={showCreateSupplierModal}
