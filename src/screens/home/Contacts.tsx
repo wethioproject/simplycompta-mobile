@@ -201,23 +201,23 @@ const Contacts: React.FC = ({ navigation: navProp }: any) => {
         } */}
 
 
-{(revenue > 0 || lateCount > 0) && (
-  <View style={styles.cardRight}>
-    
-    {lateCount > 0 && (
-      <View style={styles.badgeLate}>
-        <Clock size={14} color="#EF4444" />
-        <Text style={styles.badgeLateText}>
-          {lateCount} {t('contacts_pending')}
-        </Text>
-      </View>
-    )}
+        {(revenue > 0 || lateCount > 0) && (
+          <View style={styles.cardRight}>
 
-    {revenue > 0 && (
-      <Text style={styles.amountGreen}>
-        +{revenue.toLocaleString('fr-FR')} MAD
-      </Text>
-    )}
+            {lateCount > 0 && (
+              <View style={styles.badgeLate}>
+                <Clock size={14} color="#EF4444" />
+                <Text style={styles.badgeLateText}>
+                  {lateCount} {t('contacts_pending')}
+                </Text>
+              </View>
+            )}
+
+            {revenue > 0 && (
+              <Text style={styles.amountGreen}>
+                +{revenue.toLocaleString('fr-FR')} MAD
+              </Text>
+            )}
 
   </View>
 )}
