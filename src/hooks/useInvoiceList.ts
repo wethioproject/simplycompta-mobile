@@ -80,11 +80,6 @@ export const useInvoiceList = (): UseInvoiceListReturn => {
     }
   };
 
-  // Initial load
-  useEffect(() => {
-    fetchInvoices();
-  }, []);
-
   // Filter-triggered reload
   useEffect(() => {
     if (!isFilterMount.current) {

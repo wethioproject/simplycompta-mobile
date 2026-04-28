@@ -23,7 +23,7 @@ import { createClient } from '../../services/client.service';
 interface CreateClientModalProps {
   visible: boolean;
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: () => Promise<void>;
 }
 
 export const CreateClientModal: React.FC<CreateClientModalProps> = ({
@@ -73,7 +73,7 @@ export const CreateClientModal: React.FC<CreateClientModalProps> = ({
     try {
       await createClient(data);
       Alert.alert(t('success_title'), t('success_client_created'));
-      onCreated();
+      await onCreated();
       onClose();
     } catch (e: any) {
       const msg = e?.response?.data?.message ?? 'Erreur lors de la création du client.';

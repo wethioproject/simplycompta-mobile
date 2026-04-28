@@ -128,22 +128,23 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
     }
   };
 
-  const refreshClients = async () => {
+  const refreshClients = async (): Promise<Client[]> => {
     try {
       const resourcesResult = await getInvoiceResources();
       if (resourcesResult.success) {
-        setClients(
-          (resourcesResult.resources?.clients ?? []).map((c: any) => ({
-            id: c.id,
-            name: c.client_name,
-          }))
-        );
+        const newClients = (resourcesResult.resources?.clients ?? []).map((c: any) => ({
+          id: c.id,
+          name: c.client_name,
+        }));
+        setClients(newClients);
+        return newClients;
       }
     } catch {}
+    return clients;
   };
 
   useEffect(() => {
-    fetchResources();
+    Promise.all([fetchResources(), fetchInvoices(getFilterParams())]);
   }, []);
 
   const handleEditInvoice = (item: InvoiceItem) => {
