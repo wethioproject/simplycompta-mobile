@@ -80,7 +80,7 @@ const ArticleModal: React.FC<{
   useEffect(() => {
     setForm(prev => ({
       ...prev,
-      totalHT: Math.max(0, prev.unitPriceHT * prev.quantity - (prev.discount ?? 0)),
+      totalHT: prev.unitPriceHT * prev.quantity,
     }));
   }, [form.unitPriceHT, form.quantity, form.discount]);
 
