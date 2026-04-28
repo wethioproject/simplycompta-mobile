@@ -251,7 +251,6 @@ const ArticleModal: React.FC<{
             <View style={styles.fieldGroup}>
               <View style={styles.fieldLabelRow}>
                 <Text style={styles.fieldLabel}>{t('label_description')}</Text>
-                <Text style={styles.fieldRequired}>*</Text>
               </View>
               <TextInput
                 style={[styles.fieldInput, styles.fieldInputMultiline]}
@@ -269,7 +268,6 @@ const ArticleModal: React.FC<{
             <View style={styles.fieldGroup}>
               <View style={styles.fieldLabelRow}>
                 <Text style={styles.fieldLabel}>{t('label_reference')}</Text>
-                <Text style={styles.fieldRequired}>*</Text>
               </View>
               <TextInput
                 style={styles.fieldInput}
