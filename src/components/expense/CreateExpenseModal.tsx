@@ -42,7 +42,7 @@ import type { Account, Category, Supplier, ExpenseItem, ExpenseFormValues } from
 import { PAYMENT_METHODS } from '../../types/invoice.types';
 import { styles } from '../../styles/expenses.styles';
 
-const OCR_API_URL = 'http://192.168.1.3:3001/api/expenses/ocr';
+const OCR_API_URL = 'https://ocr.simply-compta.com/api/expenses/ocr';
 
 const expenseSchema = yup.object({
   date: yup.string().required('Date is required'),
@@ -1260,7 +1260,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                 </TouchableOpacity>
               </View>
               <View style={{ alignItems: 'center', paddingBottom: 8 }}>
-                <DateTimePicker value={tempDate} mode="date" display="inline" onChange={handleDateChange} />
+                <DateTimePicker value={tempDate} mode="date" display="inline" onChange={handleDateChange} themeVariant="light" />
               </View>
             </View>
           </View>
