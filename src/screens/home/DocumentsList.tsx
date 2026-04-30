@@ -87,8 +87,10 @@ const DEFAULT_STYLE = {
 };
 
 // ── Date formatter ────────────────────────────────────────────────────────────
-const formatDate = (iso: string): string => {
+const formatDate = (iso: string | null | undefined): string => {
+  if (!iso || iso.startsWith('0000')) return '—';
   const date = new Date(iso);
+  if (isNaN(date.getTime()) || date.getFullYear() < 2000) return '—';
   const locale = i18next.language === 'en' ? 'en-US' : 'fr-FR';
   return date.toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' });
 };
@@ -280,7 +282,9 @@ const DocumentsList: React.FC = () => {
                           <Text style={styles.catMetaText}>{cat.size}</Text>
                         </View>
                       )}
-                      <Text style={styles.catUpdate}>{t('doc_last_update')} {lastUpdate}</Text>
+                      {lastUpdate !== '—' && (
+                        <Text style={styles.catUpdate}>{t('doc_last_update')} {lastUpdate}</Text>
+                      )}
                     </View>
 
                     {/* Count badge + chevron */}
