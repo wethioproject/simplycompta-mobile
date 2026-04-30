@@ -805,6 +805,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
         total_tva: tva,
         reference: data.expenseReference ?? '',
         expense_reference: data.expenseReference ?? '',
+        notes: data.description ?? '',
         description: data.description ?? '',
         ocr_raw: ocrRaw,
         ocr_confidence_score: ocrSuggestion?.confidenceScore ?? null,

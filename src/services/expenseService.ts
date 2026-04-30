@@ -51,6 +51,14 @@ class ExpenseService {
                 formData.append('supplier_id', String(payload.supplier_id));
             }
 
+            if (payload.reference != null) {
+                formData.append('reference', String(payload.reference));
+            }
+
+            if (payload.notes != null) {
+                formData.append('notes', String(payload.notes));
+            }
+
             if (payload.document) {
                 const file = payload.document;
                 formData.append('file', {
@@ -87,6 +95,14 @@ class ExpenseService {
 
             if (payload.supplier_id != null) {
                 formData.append('supplier_id', String(payload.supplier_id));
+            }
+
+            if (payload.reference != null) {
+                formData.append('reference', String(payload.reference));
+            }
+
+            if (payload.notes != null) {
+                formData.append('notes', String(payload.notes));
             }
 
             if (payload.document) {
