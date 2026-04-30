@@ -677,7 +677,7 @@ const Products: React.FC = ({ navigation }: any) => {
                         <Text style={[
                           styles.typeToggleBtnText,
                           value === 'Product' && styles.typeToggleBtnTextProductActive,
-                        ]}>Produit</Text>
+                        ]}>{t('type_product')}</Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -875,7 +875,7 @@ const Products: React.FC = ({ navigation }: any) => {
               >
                 {saving
                   ? <ActivityIndicator color="#FFF" />
-                  : <Text style={styles.saveBtnText}>
+                  : <Text style={styles.saveBtnText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
                       {editingProduct ? t('button_save_changes') : t('button_add_product')}
                     </Text>
                 }
@@ -1249,7 +1249,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   cancelBtn: {
-    flex: 1,
+    flex: 0,
+    minWidth: 100,
+    paddingHorizontal: 16,
     paddingVertical: 13,
     borderRadius: 12,
     alignItems: 'center',
@@ -1377,7 +1379,7 @@ const styles = StyleSheet.create({
   ttcValue: { fontSize: 16, fontWeight: '700', color: '#0B5FA5' },
 
   saveBtn: { flex: 1, backgroundColor: '#0B5FA5', borderRadius: 12, paddingVertical: 13, alignItems: 'center', justifyContent: 'center' },
-  saveBtnText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
+  saveBtnText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF', textAlign: 'center' },
   saveBtnDisabled: { backgroundColor: '#BCC0CA' },
   
   fab: { position: 'absolute', bottom: 24, right: 16, width: 56, height: 56, borderRadius: 28, backgroundColor: '#0B5FA5', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 5 },
