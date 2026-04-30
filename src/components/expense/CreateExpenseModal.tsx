@@ -167,6 +167,10 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [document, setDocument] = useState<any>(null);
   const [removedExistingDocument, setRemovedExistingDocument] = useState(false);
+  const [fileSizeError, setFileSizeError] = useState(false);
+
+  const MAX_FILE_SIZE = 1024 * 1024; // 1024 KB
+
   const [tempDate, setTempDate] = useState<Date>(new Date());
   const [showCreateSupplierModal, setShowCreateSupplierModal] = useState(false);
   const [pendingSupplierName, setPendingSupplierName] = useState('');
@@ -603,6 +607,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
     setOcrApplied(false);
     setPendingSupplierName('');
     setRemovedExistingDocument(false);
+    setFileSizeError(false);
 
     if (editItem) {
       const datePart = editItem.date.split('T')[0];
@@ -723,6 +728,11 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   const handlePickFromGallery = async () => {
     try {
       const [file] = await pick({ type: [types.images] });
+      if (file.size && file.size > MAX_FILE_SIZE) {
+        setFileSizeError(true);
+        return;
+      }
+      setFileSizeError(false);
       setDocument(file);
       await sendToOcr(file);
     } catch (e: any) {
@@ -734,6 +744,11 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   const handlePickFromFiles = async () => {
     try {
       const [file] = await pick({ type: [types.pdf, types.images] });
+      if (file.size && file.size > MAX_FILE_SIZE) {
+        setFileSizeError(true);
+        return;
+      }
+      setFileSizeError(false);
       setDocument(file);
       await sendToOcr(file);
     } catch (e: any) {
@@ -747,6 +762,11 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
       if (response.didCancel || response.errorCode) return;
       const asset = response.assets?.[0];
       if (!asset?.uri) return;
+      if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
+        setFileSizeError(true);
+        return;
+      }
+      setFileSizeError(false);
 
       const photoFile = {
         uri: asset.uri,
@@ -789,6 +809,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   };
 
   const submitExpense = async (data: ExpenseFormValues & { expenseReference?: string; description?: string }) => {
+    if (fileSizeError) return;
     setSaving(true);
     try {
       const ttc = parseFloat(data.amountTTC) || 0;
@@ -952,6 +973,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                   <TouchableOpacity
                     style={styles.attachmentRemoveBtn}
                     onPress={() => {
+                      setFileSizeError(false);
                       if (document?.isExisting) setRemovedExistingDocument(true);
                       setDocument(null);
                     }}
@@ -981,6 +1003,9 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                     <Text style={styles.uploadBtnText}>{t('button_select_file')}</Text>
                   </TouchableOpacity>
                 </View>
+              )}
+              {fileSizeError && (
+                <Text style={styles.fieldError}>{t('error_file_too_large')}</Text>
               )}
 
               <View style={styles.fieldBlock}>
