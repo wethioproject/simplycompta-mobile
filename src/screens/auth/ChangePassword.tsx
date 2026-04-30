@@ -4,9 +4,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { eyeIcon } from '../../assets/icons';
 import { useAuth } from '../../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 
 const ChangePassword: React.FC = ({ navigation }: any) => {
   const { resetPassword } = useAuth();
+  const { t } = useTranslation();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -19,8 +21,8 @@ const ChangePassword: React.FC = ({ navigation }: any) => {
       console.log('Passwords do not match');
         Toast.show({
         type: 'error',
-        text1: 'Reset Password Failed',
-        text2: 'Passwords do not match',
+        text1: t('change_password_mismatch_title'),
+        text2: t('change_password_mismatch_message'),
         position: 'top'
       });
       return;
@@ -31,8 +33,8 @@ const ChangePassword: React.FC = ({ navigation }: any) => {
       console.log('Password changed successfully');
         Toast.show({
         type: 'success',
-        text1: 'Reset Password Success',
-        text2: 'Password changed successfully',
+        text1: t('change_password_success_title'),
+        text2: t('change_password_success_message'),
         position: 'top'
       });
       setCurrentPassword('');
@@ -50,7 +52,7 @@ const ChangePassword: React.FC = ({ navigation }: any) => {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Changer le mot de passe</Text>
+        <Text style={styles.headerTitle}>{t('change_password_title')}</Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -60,7 +62,7 @@ const ChangePassword: React.FC = ({ navigation }: any) => {
           <View style={styles.passwordContainer}>
             <TextInput
               style={styles.input}
-              placeholder="Mot de passe actuel"
+              placeholder={t('change_password_current_placeholder')}
               placeholderTextColor="#B0B0B0"
               value={currentPassword}
               onChangeText={setCurrentPassword}
@@ -81,7 +83,7 @@ const ChangePassword: React.FC = ({ navigation }: any) => {
           <View style={styles.passwordContainer}>
             <TextInput
               style={styles.input}
-              placeholder="Mot de passe"
+              placeholder={t('change_password_new_placeholder')}
               placeholderTextColor="#B0B0B0"
               value={newPassword}
               onChangeText={setNewPassword}
@@ -102,7 +104,7 @@ const ChangePassword: React.FC = ({ navigation }: any) => {
           <View style={styles.passwordContainer}>
             <TextInput
               style={styles.input}
-              placeholder="Mot de passe"
+              placeholder={t('change_password_confirm_placeholder')}
               placeholderTextColor="#B0B0B0"
               value={confirmPassword}
               onChangeText={setConfirmPassword}
@@ -124,7 +126,7 @@ const ChangePassword: React.FC = ({ navigation }: any) => {
 
       {/* Fixed Save Button */}
       <TouchableOpacity style={styles.fixedSaveButton} onPress={handleSave}>
-        <Text style={styles.saveButtonText}>Enregistrer</Text>
+        <Text style={styles.saveButtonText}>{t('change_password_save')}</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );

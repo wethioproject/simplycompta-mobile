@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ChevronLeft } from 'lucide-react-native';
 import { appLogoIcon } from '../../assets/icons';
 import { useAuth } from '../../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 
 interface ForgotPasswordProps {
   navigation: any;
@@ -11,6 +12,7 @@ interface ForgotPasswordProps {
 
 const ForgotPassword: React.FC<ForgotPasswordProps> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
@@ -23,7 +25,7 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ navigation }) => {
 
   const handleSendReset = async () => {
     if (!email.trim()) {
-      setErrorMessage('Please enter your email');
+      setErrorMessage(t('forgot_error_email_required'));
       return;
     }
 
@@ -35,27 +37,27 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ navigation }) => {
 
     if (result.success) {
       setShowOtpScreen(true);
-      Alert.alert('Success', result.message || 'An OTP code has been sent to your email');
+      Alert.alert(t('forgot_success_title'), result.message || t('forgot_otp_sent'));
     } else {
-      setErrorMessage(result.error || 'An error occurred');
+      setErrorMessage(result.error || t('forgot_generic_error'));
     }
   };
 
   const handleVerifyOtp = async () => {
     if (!otp.trim()) {
-      setErrorMessage('Please enter the OTP code');
+      setErrorMessage(t('forgot_error_otp_required'));
       return;
     }
     if (!password.trim()) {
-      setErrorMessage('Please enter a new password');
+      setErrorMessage(t('forgot_error_password_required'));
       return;
     }
     if (password !== confirmPassword) {
-      setErrorMessage('Passwords do not match');
+      setErrorMessage(t('forgot_error_passwords_mismatch'));
       return;
     }
     if (password.length < 6) {
-      setErrorMessage('Password must be at least 6 characters');
+      setErrorMessage(t('forgot_error_password_short'));
       return;
     }
 
@@ -67,17 +69,17 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ navigation }) => {
 
     if (result.success) {
       Alert.alert(
-        'Success',
-        'Your password has been reset successfully',
+        t('forgot_success_title'),
+        t('forgot_success_message'),
         [
           {
-            text: 'OK',
+            text: t('forgot_success_ok'),
             onPress: () => navigation.navigate('Login'),
           },
         ]
       );
     } else {
-      setErrorMessage(result.error || 'An error occurred');
+      setErrorMessage(result.error || t('forgot_generic_error'));
     }
   };
 
@@ -87,7 +89,7 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ navigation }) => {
         {/* Back Button */}
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.7} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
           <ChevronLeft size={24} color="#1F2937" />
-          <Text style={styles.backText}>Back</Text>
+          <Text style={styles.backText}>{t('forgot_back')}</Text>
         </TouchableOpacity>
 
         {/* Logo */}
@@ -100,19 +102,19 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ navigation }) => {
           {!showOtpScreen ? (
             <>
               {/* Email Reset Form */}
-              <Text style={styles.formTitle}>Reset Password</Text>
+              <Text style={styles.formTitle}>{t('forgot_title')}</Text>
 
               {/* Instruction Text */}
               <Text style={styles.instructionText}>
-                Enter your email and we'll send you an OTP code to reset your password
+                {t('forgot_instruction')}
               </Text>
 
               {/* Email Input */}
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Email <Text style={styles.required}>*</Text></Text>
+                <Text style={styles.inputLabel}>{t('forgot_email_label')} <Text style={styles.required}>*</Text></Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Enter your email"
+                  placeholder={t('forgot_email_placeholder')}
                   placeholderTextColor="#9CA3AF"
                   value={email}
                   onChangeText={(text) => {
@@ -140,24 +142,24 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ navigation }) => {
                 {isLoading ? (
                   <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
-                  <Text style={styles.buttonText}>Send OTP</Text>
+                  <Text style={styles.buttonText}>{t('forgot_send_button')}</Text>
                 )}
               </TouchableOpacity>
             </>
           ) : (
             <>
               {/* OTP Verification Form */}
-              <Text style={styles.formTitle}>Verify OTP</Text>
+              <Text style={styles.formTitle}>{t('forgot_otp_title')}</Text>
               <Text style={styles.otpSubtitle}>
-                A code has been sent to {email}
-              </Text>
+                {t('forgot_otp_subtitle', { email })}
+              </Text>∆
 
               {/* OTP Input */}
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>OTP Code <Text style={styles.required}>*</Text></Text>
+                <Text style={styles.inputLabel}>{t('forgot_otp_label')} <Text style={styles.required}>*</Text></Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Enter OTP code"
+                  placeholder={t('forgot_otp_placeholder')}
                   placeholderTextColor="#9CA3AF"
                   value={otp}
                   onChangeText={(text) => {
@@ -172,10 +174,10 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ navigation }) => {
 
               {/* Password Input */}
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>New Password <Text style={styles.required}>*</Text></Text>
+                <Text style={styles.inputLabel}>{t('forgot_new_password_label')} <Text style={styles.required}>*</Text></Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Enter new password"
+                  placeholder={t('forgot_new_password_placeholder')}
                   placeholderTextColor="#9CA3AF"
                   value={password}
                   onChangeText={(text) => {
@@ -189,10 +191,10 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ navigation }) => {
 
               {/* Confirm Password Input */}
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Confirm Password <Text style={styles.required}>*</Text></Text>
+                <Text style={styles.inputLabel}>{t('forgot_confirm_password_label')} <Text style={styles.required}>*</Text></Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Confirm password"
+                  placeholder={t('forgot_confirm_password_placeholder')}
                   placeholderTextColor="#9CA3AF"
                   value={confirmPassword}
                   onChangeText={(text) => {
@@ -219,7 +221,7 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ navigation }) => {
                 {isLoading ? (
                   <ActivityIndicator color="#FFFFFF" size="small" />
                 ) : (
-                  <Text style={styles.buttonText}>Verify & Reset</Text>
+                  <Text style={styles.buttonText}>{t('forgot_verify_button')}</Text>
                 )}
               </TouchableOpacity>
 
@@ -236,7 +238,7 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ navigation }) => {
                 disabled={isLoading}
                 activeOpacity={0.7}
               >
-                <Text style={styles.resendText}>Resend code</Text>
+                <Text style={styles.resendText}>{t('forgot_resend')}</Text>
               </TouchableOpacity>
             </>
           )}
