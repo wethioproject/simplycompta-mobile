@@ -197,9 +197,9 @@ const TasksSection: React.FC<{
         </View>
         <Text style={styles.tasksSectionTitle}>{t('section_todo_this_month')}</Text>
       </View>
-      <TouchableOpacity activeOpacity={0.7}>
+      {/* <TouchableOpacity activeOpacity={0.7}>
         <Text style={styles.tasksSeeAll}>{t('todo_see_all')}</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
     </View>
 
     <View style={styles.tasksCard}>
