@@ -125,7 +125,7 @@ const CreateInvoiceModal: React.FC<{
   const [removedExistingDocument, setRemovedExistingDocument] = useState(false);
   const [fileSizeError, setFileSizeError] = useState(false);
 
-  const MAX_FILE_SIZE = 1024 * 1024; // 1024 KB
+  const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
 
   const [localClients, setLocalClients] = useState<Client[]>(clients);
   React.useEffect(() => { setLocalClients(clients); }, [clients]);
