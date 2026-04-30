@@ -123,6 +123,9 @@ const CreateInvoiceModal: React.FC<{
   const [showCreateClientModal, setShowCreateClientModal] = useState(false);
   const [showImagePreview, setShowImagePreview] = useState(false);
   const [removedExistingDocument, setRemovedExistingDocument] = useState(false);
+  const [fileSizeError, setFileSizeError] = useState(false);
+
+  const MAX_FILE_SIZE = 1024 * 1024; // 1024 KB
 
   const [localClients, setLocalClients] = useState<Client[]>(clients);
   React.useEffect(() => { setLocalClients(clients); }, [clients]);
@@ -177,6 +180,7 @@ const CreateInvoiceModal: React.FC<{
     setShowDueDatePicker(false);
     setSaving(false);
     setRemovedExistingDocument(false);
+    setFileSizeError(false);
 
     if (editItem) {
       const datePart = editItem.date.split('T')[0];
@@ -289,6 +293,11 @@ const CreateInvoiceModal: React.FC<{
   const handlePickDocument = async () => {
     try {
       const [file] = await pick({ type: [types.pdf, types.docx, types.doc, types.images] });
+      if (file.size && file.size > MAX_FILE_SIZE) {
+        setFileSizeError(true);
+        return;
+      }
+      setFileSizeError(false);
       setDocument(file);
     } catch (e: any) {
       if (isErrorWithCode(e) && e.code === errorCodes.OPERATION_CANCELED) return;
@@ -303,6 +312,11 @@ const CreateInvoiceModal: React.FC<{
         if (response.didCancel || response.errorCode) return;
         const asset = response.assets?.[0];
         if (!asset?.uri) return;
+        if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
+          setFileSizeError(true);
+          return;
+        }
+        setFileSizeError(false);
         setDocument({
           uri: asset.uri,
           fileCopyUri: asset.uri,
@@ -341,6 +355,7 @@ const CreateInvoiceModal: React.FC<{
   const totalTTC = totalHT + totalTVA;
 
   const onSubmit = async (data: InvoiceFormValues) => {
+    if (fileSizeError) return;
     setSaving(true);
     try {
       const payload = {
@@ -441,6 +456,7 @@ const CreateInvoiceModal: React.FC<{
                     style={styles.attachmentRemoveBtn}
                     onPress={() => {
                       if (document?.isExisting) setRemovedExistingDocument(true);
+                      setFileSizeError(false);
                       setDocument(null);
                     }}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -459,6 +475,9 @@ const CreateInvoiceModal: React.FC<{
                     <Text style={styles.uploadBtnText}>{t('button_select_file')}</Text>
                   </TouchableOpacity>
                 </View>
+              )}
+              {fileSizeError && (
+                <Text style={styles.fieldError}>{t('error_file_too_large')}</Text>
               )}
 
               {/* Invoice Number */}
