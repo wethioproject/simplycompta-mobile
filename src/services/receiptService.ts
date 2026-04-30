@@ -6,6 +6,7 @@ export interface ReceiptPayload {
   amount: string | number;
   payment_method: string;
   notes?: string;
+  remove_document?: number;
   document?: {
     uri: string;
     name: string;
@@ -65,6 +66,7 @@ class ReceiptService {
       formData.append('amount', String(payload.amount));
       formData.append('payment_method', payload.payment_method);
       formData.append('_method', 'PUT');
+      formData.append('remove_document', String(payload.remove_document ?? 0));
 
       if (payload.notes) {
         formData.append('description', payload.notes);

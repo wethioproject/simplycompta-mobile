@@ -20,6 +20,7 @@ export type ReceiptFormData = {
     type: string;
     fileCopyUri?: string;
   } | null;
+  removedExistingDocument?: boolean;
 };
 
 export const PAYMENT_METHODS: PaymentMethod[] = ['transfer', 'cash', 'card', 'check', 'other'];

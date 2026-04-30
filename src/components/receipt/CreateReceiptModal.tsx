@@ -65,6 +65,7 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
   const [saving, setSaving]                       = useState(false);
   const [document, setDocument]                   = useState<any>(null);
   const [showImagePreview, setShowImagePreview]   = useState(false);
+  const [removedExistingDocument, setRemovedExistingDocument] = useState(false);
 
   const amountParsed = parseFloat(formAmount);
   const isValid = !!formAmount && !isNaN(amountParsed) && amountParsed > 0 && !!formDate;
@@ -74,6 +75,7 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
     setSaving(false);
     setShowDatePicker(false);
     setShowMethodPicker(false);
+    setRemovedExistingDocument(false);
     if (editItem) {
       const iso = toIsoDate(editItem.date);
       setFormDate(iso);
@@ -88,7 +90,7 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
           : ['jpg', 'jpeg'].includes(ext) ? 'image/jpeg'
           : ext === 'png' ? 'image/png'
           : 'application/octet-stream';
-        setDocument({ uri: editItem.documentUrl, fileCopyUri: editItem.documentUrl, name: filename, type: mimeType });
+        setDocument({ uri: editItem.documentUrl, fileCopyUri: editItem.documentUrl, name: filename, type: mimeType, isExisting: true });
       } else {
         setDocument(null);
       }
@@ -160,7 +162,7 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
       return;
     }
     setSaving(true);
-    onSave({ date: formDate, amount: formAmount, paymentMethod: formPaymentMethod, note: formNote, document: document ?? null });
+    onSave({ date: formDate, amount: formAmount, paymentMethod: formPaymentMethod, note: formNote, document: document ?? null, removedExistingDocument });
     setSaving(false);
     onClose();
   };
@@ -299,7 +301,10 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
                     </View>
                     <TouchableOpacity
                       style={styles.attachmentRemoveBtn}
-                      onPress={() => setDocument(null)}
+                      onPress={() => {
+                        if (document?.isExisting) setRemovedExistingDocument(true);
+                        setDocument(null);
+                      }}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
                       <X size={16} color="#DC2626" />

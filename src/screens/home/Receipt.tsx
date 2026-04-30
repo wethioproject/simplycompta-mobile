@@ -48,7 +48,7 @@ const Receipt: React.FC = ({ navigation: navProp }: any) => {
         amount: parseFloat(r.amount) || 0,
         paymentMethod: r.payment_method ?? 'other',
         note: r.description ?? undefined,
-        documentUrl: r.add_receipt ?? undefined,
+        documentUrl: r.pdf_receipt ?? undefined,
       }));
       setReceipts(mapped);
     } else {
@@ -67,6 +67,7 @@ const Receipt: React.FC = ({ navigation: navProp }: any) => {
       payment_method: data.paymentMethod,
       notes: data.note || undefined,
       document: data.document ?? undefined,
+      remove_document: !data.document && data.removedExistingDocument ? 1 : 0,
     };
     if (editingItem) {
       const result = await updateRevenue(Number(editingItem.id), payload);
