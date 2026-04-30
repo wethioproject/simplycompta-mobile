@@ -649,12 +649,12 @@ const OnboardingScreen = ({ navigation }: any) => {
 
   const handleSkip = async () => {
     await completeOnboarding();
-    navigation.replace('Login');
+    navigation.replace('Signup');
   };
 
   const handleGetStarted = async () => {
     await completeOnboarding();
-    navigation.replace('Login');
+    navigation.replace('Signup');
   };
 
   const handleNext = () => {
