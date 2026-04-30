@@ -106,6 +106,8 @@ const BankStatements: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [uploadingSlot, setUploadingSlot] = useState<string | null>(null);
 
+  const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
+
   // ── FAB ────────────────────────────────────────────────────────────────────
   const [isFabOpen, setIsFabOpen] = useState(false);
   const fabRotation = useState(new Animated.Value(0))[0];
@@ -189,6 +191,10 @@ const BankStatements: React.FC = () => {
   const handleUpload = async (slot: string) => {
     try {
       const [file] = await pick({ type: [types.pdf, types.images] });
+      if (file.size && file.size > MAX_FILE_SIZE) {
+        Alert.alert(t('error_title'), t('error_file_too_large'));
+        return;
+      }
       setUploadingSlot(slot);
       const result = await createBankStatement({
         customer_id: String(user?.id ?? ''),
@@ -217,6 +223,10 @@ const BankStatements: React.FC = () => {
         if (response.didCancel || response.errorCode) return;
         const asset = response.assets?.[0];
         if (!asset?.uri) return;
+        if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
+          Alert.alert(t('error_title'), t('error_file_too_large'));
+          return;
+        }
         const file = {
           uri: asset.uri,
           fileCopyUri: asset.uri,
@@ -481,7 +491,7 @@ const handleDocOpen = async (doc: any) => {
                 ) : (
                   <View style={{ alignItems: 'flex-end', gap: 4 }}>
                     <Text style={{ fontSize: 10, color: '#9CA3AF', fontStyle: 'italic' }}>
-                      {'Max 1 MB'}
+                      {'Max 2 MB'}
                     </Text>
                     <View style={styles.uploadActions}>
                       <TouchableOpacity
