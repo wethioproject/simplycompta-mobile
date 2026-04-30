@@ -4,6 +4,8 @@ import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image, ActivityInd
 import { User } from 'lucide-react-native';
 import { appLogoIcon, eyeIcon } from '../../assets/icons';
 import { useAuth } from '../../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
+import LanguageToggle from '../../components/auth/LanguageToggle';
 
 
 interface LoginProps {
@@ -12,6 +14,7 @@ interface LoginProps {
 
 const Login: React.FC<LoginProps> = ({ navigation }) => {
   const { login, isLoading, error } = useAuth();
+  const { t } = useTranslation();
   console.log('login error', error?.message)
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,8 +24,8 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
     if (!email || !password) {
       Toast.show({
         type: 'error',
-        text1: 'Required Fields',
-        text2: 'Please fill in all fields',
+        text1: t('login_required_fields_title'),
+        text2: t('login_required_fields_message'),
         position: 'top'
       });
       return;
@@ -42,7 +45,7 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
     if (error) {
       Toast.show({
         type: 'error',
-        text1: 'Login Failed',
+        text1: t('login_failed_title'),
         text2: error,
         position: 'top'
       });
@@ -57,6 +60,11 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
       keyboardShouldPersistTaps="handled"
     >
       <View style={styles.innerContainer}>
+        {/* Language Toggle */}
+        <View style={styles.langToggleRow}>
+          <LanguageToggle />
+        </View>
+
         {/* Logo Section */}
         <View style={styles.logoContainer}>
           <Image source={appLogoIcon} style={styles.logoImage} resizeMode="contain" />
@@ -64,7 +72,7 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
 
         {/* Login Form Card */}
         <View style={styles.formCard}>
-          <Text style={styles.formTitle}>Sign In</Text>
+          <Text style={styles.formTitle}>{t('login_title')}</Text>
 
           {/* Email Input */}
           <View style={styles.inputGroup}>
@@ -73,7 +81,7 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
             </Text>
             <TextInput
               style={styles.input}
-              placeholder="Email *"
+              placeholder={t('login_email_placeholder')}
               placeholderTextColor="#9CA3AF"
               value={email}
               onChangeText={setEmail}
@@ -91,7 +99,7 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
             <View style={styles.passwordContainer}>
               <TextInput
                 style={styles.passwordInput}
-                placeholder="Password *"
+                placeholder={t('login_password_placeholder')}
                 placeholderTextColor="#9CA3AF"
                 value={password}
                 onChangeText={setPassword}
@@ -118,14 +126,14 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
             {isLoading ? (
               <ActivityIndicator color="#FFFFFF" size="small" />
             ) : (
-              <Text style={styles.loginButtonText}>Sign In</Text>
+              <Text style={styles.loginButtonText}>{t('login_button')}</Text>
             )}
           </TouchableOpacity>
 
           {/* Links Section */}
           <View style={styles.linksContainer}>
             <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')}>
-              <Text style={styles.linkText}>Forgot password?</Text>
+              <Text style={styles.linkText}>{t('login_forgot_password')}</Text>
             </TouchableOpacity>
             
             {/* <TouchableOpacity 
@@ -142,21 +150,21 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
           <View style={styles.divider} />
 
           {/* Sign Up Link */}
-          {/* <View style={styles.signupContainer}>
-            <Text style={styles.signupText}>Pas encore de compte ? </Text>
+          <View style={styles.signupContainer}>
+            <Text style={styles.signupText}>{t('login_no_account')}</Text>
             <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
-              <Text style={styles.signupLink}>S'inscrire</Text>
+              <Text style={styles.signupLink}>{t('login_signup_link')}</Text>
             </TouchableOpacity>
-          </View> */}
+          </View>
         </View>
 
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            By signing in, you accept our{' '}
-            <Text style={styles.footerLink}>Terms of Use</Text>
-            {' '}and our{' '}
-            <Text style={styles.footerLink}>Privacy Policy</Text>
+            {t('login_terms')}
+            <Text style={styles.footerLink}>{t('login_terms_of_use')}</Text>
+            {t('login_and')}
+            <Text style={styles.footerLink}>{t('login_privacy')}</Text>
           </Text>
         </View>
       </View>
@@ -179,6 +187,10 @@ const styles = StyleSheet.create({
     maxWidth: 448,
     alignSelf: 'center',
     paddingHorizontal: 16,
+  },
+  langToggleRow: {
+    alignItems: 'flex-end',
+    marginBottom: 12,
   },
   logoContainer: {
     alignItems: 'center',
