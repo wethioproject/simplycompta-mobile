@@ -118,6 +118,28 @@ const normalizeText = (value: any) =>
 const includesAny = (text: string, keywords: string[]) =>
   keywords.some(k => text.includes(normalizeText(k)));
 
+const CATEGORY_KEY_MAP: Record<string, string> = {
+  'Autres dépenses': 'expense_cat_autres_depenses',
+  'Banque / Assurance': 'expense_cat_banque_assurance',
+  'Carburant / Transport': 'expense_cat_carburant_transport',
+  'Cloud Services': 'expense_cat_cloud_services',
+  'Comptable / Juridiques': 'expense_cat_comptable_juridiques',
+  'Eau / Électricité': 'expense_cat_eau_electricite',
+  'Fournitures': 'expense_cat_fournitures',
+  'Impôts / Taxes': 'expense_cat_impots_taxes',
+  'Internet': 'expense_cat_internet',
+  'Logiciels / Abonnements': 'expense_cat_logiciels_abonnements',
+  'Loyer': 'expense_cat_loyer',
+  'Maintenance / Réparation': 'expense_cat_maintenance_reparation',
+  'Marketing / Publicités': 'expense_cat_marketing_publicites',
+  'Meals & Entertainment': 'expense_cat_meals_entertainment',
+  'Meals and Entertainment': 'expense_cat_meals_and_entertainment',
+  'Office Supplies': 'expense_cat_office_supplies',
+  'Restaurant': 'expense_cat_restaurant',
+  'Salaires': 'expense_cat_salaires',
+  'Transport': 'expense_cat_transport',
+};
+
 const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   visible,
   onClose,
@@ -1081,7 +1103,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                   activeOpacity={0.7}
                 >
                   <Text style={selectedCategory ? styles.pickerValueText : styles.pickerPlaceholderText}>
-                    {selectedCategory?.name || t('placeholder_category')}
+                    {selectedCategory ? t(CATEGORY_KEY_MAP[selectedCategory.name] ?? selectedCategory.name, { defaultValue: selectedCategory.name }) : t('placeholder_category')}
                   </Text>
                   <ChevronDown size={18} color="#1E5BAC" />
                 </TouchableOpacity>
@@ -1139,7 +1161,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                     style={styles.pickerOption}
                     onPress={() => { setValue('categoryId', c.id, { shouldValidate: true }); setShowCategoryPicker(false); }}
                   >
-                    <Text style={[styles.pickerOptionText, watchedCategoryId === c.id && styles.pickerOptionSelected]}>{c.name}</Text>
+                    <Text style={[styles.pickerOptionText, watchedCategoryId === c.id && styles.pickerOptionSelected]}>{t(CATEGORY_KEY_MAP[c.name] ?? c.name, { defaultValue: c.name })}</Text>
                     {watchedCategoryId === c.id && <Text style={styles.pickerCheck}>✓</Text>}
                   </TouchableOpacity>
                 ))}
