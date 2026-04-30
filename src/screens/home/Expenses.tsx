@@ -104,7 +104,7 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
         setSuppliers(
           (suppliersResult.suppliers ?? []).map((s: any) => ({
             id: s.id,
-            name: s.supplier_name || s.name,
+            name: s.company_name || s.supplier_name || s.name,
           }))
         );
       }
@@ -142,7 +142,7 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
         setSuppliers(
           (result.suppliers ?? []).map((s: any) => ({
             id: s.id,
-            name: s.supplier_name || s.name,
+            name: s.company_name || s.supplier_name || s.name,
           }))
         );
       }

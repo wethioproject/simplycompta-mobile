@@ -257,7 +257,7 @@ const Contacts: React.FC = ({ navigation: navProp }: any) => {
         </View>
         <View style={styles.cardInfo}>
           <Text style={styles.cardName}>{item.company_name}</Text>
-          <Text style={styles.cardMeta}>{item.supplier_name}</Text>
+          {!!item.supplier_name && <Text style={styles.cardMeta}>{item.supplier_name}</Text>}
         </View>
         <View style={styles.cardRight}>
           {lateCount > 0 ? (
