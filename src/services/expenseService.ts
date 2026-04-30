@@ -83,6 +83,7 @@ class ExpenseService {
             formData.append('total_ttc', payload.total_ttc);
             formData.append('total_tva', payload.total_tva);
             formData.append('_method', 'PUT');
+            formData.append('remove_document', String(payload.remove_document ?? 0));
 
             if (payload.supplier_id != null) {
                 formData.append('supplier_id', String(payload.supplier_id));

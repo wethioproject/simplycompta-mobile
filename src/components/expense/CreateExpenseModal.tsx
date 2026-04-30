@@ -144,6 +144,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   const [showSupplierPicker, setShowSupplierPicker] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [document, setDocument] = useState<any>(null);
+  const [removedExistingDocument, setRemovedExistingDocument] = useState(false);
   const [tempDate, setTempDate] = useState<Date>(new Date());
   const [showCreateSupplierModal, setShowCreateSupplierModal] = useState(false);
   const [pendingSupplierName, setPendingSupplierName] = useState('');
@@ -579,6 +580,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
     setOcrRaw(null);
     setOcrApplied(false);
     setPendingSupplierName('');
+    setRemovedExistingDocument(false);
 
     if (editItem) {
       const datePart = editItem.date.split('T')[0];
@@ -787,6 +789,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
         ocr_warnings: ocrSuggestion?.warnings ?? [],
         ocr_items: ocrSuggestion?.items ?? [],
         document: document?.isExisting ? null : document,
+        remove_document: !document && removedExistingDocument ? 1 : 0,
       };
 
       if (editItem && onUpdate) {
@@ -925,7 +928,10 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                   </View>
                   <TouchableOpacity
                     style={styles.attachmentRemoveBtn}
-                    onPress={() => setDocument(null)}
+                    onPress={() => {
+                      if (document?.isExisting) setRemovedExistingDocument(true);
+                      setDocument(null);
+                    }}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <X size={16} color="#DC2626" />
