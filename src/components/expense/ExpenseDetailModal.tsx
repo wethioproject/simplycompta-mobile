@@ -120,12 +120,6 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
 
   const detailRows = [
     {
-      icon: <FileText size={18} color="#4F6EF7" />,
-      iconBg: '#EEF2FF',
-      label: t('label_category'),
-      value: item.category?.name ?? '—',
-    },
-    {
       icon: <Calendar size={18} color="#D97706" />,
       iconBg: '#FEF3C7',
       label: t('label_date'),
@@ -147,7 +141,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
       icon: <Hash size={18} color="#4F6EF7" />,
       iconBg: '#EEF2FF',
       label: t('label_reference'),
-      value: 'N/A',
+      value: item.reference ?? 'N/A',
     },
     {
       icon: <FileText size={18} color="#4F6EF7" />,
