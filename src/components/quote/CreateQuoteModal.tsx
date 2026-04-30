@@ -133,6 +133,9 @@ const CreateQuoteModal: React.FC<{
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [showCreateClientModal, setShowCreateClientModal] = useState(false);
   const [showImagePreview, setShowImagePreview] = useState(false);
+  const [fileSizeError, setFileSizeError] = useState(false);
+
+  const MAX_FILE_SIZE = 1024 * 1024; // 1024 KB
 
   const [localClients, setLocalClients] = useState<Client[]>(clients);
   React.useEffect(() => { setLocalClients(clients); }, [clients]);
@@ -184,6 +187,7 @@ const CreateQuoteModal: React.FC<{
     setShowDueDatePicker(false);
     setSaving(false);
     setRemovedExistingDocument(false);
+    setFileSizeError(false);
 
     if (editItem) {
       const datePart = editItem.date.split('T')[0];
@@ -297,6 +301,11 @@ const CreateQuoteModal: React.FC<{
   const handlePickDocument = async () => {
     try {
       const [file] = await pick({ type: [types.pdf, types.docx, types.doc, types.images] });
+      if (file.size && file.size > MAX_FILE_SIZE) {
+        setFileSizeError(true);
+        return;
+      }
+      setFileSizeError(false);
       setDocument(file);
     } catch (e: any) {
       if (isErrorWithCode(e) && e.code === errorCodes.OPERATION_CANCELED) return;
@@ -309,6 +318,11 @@ const CreateQuoteModal: React.FC<{
       if (response.didCancel || response.errorCode) return;
       const asset = response.assets?.[0];
       if (!asset?.uri) return;
+      if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
+        setFileSizeError(true);
+        return;
+      }
+      setFileSizeError(false);
       setDocument({
         uri: asset.uri,
         fileCopyUri: asset.uri,
@@ -339,6 +353,7 @@ const CreateQuoteModal: React.FC<{
   };
 
   const onSubmit = async (data: QuoteFormValues) => {
+    if (fileSizeError) return;
     setSaving(true);
     try {
       const payload = {
@@ -440,6 +455,7 @@ const CreateQuoteModal: React.FC<{
                   <TouchableOpacity
                     style={styles.attachmentRemoveBtn}
                     onPress={() => {
+                      setFileSizeError(false);
                       if (document?.isExisting) setRemovedExistingDocument(true);
                       setDocument(null);
                     }}
@@ -459,6 +475,9 @@ const CreateQuoteModal: React.FC<{
                     <Text style={styles.uploadBtnText}>{t('button_select_file')}</Text>
                   </TouchableOpacity>
                 </View>
+              )}
+              {fileSizeError && (
+                <Text style={styles.fieldError}>{t('error_file_too_large')}</Text>
               )}
 
               {/* Quote Number */}
