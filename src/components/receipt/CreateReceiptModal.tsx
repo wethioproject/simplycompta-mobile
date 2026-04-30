@@ -66,9 +66,12 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
   const [document, setDocument]                   = useState<any>(null);
   const [showImagePreview, setShowImagePreview]   = useState(false);
   const [removedExistingDocument, setRemovedExistingDocument] = useState(false);
+  const [fileSizeError, setFileSizeError]         = useState(false);
+
+  const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
 
   const amountParsed = parseFloat(formAmount);
-  const isValid = !!formAmount && !isNaN(amountParsed) && amountParsed > 0 && !!formDate;
+  const isValid = !!formAmount && !isNaN(amountParsed) && amountParsed > 0 && !!formDate && !fileSizeError;
 
   useEffect(() => {
     if (!visible) return;
@@ -76,6 +79,7 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
     setShowDatePicker(false);
     setShowMethodPicker(false);
     setRemovedExistingDocument(false);
+    setFileSizeError(false);
     if (editItem) {
       const iso = toIsoDate(editItem.date);
       setFormDate(iso);
@@ -123,6 +127,11 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
   const handlePickDocument = async () => {
     try {
       const [file] = await pick({ type: [types.pdf, types.docx, types.doc, types.images] });
+      if (file.size && file.size > MAX_FILE_SIZE) {
+        setFileSizeError(true);
+        return;
+      }
+      setFileSizeError(false);
       setDocument(file);
     } catch (e: any) {
       if (isErrorWithCode(e) && e.code === errorCodes.OPERATION_CANCELED) return;
@@ -135,6 +144,11 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
       if (response.didCancel || response.errorCode) return;
       const asset = response.assets?.[0];
       if (!asset?.uri) return;
+      if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
+        setFileSizeError(true);
+        return;
+      }
+      setFileSizeError(false);
       setDocument({
         uri: asset.uri,
         fileCopyUri: asset.uri,
@@ -157,6 +171,7 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
   };
 
   const handleSubmit = () => {
+    if (fileSizeError) return;
     if (!isValid) {
       Alert.alert(t('error_title'), t('receipt_error_invalid_amount'));
       return;
@@ -304,6 +319,7 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
                       onPress={() => {
                         if (document?.isExisting) setRemovedExistingDocument(true);
                         setDocument(null);
+                        setFileSizeError(false);
                       }}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
@@ -321,6 +337,9 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
                       <Text style={styles.uploadBtnText}>{t('button_select_file')}</Text>
                     </TouchableOpacity>
                   </View>
+                )}
+                {fileSizeError && (
+                  <Text style={styles.fieldError}>{t('error_file_too_large')}</Text>
                 )}
               </View>
 
