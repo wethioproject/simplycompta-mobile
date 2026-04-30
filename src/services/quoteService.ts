@@ -130,6 +130,7 @@ class QuoteService {
             formData.append('status', payload.status ?? 'Brouillons');
             if (payload.due_date) formData.append('due_date', payload.due_date);
             formData.append('_method', 'PUT');
+            formData.append('remove_document', String(payload.remove_document ?? 0));
 
             if (payload.document) {
                 const file = payload.document;

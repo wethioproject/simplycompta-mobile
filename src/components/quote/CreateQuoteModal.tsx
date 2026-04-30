@@ -128,6 +128,7 @@ const CreateQuoteModal: React.FC<{
   const [showClientPicker, setShowClientPicker] = useState(false);
   const [showAccountPicker, setShowAccountPicker] = useState(false);
   const [showDueDatePicker, setShowDueDatePicker] = useState(false);
+  const [removedExistingDocument, setRemovedExistingDocument] = useState(false);
   const [tempDueDate, setTempDueDate] = useState<Date>(new Date());
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [showCreateClientModal, setShowCreateClientModal] = useState(false);
@@ -182,6 +183,7 @@ const CreateQuoteModal: React.FC<{
     setShowDatePicker(false);
     setShowDueDatePicker(false);
     setSaving(false);
+    setRemovedExistingDocument(false);
 
     if (editItem) {
       const datePart = editItem.date.split('T')[0];
@@ -349,6 +351,7 @@ const CreateQuoteModal: React.FC<{
         due_date: data.validUntil || null,
         notes: data.notes || null,
         document: document?.isExisting ? null : document,
+        remove_document: !document && removedExistingDocument ? 1 : 0,
         articles: (data.articles ?? []).map(a => ({
           designation: a.designation,
           unit_price_ht: a.unitPriceHT,
@@ -436,7 +439,10 @@ const CreateQuoteModal: React.FC<{
                   </View>
                   <TouchableOpacity
                     style={styles.attachmentRemoveBtn}
-                    onPress={() => setDocument(null)}
+                    onPress={() => {
+                      if (document?.isExisting) setRemovedExistingDocument(true);
+                      setDocument(null);
+                    }}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <X size={16} color="#DC2626" />
