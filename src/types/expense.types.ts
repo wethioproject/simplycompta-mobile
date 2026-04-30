@@ -11,6 +11,7 @@ export interface Category {
 export interface Supplier {
   id: number;
   name: string;
+  company_name?: string;
   supplier_name?: string;
 }
 
@@ -28,7 +29,9 @@ export interface ExpenseItem {
   total_ttc: string;
   total_tva: string;
   notes: string | null;
+  reference?: string | null;
   category: { id: number; name: string };
+  supplier?: { id: number; supplier_name: string | null };
 }
 
 export type ExpenseFormValues = {
