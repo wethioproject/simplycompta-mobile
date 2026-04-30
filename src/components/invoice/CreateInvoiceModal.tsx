@@ -122,6 +122,7 @@ const CreateInvoiceModal: React.FC<{
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [showCreateClientModal, setShowCreateClientModal] = useState(false);
   const [showImagePreview, setShowImagePreview] = useState(false);
+  const [removedExistingDocument, setRemovedExistingDocument] = useState(false);
 
   const [localClients, setLocalClients] = useState<Client[]>(clients);
   React.useEffect(() => { setLocalClients(clients); }, [clients]);
@@ -175,6 +176,7 @@ const CreateInvoiceModal: React.FC<{
     setShowDatePicker(false);
     setShowDueDatePicker(false);
     setSaving(false);
+    setRemovedExistingDocument(false);
 
     if (editItem) {
       const datePart = editItem.date.split('T')[0];
@@ -351,6 +353,7 @@ const CreateInvoiceModal: React.FC<{
         due_date: data.validUntil || null,
         notes: data.notes || null,
         document: document?.isExisting ? null : document,
+        remove_document: !document && removedExistingDocument ? 1 : 0,
         articles: (data.articles ?? []).map(a => ({
           designation: a.designation,
           unit_price_ht: a.unitPriceHT,
@@ -434,11 +437,16 @@ const CreateInvoiceModal: React.FC<{
                       {document.isExisting ? t('label_attached_file') : (document.type ?? 'file')}
                     </Text>
                   </View>
-                  {!document.isExisting && (
-                    <TouchableOpacity style={styles.attachmentRemoveBtn} onPress={() => setDocument(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                      <X size={16} color="#DC2626" />
-                    </TouchableOpacity>
-                  )}
+                  <TouchableOpacity
+                    style={styles.attachmentRemoveBtn}
+                    onPress={() => {
+                      if (document?.isExisting) setRemovedExistingDocument(true);
+                      setDocument(null);
+                    }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <X size={16} color="#DC2626" />
+                  </TouchableOpacity>
                 </View>
               ) : (
                 <View style={styles.uploadArea}>
