@@ -570,7 +570,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
         data = JSON.parse(rawText);
       } catch (jsonError) {
         console.log('❌ OCR JSON PARSE ERROR:', jsonError);
-        Alert.alert('OCR Error', 'Réponse OCR invalide');
+        Alert.alert(t('ocr_error_title'), t('ocr_error_invalid_response'));
         return;
       }
 
@@ -578,16 +578,16 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
 
       if (!response.ok) {
         console.log('❌ OCR BACKEND ERROR:', data);
-        Alert.alert('OCR Error', data?.error || data?.message || 'OCR failed');
+        Alert.alert(t('ocr_error_title'), data?.error || data?.message || t('ocr_error_failed'));
         return;
       }
 
       applyOcrDataToForm(data, { ...file, name: fileName });
 
-      Alert.alert('OCR', 'Données extraites avec succès');
+      Alert.alert(t('ocr_success_title'), t('ocr_success_message'));
     } catch (e: any) {
       console.log('❌ OCR FETCH ERROR:', e?.message || e);
-      Alert.alert('OCR Error', e?.message || 'OCR failed');
+      Alert.alert(t('ocr_error_title'), e?.message || t('ocr_error_failed'));
     } finally {
       setOcrLoading(false);
     }
@@ -706,12 +706,12 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   const handlePickDocument = async () => {
     try {
       Alert.alert(
-        'Ajouter un justificatif',
-        'Choisir la source du fichier',
+        t('document_picker_title'),
+        t('document_picker_subtitle'),
         [
-          { text: 'Galerie', onPress: handlePickFromGallery },
-          { text: 'Fichiers', onPress: handlePickFromFiles },
-          { text: 'Annuler', style: 'cancel' },
+          { text: t('button_gallery'), onPress: handlePickFromGallery },
+          { text: t('button_files'), onPress: handlePickFromFiles },
+          { text: t('button_cancel'), style: 'cancel' },
         ],
       );
     } catch (e: any) {
@@ -775,11 +775,11 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   const onSubmit = async (data: ExpenseFormValues & { expenseReference?: string; description?: string }) => {
     if (ocrSuggestion?.duplicateWarning) {
       Alert.alert(
-        'Doublon possible',
+        t('ocr_duplicate_title'),
         ocrSuggestion.duplicateWarning,
         [
-          { text: 'Annuler', style: 'cancel' },
-          { text: 'Continuer', onPress: () => submitExpense(data) },
+          { text: t('button_cancel'), style: 'cancel' },
+          { text: t('button_continue'), onPress: () => submitExpense(data) },
         ],
       );
       return;
@@ -871,7 +871,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
               {ocrLoading && (
                 <View style={{ padding: 12, marginBottom: 12, borderRadius: 10, backgroundColor: '#EFF6FF' }}>
                   <Text style={{ color: '#1E5BAC', fontWeight: '600', textAlign: 'center' }}>
-                    Extraction OCR en cours...
+                    {t('ocr_loading')}
                   </Text>
                 </View>
               )}
@@ -885,7 +885,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                       <CheckCircle2 size={18} color="#16A34A" />
                     )}
                     <Text style={{ fontWeight: '700', color: '#111827', flex: 1 }}>
-                      Données OCR détectées {confidencePercent !== null ? `(${confidencePercent}%)` : ''}
+                      {t('ocr_data_detected')}{confidencePercent !== null ? ` (${confidencePercent}%)` : ''}
                     </Text>
                   </View>
 
@@ -910,7 +910,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                       style={{ backgroundColor: '#1E5BAC', borderRadius: 8, paddingVertical: 10, alignItems: 'center' }}
                       onPress={() => applyOcrSuggestionToForm(ocrSuggestion)}
                     >
-                      <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>Appliquer les données OCR</Text>
+                      <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>{t('ocr_apply')}</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -983,7 +983,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
               )}
 
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Référence dépense</Text>
+                <Text style={styles.fieldLabel}>{t('label_reference')}</Text>
                 <Controller
                   control={control}
                   name={'expenseReference' as any}
@@ -993,7 +993,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                       value={value}
                       onChangeText={onChange}
                       onBlur={onBlur}
-                      placeholder="Référence du reçu / facture"
+                      placeholder={t('placeholder_reference')}
                       placeholderTextColor="#9CA3AF"
                     />
                   )}
@@ -1001,7 +1001,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
               </View>
 
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>Description / articles</Text>
+                <Text style={styles.fieldLabel}>{t('label_notes')}</Text>
                 <Controller
                   control={control}
                   name={'description' as any}
@@ -1012,7 +1012,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                       onChangeText={onChange}
                       onBlur={onBlur}
                       multiline
-                      placeholder="Articles détectés par OCR"
+                      placeholder={t('placeholder_notes')}
                       placeholderTextColor="#9CA3AF"
                     />
                   )}
