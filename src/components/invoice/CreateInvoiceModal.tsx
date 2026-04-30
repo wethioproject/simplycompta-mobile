@@ -583,7 +583,7 @@ const CreateInvoiceModal: React.FC<{
                   onPress={() => setShowStatusPicker(true)}
                   activeOpacity={0.7}
                 >
-                  <Text style={[watchedStatus ? styles.pickerValueText : styles.pickerPlaceholderText, editItem ? { color: '#1F2937' } : { color: '#9CA3AF' }]}>
+                  <Text style={watchedStatus ? styles.pickerValueText : styles.pickerPlaceholderText}>
                     {watchedStatus
                       ? (STATUT_OPTIONS_DETAIL_MODAL.find((s: {key: string; fr: string; en: string}) => s.key === watchedStatus)?.[i18n.language.startsWith('fr') ? 'fr' : 'en'] ?? watchedStatus)
                       : t('placeholder_status')}
