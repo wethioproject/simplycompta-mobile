@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import authService, { LoginCredentials } from '../services/authService';
+import authService, { LoginCredentials, RegisterPayload } from '../services/authService';
 import { loginSuccess, loginFailure, logout as logoutAction, setLoading } from '../store/slices/userSlice';
 import { RootState } from '../store';
 
@@ -63,6 +63,35 @@ export const useAuth = () => {
     }
   }, [])
 
+  const checkEmail = useCallback(async (email: string) => {
+    try {
+      const res = await authService.checkEmail(email);
+      return { success: true, exists: res.exists };
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Email check failed. Please try again.';
+      return { success: false, exists: false, error: errorMessage };
+    }
+  }, []);
+
+  /**
+   * Register a new customer
+   */
+  const signup = useCallback(async (payload: RegisterPayload) => {
+    try {
+      dispatch(setLoading(true));
+      const response = await authService.register(payload);
+      dispatch(loginSuccess({
+        customer: response.customer,
+        token: response.token,
+      }));
+      return { success: true };
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'Registration failed. Please try again.';
+      dispatch(loginFailure(errorMessage));
+      return { success: false, error: errorMessage };
+    }
+  }, [dispatch]);
+
   /**
    * Logout function
    */
@@ -105,6 +134,8 @@ export const useAuth = () => {
     error,
     // Actions
     login,
+    signup,
+    checkEmail,
     resetPassword,
     logout,
     forgotPassword,

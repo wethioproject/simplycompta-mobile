@@ -46,7 +46,97 @@ export interface LoginCredentials {
 }
 
 
+export interface CheckEmailResponse {
+  exists: boolean;
+  message?: string;
+}
+
+export interface RegisterPayload {
+  first_name: string;
+  last_name?: string;
+  email: string;
+  contact: string;
+  password: string;
+  company_type: string;
+  billing_name: string;
+  billing_city: string;
+  billing_address?: string;
+  billing_zip?: string;
+  website?: string;
+  ice_number?: string;
+  patent_number?: string;
+  rc_number?: string;
+  cnss?: string;
+  if_number?: string;
+  rib?: string;
+  vat_number?: string;
+  avatar?: { uri: string; name: string; type: string };
+  signature?: { uri: string; name: string; type: string };
+}
+
 class AuthService {
+  /**
+   * Check if a customer email already exists
+   */
+  async checkEmail(email: string): Promise<CheckEmailResponse> {
+    try {
+      const response = await api.post<CheckEmailResponse>('/customer/check-email', { email });
+      return response.data;
+    } catch (error: any) {
+      console.error('Check email error:', error.response?.data || error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Register a new customer (multipart for file uploads)
+   */
+  async register(payload: RegisterPayload): Promise<LoginResponse> {
+    try {
+      const formData = new FormData();
+
+      formData.append('first_name', payload.first_name);
+      formData.append('email', payload.email);
+      formData.append('contact', payload.contact);
+      formData.append('password', payload.password);
+      formData.append('company_type', payload.company_type);
+      formData.append('billing_name', payload.billing_name);
+      formData.append('billing_city', payload.billing_city);
+
+      if (payload.last_name)     formData.append('last_name', payload.last_name);
+      if (payload.billing_address) formData.append('billing_address', payload.billing_address);
+      if (payload.billing_zip)   formData.append('billing_zip', payload.billing_zip);
+      if (payload.website)       formData.append('website', payload.website);
+      if (payload.ice_number)    formData.append('ice_number', payload.ice_number);
+      if (payload.patent_number) formData.append('patent_number', payload.patent_number);
+      if (payload.rc_number)     formData.append('rc_number', payload.rc_number);
+      if (payload.cnss)          formData.append('cnss', payload.cnss);
+      if (payload.if_number)     formData.append('if_number', payload.if_number);
+      if (payload.rib)           formData.append('rib', payload.rib);
+      if (payload.vat_number)    formData.append('vat_number', payload.vat_number);
+
+      if (payload.avatar) {
+        formData.append('avatar', payload.avatar as any);
+      }
+      if (payload.signature) {
+        formData.append('signature', payload.signature as any);
+      }
+      console.log('Registering with formData:', formData);
+      const response = await api.post<LoginResponse>('/customer/register', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      const { token, customer } = response.data;
+      await AsyncStorage.setItem(TOKEN_KEY, token);
+      await AsyncStorage.setItem('@customer_data', JSON.stringify(customer));
+
+      return response.data;
+    } catch (error: any) {
+      console.error('Register error:', error.response?.data || error.message);
+      throw error;
+    }
+  }
+
   /**
    * Login user with email and password
    * Stores token in AsyncStorage and returns user data

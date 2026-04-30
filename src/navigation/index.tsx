@@ -6,6 +6,7 @@ import Toast from 'react-native-toast-message';
 import Splash from '../screens/splash/Splash';
 import OnboardingScreen from '../screens/onboarding/OnboardingScreen';
 import Login from '../screens/auth/Login';
+import Signup from '../screens/auth/Signup';
 import ForgotPassword from '../screens/auth/ForgotPassword';
 import ChangePassword from '../screens/auth/ChangePassword';
 import HomeDrawer from './HomeDrawer';
@@ -79,6 +80,7 @@ const AppNavigator = () => {
         <Stack.Screen name="Splash" component={Splash} options={{ headerShown: false }} />
         <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="Login" component={Login} options={{ headerShown: false }} />
+        <Stack.Screen name="Signup" component={Signup} options={{ headerShown: false }} />
         <Stack.Screen name="ForgotPassword" component={ForgotPassword} options={{ headerShown: false }} />
         <Stack.Screen name="Home" component={HomeDrawer} options={{ headerShown: false }} />
         <Stack.Screen name="My Business" component={MyBusiness} options={{ headerShown: false }} />
