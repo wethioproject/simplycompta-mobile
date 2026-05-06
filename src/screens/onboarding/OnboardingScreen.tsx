@@ -652,6 +652,8 @@ const OnboardingScreen = ({ navigation }: any) => {
     navigation.replace('Signup');
   };
 
+  const handleLogin = () => { navigation.replace('Login'); };
+
   const handleGetStarted = async () => {
     await completeOnboarding();
     navigation.replace('Signup');
@@ -732,7 +734,7 @@ const OnboardingScreen = ({ navigation }: any) => {
           <TouchableOpacity style={styles.ctaPrimary} onPress={handleGetStarted} activeOpacity={0.9}>
             <Text style={styles.ctaPrimaryText}>{t('onboarding_cta_signup')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.ctaSecondary} onPress={handleSkip} activeOpacity={0.8}>
+          <TouchableOpacity style={styles.ctaSecondary} onPress={handleLogin} activeOpacity={0.8}>
             <Text style={styles.ctaSecondaryText}>{t('onboarding_cta_login')}</Text>
           </TouchableOpacity>
           {!isLastSlide && (
