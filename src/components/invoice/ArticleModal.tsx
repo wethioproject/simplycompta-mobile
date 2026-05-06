@@ -422,7 +422,7 @@ const ArticleModal: React.FC<{
                 <View style={[styles.computedRow, { borderTopWidth: 1, borderTopColor: '#E5E7EB', marginTop: 6, paddingTop: 6 }]}>
                   <Text style={[styles.computedLabel, { fontWeight: '700', color: '#1F2937' }]}>{t('label_price_ht_total')}</Text>
                   <Text style={[styles.computedValue, { fontWeight: '700', color: '#1F2937' }]}>
-                    {form.totalHT.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
+                    {((form.unitPriceHT * form.quantity) - (form.discount ?? 0)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
                   </Text>
                 </View>
               </View>
@@ -434,9 +434,10 @@ const ArticleModal: React.FC<{
                 <Text style={styles.ttcLabel}>{t('label_price_ttc')}</Text>
                 <Text style={styles.ttcValue}>
                   {(() => {
-                    const selectedTax = tvaOptions.find(t => t.id === form.tva);
-                    const rate = selectedTax ? parseFloat(selectedTax.rate) : 0;
-                    return (form.totalHT * (1 + rate / 100)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const selectedTva = tvaOptions.find(t => t.id === form.tva);
+                    const vatRate = parseFloat(String(selectedTva?.rate ?? 0)) || 0;
+                    const baseHT = (form.unitPriceHT * form.quantity) - (form.discount ?? 0);
+                    return (baseHT * (1 + vatRate / 100)).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                   })()} MAD
                 </Text>
               </View>
@@ -551,6 +552,7 @@ const ArticleModal: React.FC<{
             >
               <View style={styles.inlinePickerSheet}>
                 <Text style={styles.pickerSheetTitle}>{t('label_unit')}</Text>
+                <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 300 }} showsVerticalScrollIndicator={false}>
                 {unitOptions.map(opt => (
                   <TouchableOpacity
                     key={opt.id}
@@ -564,6 +566,7 @@ const ArticleModal: React.FC<{
                     {(form as any).unit_id === opt.id && <Check size={16} color="#0B5FA5" />}
                   </TouchableOpacity>
                 ))}
+                </ScrollView>
               </View>
             </TouchableOpacity>
           )}
