@@ -945,20 +945,22 @@ const Products: React.FC = ({ navigation }: any) => {
               >
                 <View style={styles.inlinePickerSheet}>
                   <Text style={styles.pickerSheetTitle}>{t('label_unit')}</Text>
-                  {unitOptions.map(opt => {
-                    const isSelected = watch('unit_id') === String(opt.id);
-                    return (
-                      <TouchableOpacity
-                        key={opt.id}
-                        style={styles.pickerOption}
-                        onPress={() => { setValue('unit_id', String(opt.id), { shouldValidate: true }); setShowUnitPicker(false); }}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={[styles.pickerOptionText, isSelected && styles.pickerOptionSelected]}>{opt.name}</Text>
-                        {isSelected && <Check size={16} color="#0B5FA5" />}
-                      </TouchableOpacity>
-                    );
-                  })}
+                  <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                    {unitOptions.map(opt => {
+                      const isSelected = watch('unit_id') === String(opt.id);
+                      return (
+                        <TouchableOpacity
+                          key={opt.id}
+                          style={styles.pickerOption}
+                          onPress={() => { setValue('unit_id', String(opt.id), { shouldValidate: true }); setShowUnitPicker(false); }}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={[styles.pickerOptionText, isSelected && styles.pickerOptionSelected]}>{opt.name}</Text>
+                          {isSelected && <Check size={16} color="#0B5FA5" />}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
                 </View>
               </TouchableOpacity>
             )}
