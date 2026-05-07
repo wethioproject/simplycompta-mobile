@@ -13,9 +13,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
 import { ChevronLeft, Plus, Coins } from 'lucide-react-native';
+import { useDispatch } from 'react-redux';
 import type { ReceiptItem, ReceiptFormData } from '../../types/receipt.types';
 import ReceiptCard from '../../components/receipt/ReceiptCard';
 import CreateReceiptModal from '../../components/receipt/CreateReceiptModal';
+import { loadSubscription } from '../../store/slices/subscriptionSlice';
+import type { AppDispatch } from '../../store';
 import DetailModal from '../../components/receipt/DetailModal';
 import { useReceipt } from '../../hooks/useReceipt';
 
@@ -24,6 +27,7 @@ const Receipt: React.FC = ({ navigation: navProp }: any) => {
   const { t } = useTranslation();
   const navigation = useNavigation();
   const nav = navProp ?? navigation;
+  const dispatch = useDispatch<AppDispatch>();
 
   const { getRevenues, createRevenue, updateRevenue, deleteRevenue } = useReceipt();
 
@@ -81,11 +85,12 @@ const Receipt: React.FC = ({ navigation: navProp }: any) => {
       const result = await createRevenue(payload);
       if (result.success) {
         fetchRevenues(true);
+        dispatch(loadSubscription() as any);
       } else {
         Alert.alert(t('error_title'), result.error ?? t('error_generic'));
       }
     }
-  }, [editingItem, createRevenue, updateRevenue, fetchRevenues, t]);
+  }, [editingItem, createRevenue, updateRevenue, fetchRevenues, t, dispatch]);
 
   const handleDelete = useCallback((id: string) => {
     Alert.alert(
@@ -100,6 +105,7 @@ const Receipt: React.FC = ({ navigation: navProp }: any) => {
             const result = await deleteRevenue(Number(id));
             if (result.success) {
               fetchRevenues(true);
+              dispatch(loadSubscription() as any);
             } else {
               Alert.alert(t('error_title'), (result as any).error ?? t('error_generic'));
             }

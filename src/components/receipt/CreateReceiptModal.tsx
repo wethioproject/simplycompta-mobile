@@ -12,9 +12,14 @@ import {
   ActivityIndicator,
   Image,
   Share,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useSelector, useDispatch } from 'react-redux';
+import { canUseFeature } from '../../utils/subscriptionHelpers';
+import { loadSubscription } from '../../store/slices/subscriptionSlice';
+import type { AppDispatch } from '../../store';
 import { ChevronDown, Calendar, Camera, FileText, Eye, X } from 'lucide-react-native';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -54,6 +59,11 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const dispatch = useDispatch<AppDispatch>();
+  const subscription = useSelector((state: any) => state.subscription.data);
+  const storageExhausted = (subscription?.usage?.storage?.remaining_mb ?? 1) <= 0;
+  const upgradeUrl = subscription?.upgrade_url;
+  
 
   const [formDate, setFormDate]                   = useState(todayIso());
   const [formAmount, setFormAmount]               = useState('');
@@ -125,10 +135,25 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
   };
 
   const handlePickDocument = async () => {
+    if (storageExhausted) {
+      Alert.alert(t('error_title'), t('error_storage_full'), [
+        { text: t('button_maybe_later'), style: 'cancel' },
+        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+      ]);
+      return;
+    }
     try {
       const [file] = await pick({ type: [types.pdf, types.docx, types.doc, types.images] });
       if (file.size && file.size > MAX_FILE_SIZE) {
         setFileSizeError(true);
+        return;
+      }
+      const remainingBytes = (subscription?.usage?.storage?.remaining_mb ?? Infinity) * 1024 * 1024;
+      if (file.size && file.size > remainingBytes) {
+        Alert.alert(t('error_title'), t('error_file_exceeds_storage'), [
+          { text: t('button_maybe_later'), style: 'cancel' },
+          { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+        ]);
         return;
       }
       setFileSizeError(false);
@@ -140,12 +165,27 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
   };
 
   const handleTakePhoto = async () => {
+    if (storageExhausted) {
+      Alert.alert(t('error_title'), t('error_storage_full'), [
+        { text: t('button_maybe_later'), style: 'cancel' },
+        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+      ]);
+      return;
+    }
     launchCamera({ mediaType: 'photo', saveToPhotos: false, quality: 0.8 }, response => {
       if (response.didCancel || response.errorCode) return;
       const asset = response.assets?.[0];
       if (!asset?.uri) return;
       if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
         setFileSizeError(true);
+        return;
+      }
+      const remainingBytes = (subscription?.usage?.storage?.remaining_mb ?? Infinity) * 1024 * 1024;
+      if (asset.fileSize && asset.fileSize > remainingBytes) {
+        Alert.alert(t('error_title'), t('error_file_exceeds_storage'), [
+          { text: t('button_maybe_later'), style: 'cancel' },
+          { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+        ]);
         return;
       }
       setFileSizeError(false);
@@ -172,12 +212,20 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
 
   const handleSubmit = () => {
     if (fileSizeError) return;
+        if (!editItem && !canUseFeature(subscription, 'receipts')) {
+          Alert.alert(t('subscription_limit_title'), t('subscription_limit_receipts'), [
+            { text: t('button_maybe_later'), style: 'cancel' },
+            { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+          ]);
+          return;
+        }
     if (!isValid) {
       Alert.alert(t('error_title'), t('receipt_error_invalid_amount'));
       return;
     }
     setSaving(true);
     onSave({ date: formDate, amount: formAmount, paymentMethod: formPaymentMethod, note: formNote, document: document ?? null, removedExistingDocument });
+    dispatch(loadSubscription() as any);
     setSaving(false);
     onClose();
   };
