@@ -50,9 +50,9 @@ export interface SupplierItem {
 // ─── Yup schema (Supplier) ─────────────────────────────────────────────────────
 const supplierSchema = yup.object({
   companyName: yup.string().required('Company name is required'),
-  supplierName: yup.string().optional(),
-  email: yup.string().test('email-format', 'Invalid email address', v => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)).optional(),
-  telephone: yup.string().optional(),
+  supplierName: yup.string().trim().required('Supplier name is required'),
+  email: yup.string().trim().required('Email is required').test('email-format', 'Invalid email address', v => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)),
+  telephone: yup.string().trim().required('Phone is required'),
   postalCode: yup.string().optional(),
   city: yup.string().optional(),
   commercialRegister: yup.string().optional(),
@@ -236,7 +236,7 @@ export const CreateSupplierModal: React.FC<{
                                 {errors.companyName && <Text style={styles.fieldError}>{errors.companyName.message}</Text>}
               </View>
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>{t('label_supplier_name')}</Text>
+                <Text style={styles.fieldLabel}>{t('label_supplier_name')} <Text style={styles.required}>*</Text></Text>
                 <Controller
                   control={control}
                   name="supplierName"
@@ -254,7 +254,7 @@ export const CreateSupplierModal: React.FC<{
                 {errors.supplierName && <Text style={styles.fieldError}>{errors.supplierName.message}</Text>}
               </View>
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>{t('label_email')}</Text>
+                <Text style={styles.fieldLabel}>{t('label_email')} <Text style={styles.required}>*</Text></Text>
                 {/* <TextInput style={styles.fieldInput} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" placeholder="contact@bureautique.ma" placeholderTextColor="#AAAAAA" /> */}
                                 <Controller
                                   control={control}
@@ -273,7 +273,7 @@ export const CreateSupplierModal: React.FC<{
                                 {errors.email && <Text style={styles.fieldError}>{errors.email.message}</Text>}
               </View>
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>{t('label_phone')}</Text>
+                <Text style={styles.fieldLabel}>{t('label_phone')} <Text style={styles.required}>*</Text></Text>
                 <Controller
                   control={control}
                   name="telephone"
