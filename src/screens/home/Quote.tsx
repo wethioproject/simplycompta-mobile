@@ -10,11 +10,12 @@ import {
   RefreshControl,
   Platform,
   Share,
+  Linking,
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import {
   ChevronLeft,
@@ -28,6 +29,9 @@ import {
 } from 'lucide-react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { useQuote } from '../../hooks/useQuote';
+import { canUseFeature } from '../../utils/subscriptionHelpers';
+import { loadSubscription } from '../../store/slices/subscriptionSlice';
+import type { AppDispatch } from '../../store';
 import { useQuoteList } from '../../hooks/useQuoteList';
 import CreateQuoteModal from '../../components/quote/CreateQuoteModal';
 import DetailModal from '../../components/quote/DetailModal';
@@ -71,6 +75,9 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
   const { createQuote, updateQuote, deleteQuote, getQuoteResources, duplicateQuote, updateQuoteStatus, exportQuotes } = useQuote();
   const token = useSelector((state: any) => state.user.token);
   const user = useSelector((state: any) => state.user.customer);
+  const subscription = useSelector((state: any) => state.subscription.data);
+  const upgradeUrl = subscription?.upgrade_url;
+  const dispatch = useDispatch<AppDispatch>();
 
   const {
     quotes,
@@ -185,6 +192,7 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
     if (result.success) {
       setSelectedItem(null);
       fetchQuotes(getFilterParams());
+      dispatch(loadSubscription() as any);
       Alert.alert(t('success_title'), t('success_quote_deleted'));
     } else {
       Alert.alert(t('error_title'), result.error ?? t('error_delete_quote'));
@@ -193,6 +201,13 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
 
   const handleExport = async () => {
     if (exporting) return;
+    if (!canUseFeature(subscription, 'export_enabled')) {
+      Alert.alert(t('subscription_limit_title'), t('subscription_limit_export'), [
+        { text: t('button_maybe_later'), style: 'cancel' },
+        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+      ]);
+      return;
+    }
     setExporting(true);
     try {
       const result = await exportQuotes();
@@ -218,8 +233,16 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
   };
 
   const handleDuplicate = async (item: InvoiceItem) => {
+    if (!canUseFeature(subscription, 'quotes')) {
+      Alert.alert(t('subscription_limit_title'), t('subscription_limit_quotes'), [
+        { text: t('button_maybe_later'), style: 'cancel' },
+        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+      ]);
+      return;
+    }
     const result = await duplicateQuote(item.id);
     if (result.success) {
+      dispatch(loadSubscription() as any);
       fetchQuotes(getFilterParams());
       Alert.alert(t('success'), t('success_quote_duplicated') || t('success_invoice_duplicated'));
     } else {
@@ -230,6 +253,7 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
   const handleMarkAccepted = async (item: InvoiceItem) => {
     const result = await updateQuoteStatus(item.id, 'accepted');
     if (result.success) {
+      dispatch(loadSubscription() as any);
       fetchQuotes(getFilterParams());
     } else {
       Alert.alert(t('error'), result.error ?? t('error_generic'));

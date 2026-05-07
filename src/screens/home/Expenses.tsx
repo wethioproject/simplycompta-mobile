@@ -8,17 +8,21 @@ import {
   Platform,
   RefreshControl,
   Share,
+  Linking,
   TouchableOpacity,
 } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Plus, AlertTriangle } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 
 import { useExpense } from '../../hooks/useExpense';
+import { canUseFeature } from '../../utils/subscriptionHelpers';
+import { loadSubscription } from '../../store/slices/subscriptionSlice';
+import type { AppDispatch } from '../../store';
 import { useSupplier } from '../../hooks/useSupplier';
 import dashboardService from '../../services/dashboardService';
 import type { ExpenseCategoryItem } from '../../services/dashboardService';
@@ -41,6 +45,9 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
   const route = useRoute<any>();
   const { t } = useTranslation();
   const user = useSelector((state: any) => state.user.customer);
+  const subscription = useSelector((state: any) => state.subscription.data);
+  const upgradeUrl = subscription?.upgrade_url;
+  const dispatch = useDispatch<AppDispatch>();
 
   const {
     getExpenses,
@@ -163,6 +170,7 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
     if (result.success) {
       setSelectedItem(null);
       fetchData();
+      dispatch(loadSubscription() as any);
       Alert.alert(t('success_title'), t('success_expense_deleted'));
     } else {
       Alert.alert(t('error_title'), result.error ?? t('error_delete_expense'));
@@ -176,6 +184,13 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
 
   const handleExport = async () => {
     if (exporting) return;
+    if (!canUseFeature(subscription, 'export_enabled')) {
+      Alert.alert(t('subscription_limit_title'), t('subscription_limit_export'), [
+        { text: t('button_maybe_later'), style: 'cancel' },
+        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+      ]);
+      return;
+    }
     setExporting(true);
     try {
       const result = await exportExpenses();

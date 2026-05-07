@@ -12,6 +12,7 @@ import {
   Alert,
   ActivityIndicator,
   Share,
+  Linking
 } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { useForm, Controller } from 'react-hook-form';
@@ -19,6 +20,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useSelector, useDispatch } from 'react-redux';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { pick, types, isErrorWithCode, errorCodes } from '@react-native-documents/picker';
 import { launchCamera } from 'react-native-image-picker';
@@ -36,6 +38,9 @@ import {
 } from 'lucide-react-native';
 
 import { useSupplier } from '../../hooks/useSupplier';
+import { canUseFeature } from '../../utils/subscriptionHelpers';
+import { loadSubscription } from '../../store/slices/subscriptionSlice';
+import type { AppDispatch } from '../../store';
 import { getMimeType } from '../../utils/helpers';
 import { CreateSupplierModal } from '../../screens/home/Suppliers';
 import type { Account, Category, Supplier, ExpenseItem, ExpenseFormValues } from '../../types/expense.types';
@@ -158,6 +163,10 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   const insets = useSafeAreaInsets();
   const { t, i18n } = useTranslation();
   const { getSuppliers } = useSupplier();
+  const dispatch = useDispatch<AppDispatch>();
+  const subscription = useSelector((state: any) => state.subscription.data);
+  const storageExhausted = (subscription?.usage?.storage?.remaining_mb ?? 1) <= 0;
+  const upgradeUrl = subscription?.upgrade_url;
 
   const [saving, setSaving] = useState(false);
   const [ocrLoading, setOcrLoading] = useState(false);
@@ -726,10 +735,32 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   };
 
   const handlePickFromGallery = async () => {
+    if (!canUseFeature(subscription, 'ocr')) {
+      Alert.alert(t('error_title'), t('error_ocr_limit'), [
+        { text: t('button_maybe_later'), style: 'cancel' },
+        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+      ]);
+      return;
+    }
+    if (storageExhausted) {
+      Alert.alert(t('error_title'), t('error_storage_full'), [
+        { text: t('button_maybe_later'), style: 'cancel' },
+        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+      ]);
+      return;
+    }
     try {
       const [file] = await pick({ type: [types.images] });
       if (file.size && file.size > MAX_FILE_SIZE) {
         setFileSizeError(true);
+        return;
+      }
+      const remainingBytes = (subscription?.usage?.storage?.remaining_mb ?? Infinity) * 1024 * 1024;
+      if (file.size && file.size > remainingBytes) {
+        Alert.alert(t('error_title'), t('error_file_exceeds_storage'), [
+          { text: t('button_maybe_later'), style: 'cancel' },
+          { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+        ]);
         return;
       }
       setFileSizeError(false);
@@ -742,10 +773,32 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   };
 
   const handlePickFromFiles = async () => {
+    if (!canUseFeature(subscription, 'ocr')) {
+      Alert.alert(t('error_title'), t('error_ocr_limit'), [
+        { text: t('button_maybe_later'), style: 'cancel' },
+        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+      ]);
+      return;
+    }
+    if (storageExhausted) {
+      Alert.alert(t('error_title'), t('error_storage_full'), [
+        { text: t('button_maybe_later'), style: 'cancel' },
+        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+      ]);
+      return;
+    }
     try {
       const [file] = await pick({ type: [types.pdf, types.images] });
       if (file.size && file.size > MAX_FILE_SIZE) {
         setFileSizeError(true);
+        return;
+      }
+      const remainingBytes = (subscription?.usage?.storage?.remaining_mb ?? Infinity) * 1024 * 1024;
+      if (file.size && file.size > remainingBytes) {
+        Alert.alert(t('error_title'), t('error_file_exceeds_storage'), [
+          { text: t('button_maybe_later'), style: 'cancel' },
+          { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+        ]);
         return;
       }
       setFileSizeError(false);
@@ -758,6 +811,20 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   };
 
   const handleTakePhoto = async () => {
+    if (!canUseFeature(subscription, 'ocr')) {
+      Alert.alert(t('error_title'), t('error_ocr_limit'), [
+        { text: t('button_maybe_later'), style: 'cancel' },
+        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+      ]);
+      return;
+    }
+    if (storageExhausted) {
+      Alert.alert(t('error_title'), t('error_storage_full'), [
+        { text: t('button_maybe_later'), style: 'cancel' },
+        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+      ]);
+      return;
+    }
     launchCamera({ mediaType: 'photo', saveToPhotos: false, quality: 0.8 }, async response => {
       if (response.didCancel || response.errorCode) return;
       const asset = response.assets?.[0];
@@ -810,6 +877,15 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
 
   const submitExpense = async (data: ExpenseFormValues & { expenseReference?: string; description?: string }) => {
     if (fileSizeError) return;
+
+    if (!editItem && !canUseFeature(subscription, 'expenses')) {
+      Alert.alert(t('subscription_limit_title'), t('subscription_limit_expenses'), [
+        { text: t('button_maybe_later'), style: 'cancel' },
+        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+      ]);
+      return;
+    }
+
     setSaving(true);
     try {
       const ttc = parseFloat(data.amountTTC) || 0;
@@ -839,6 +915,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
       if (editItem && onUpdate) {
         const result = await onUpdate(editItem.id, payload);
         if (result.success) {
+          dispatch(loadSubscription() as any);
           Alert.alert(t('success_title'), t('success_expense_updated'));
           onCreated();
           onClose();
