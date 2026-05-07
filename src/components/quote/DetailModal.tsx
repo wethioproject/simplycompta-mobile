@@ -9,10 +9,13 @@ import {
   Alert,
   Platform,
   Share,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import type { AppDispatch } from '../../store';
+import { useQuoteList } from '../../hooks/useQuoteList';
 import {
   Download,
   Trash2,
@@ -32,6 +35,8 @@ import {
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import RNShare from 'react-native-share';
 import { useQuote } from '../../hooks/useQuote';
+import { canUseFeature } from '../../utils/subscriptionHelpers';
+import { loadSubscription } from '../../store/slices/subscriptionSlice';
 import { invoiceStyles as styles } from '../../styles/quote.styles';
 import type { InvoiceItem } from '../../types/quote.types';
 import { STATUT_OPTIONS, resolvePaymentMethod, resolveStatus } from '../../types/quote.types';
@@ -54,6 +59,13 @@ const DetailModal: React.FC<DetailModalProps> = ({
   console.log('Rendering DetailModal for quote:', item);
   const { t, i18n } = useTranslation();
   const token = useSelector((state: any) => state.user.token);
+  const dispatch = useDispatch<AppDispatch>();
+  const {
+    fetchQuotes,
+    getFilterParams,
+  } = useQuoteList();
+  const subscription = useSelector((state: any) => state.subscription.data);
+  const upgradeUrl = subscription?.upgrade_url;
   const { getPdfDownloadUrl, convertToInvoice, duplicateQuote, getQuote, updateQuoteStatus } = useQuote();
 
   // ── Fetched detail state ──────────────────────────────────────────
@@ -405,10 +417,19 @@ console.log('Initiating document download for quote:102', src);
             <TouchableOpacity
               style={styles.detailCloseBtn}
               onPress={async () => {
+                if (!canUseFeature(subscription, 'quotes')) {
+                  Alert.alert(t('subscription_limit_title'), t('subscription_limit_quotes'), [
+                    { text: t('button_maybe_later'), style: 'cancel' },
+                    { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+                  ]);
+                  return;
+                }
                 setDuplicating(true);
                 try {
                   const result = await duplicateQuote(item.id);
                   if (result.success) {
+                    dispatch(loadSubscription() as any);
+                    fetchQuotes(getFilterParams());
                     Alert.alert(t('success_title'), t('success_quote_duplicated') || t('success_invoice_duplicated'));
                   } else {
                     Alert.alert(t('error_title'), result.error ?? t('error_generic'));
