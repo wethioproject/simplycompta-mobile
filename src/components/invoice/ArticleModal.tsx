@@ -43,14 +43,14 @@ const ArticleModal: React.FC<{
   });
   const [tvaOptions, setTvaOptions] = useState<{ id: number; name: string; rate: string }[]>([]);
   const [unitOptions, setUnitOptions] = useState<{ id: number; name: string }[]>([]);
-  const [categoryOptions, setCategoryOptions] = useState<{ id: number; name: string; type: string }[]>([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  // const [categoryOptions, setCategoryOptions] = useState<{ id: number; name: string; type: string }[]>([]);
+  // const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [showTvaPicker, setShowTvaPicker] = useState(false);
   const [showUnitPicker, setShowUnitPicker] = useState(false);
-  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  // const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showTypePicker, setShowTypePicker] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<number | undefined>(undefined);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -68,9 +68,9 @@ const ArticleModal: React.FC<{
         if (resources.units && Array.isArray(resources.units)) {
           setUnitOptions(resources.units);
         }
-        if (resources.categories && Array.isArray(resources.categories)) {
-          setCategoryOptions(resources.categories);
-        }
+        // if (resources.categories && Array.isArray(resources.categories)) {
+        //   setCategoryOptions(resources.categories);
+        // }
       }
     };
     fetchResources();
@@ -135,7 +135,7 @@ const ArticleModal: React.FC<{
       unit_id: product.unit_id ?? undefined,
       discount: product.discount ? parseFloat(product.discount) : undefined,
     });
-    setSelectedCategoryId(product.category_id ?? null);
+    // setSelectedCategoryId(product.category_id ?? null);
     setSuggestions([]);
     setShowSuggestions(false);
   };
@@ -145,10 +145,10 @@ const ArticleModal: React.FC<{
       Alert.alert(t('alert_field_required'), t('message_designation_required'));
       return;
     }
-    if (selectedCategoryId == null) {
-      Alert.alert(t('alert_field_required'), t('message_category_required'));
-      return;
-    }
+    // if (selectedCategoryId == null) {
+    //   Alert.alert(t('alert_field_required'), t('message_category_required'));
+    //   return;
+    // }
     if ((form as any).unit_id == null) {
       Alert.alert(t('alert_field_required'), t('message_unit_required'));
       return;
@@ -161,7 +161,7 @@ const ArticleModal: React.FC<{
         description: form.description ?? '',
         reference: form.reference ?? '',
         type: form.type ?? 'Product',
-        category_id: selectedCategoryId,
+        // category_id: selectedCategoryId,
         unit_price_ht: form.unitPriceHT,
         tva_percentage: form.tva,
         quantity: form.quantity,
@@ -177,7 +177,7 @@ const ArticleModal: React.FC<{
     onConfirm({ ...form, product_id });
     setForm({ designation: '', unitPriceHT: 0, quantity: 1, totalHT: 0, tva: null as any, description: '', reference: '', type: 'Product', unit_id: undefined, discount: undefined });
     setSelectedProductId(undefined);
-    setSelectedCategoryId(null);
+    // setSelectedCategoryId(null);
     setSuggestions([]);
     setShowSuggestions(false);
   };
@@ -295,7 +295,7 @@ const ArticleModal: React.FC<{
             </View>
 
             {/* Category */}
-            <View style={styles.fieldGroup}>
+            {/* <View style={styles.fieldGroup}>
               <View style={styles.fieldLabelRow}>
                 <Text style={styles.fieldLabel}>{t('label_category')}</Text>
                 <Text style={styles.fieldRequired}>*</Text>
@@ -310,7 +310,7 @@ const ArticleModal: React.FC<{
                 </Text>
                 <ChevronDown size={18} color="#0B5FA5" />
               </TouchableOpacity>
-            </View>
+            </View> */}
 
             {/* Prix H.T. unitaire */}
             <View style={styles.fieldGroup}>
@@ -456,9 +456,9 @@ const ArticleModal: React.FC<{
               <Text style={styles.cancelBtnText}>{t('modal_cancel_text')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.saveBtn, (!form.designation.trim() || !form.unitPriceHT || form.tva == null || selectedCategoryId == null || (form as any).unit_id == null) && styles.saveBtnDisabled]}
+              style={[styles.saveBtn, (!form.designation.trim() || !form.unitPriceHT || form.tva == null || (form as any).unit_id == null) && styles.saveBtnDisabled]}
               onPress={handleConfirm}
-              disabled={!form.designation.trim() || !form.unitPriceHT || form.tva == null || selectedCategoryId == null || (form as any).unit_id == null}
+              disabled={!form.designation.trim() || !form.unitPriceHT || form.tva == null || (form as any).unit_id == null}
               activeOpacity={0.8}
             >
               <Text style={styles.saveBtnText}>{t('button_add')}</Text>
@@ -492,7 +492,7 @@ const ArticleModal: React.FC<{
           )}
 
           {/* Category Picker inline overlay */}
-          {showCategoryPicker && (
+          {/* {showCategoryPicker && (
             <TouchableOpacity
               style={styles.inlinePickerOverlay}
               activeOpacity={1}
@@ -515,7 +515,7 @@ const ArticleModal: React.FC<{
                 ))}
               </View>
             </TouchableOpacity>
-          )}
+          )} */}
 
           {/* TVA Picker inline overlay */}
           {showTvaPicker && (

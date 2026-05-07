@@ -38,7 +38,7 @@ interface Product {
   description?: string;
   sku?: string;
   type?: string;
-  category_id?: number | null;
+  // category_id?: number | null;
 }
 
 const productSchema = yup.object({
@@ -46,7 +46,7 @@ const productSchema = yup.object({
   description: yup.string().trim().optional(),
   reference: yup.string().trim().optional(),
   type: yup.string().trim().required('error_type_required'),
-  category_id: yup.string().trim().required('error_category_required'),
+  // category_id: yup.string().trim().required('error_category_required'),
   unit_price_ht: yup
     .string()
     .trim()
@@ -71,7 +71,7 @@ interface ProductFormValues {
   description: string;
   reference: string;
   type: string;
-  category_id: string;
+  // category_id: string;
   unit_price_ht: string;
   tva_percentage: string;
   quantity: string;
@@ -99,8 +99,8 @@ const Products: React.FC = ({ navigation }: any) => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [saving, setSaving] = useState(false);
-  const [categoryOptions, setCategoryOptions] = useState<{ id: number; name: string; type?: string }[]>([]);
-  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  // const [categoryOptions, setCategoryOptions] = useState<{ id: number; name: string; type?: string }[]>([]);
+  // const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showTvaPicker, setShowTvaPicker] = useState(false);
   const [showUnitPicker, setShowUnitPicker] = useState(false);
   const {
@@ -118,7 +118,7 @@ const Products: React.FC = ({ navigation }: any) => {
       description: '',
       reference: '',
       type: 'Product',
-      category_id: '',
+      // category_id: '',
       unit_price_ht: '',
       tva_percentage: '20',
       quantity: '',
@@ -160,9 +160,9 @@ const Products: React.FC = ({ navigation }: any) => {
         if (resources.units && Array.isArray(resources.units)) {
           setUnitOptions(resources.units);
         }
-        if (resources.categories && Array.isArray(resources.categories)) {
-          setCategoryOptions(resources.categories);
-        }
+        // if (resources.categories && Array.isArray(resources.categories)) {
+        //   setCategoryOptions(resources.categories);
+        // }
       }
     };
     fetchResources();
@@ -179,7 +179,8 @@ const Products: React.FC = ({ navigation }: any) => {
   // Open modal
   const openCreate = () => {
     setEditingProduct(null);
-    reset({ designation: '', description: '', reference: '', type: 'Product', category_id: '', unit_price_ht: '', tva_percentage: '', quantity: '', total_price_ht: '', unit_id: '' });
+    // reset({ designation: '', description: '', reference: '', type: 'Product', category_id: '', unit_price_ht: '', tva_percentage: '', quantity: '', total_price_ht: '', unit_id: '' });
+    reset({ designation: '', description: '', reference: '', type: 'Product', unit_price_ht: '', tva_percentage: '', quantity: '', total_price_ht: '', unit_id: '' });
     setModalVisible(true);
   };
 
@@ -190,7 +191,7 @@ const Products: React.FC = ({ navigation }: any) => {
       description: item.description ?? '',
       reference: item.sku ?? '',
       type: item.type ?? 'Product',
-      category_id: item.category_id != null ? String(item.category_id) : '',
+      // category_id: item.category_id != null ? String(item.category_id) : '',
       unit_price_ht: item.sale_price,
       tva_percentage: item.tax_id,
       quantity: String(item.quantity),
@@ -220,7 +221,7 @@ const Products: React.FC = ({ navigation }: any) => {
       description: data.description,
       reference: data.reference,
       type: data.type,
-      category_id: data.category_id ? Number(data.category_id) : null,
+      // category_id: data.category_id ? Number(data.category_id) : null,
       unit_price_ht: data.unit_price_ht,
       tva_percentage: data.tva_percentage,
       quantity: data.quantity,
@@ -325,11 +326,11 @@ const Products: React.FC = ({ navigation }: any) => {
 
         {/* Footer: category badge + price */}
         <View style={styles.productFooter}>
-          <View style={styles.categoryBadge}>
+          {/* <View style={styles.categoryBadge}>
             <Text style={styles.categoryText} numberOfLines={1}>
               {categoryOptions.find(c => c.id === item.category_id)?.name ?? (item.type ?? 'Produit')}
             </Text>
-          </View>
+          </View> */}
           <View style={styles.priceSection}>
             <Text style={styles.priceValue}>
               {parseFloat(item.sale_price).toLocaleString('fr-FR')}
@@ -486,7 +487,7 @@ const Products: React.FC = ({ navigation }: any) => {
                       <Text style={styles.detailValue}>{selectedProduct.sku}</Text>
                     </View>
                   ) : null}
-                  <View style={styles.detailRow}>
+                  {/* <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>{t('label_category')}</Text>
                     <View style={styles.detailCategoryRow}>
                       <View style={styles.detailCategoryDot} />
@@ -494,7 +495,7 @@ const Products: React.FC = ({ navigation }: any) => {
                         {categoryOptions.find(c => c.id === selectedProduct.category_id)?.name ?? '—'}
                       </Text>
                     </View>
-                  </View>
+                  </View> */}
                   <View style={styles.detailRow}>
                     <Text style={styles.detailLabel}>{t('label_price_ht')}</Text>
                     <Text style={styles.detailValue}>
@@ -688,7 +689,7 @@ const Products: React.FC = ({ navigation }: any) => {
               </View>
 
               {/* ── Category dropdown (API-driven) ──────────────────── */}
-              <View style={styles.fieldGroup}>
+              {/* <View style={styles.fieldGroup}>
                 <View style={styles.fieldLabelRow}>
                   <Text style={styles.fieldLabel}>{t('label_category')}</Text>
                   <Text style={styles.fieldRequired}>*</Text>
@@ -712,7 +713,7 @@ const Products: React.FC = ({ navigation }: any) => {
                 {errors.category_id && (
                   <Text style={styles.fieldError}>{t(errors.category_id.message ?? '')}</Text>
                 )}
-              </View>
+              </View> */}
 
               {/* ── Prix H.T. ────────────────────────────────────────── */}
               <View style={styles.fieldGroup}>
@@ -883,7 +884,7 @@ const Products: React.FC = ({ navigation }: any) => {
             </View>
 
             {/* ── Category Picker inline overlay (API-driven) ─────── */}
-            {showCategoryPicker && (
+            {/* {showCategoryPicker && (
               <TouchableOpacity
                 style={styles.inlinePickerOverlay}
                 activeOpacity={1}
@@ -907,7 +908,7 @@ const Products: React.FC = ({ navigation }: any) => {
                   })}
                 </View>
               </TouchableOpacity>
-            )}
+            )} */}
 
             {/* ── TVA Picker inline overlay ───────────────────────── */}
             {showTvaPicker && (
