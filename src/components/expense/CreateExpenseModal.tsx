@@ -640,7 +640,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
         categoryId: cat?.id ?? undefined,
         supplierId: sup?.id ?? null,
         expenseReference: (editItem as any).reference ?? (editItem as any).expense_reference ?? '',
-        description: (editItem as any).description ?? '',
+        description: (editItem as any).description ?? (editItem as any).notes ?? '',
       } as any);
     } else {
       const today = new Date();
