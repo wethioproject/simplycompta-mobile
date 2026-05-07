@@ -9,10 +9,12 @@ import {
   Alert,
   Platform,
   Share,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import type { AppDispatch } from '../../store';
 import {
   Download,
   Trash2,
@@ -27,6 +29,8 @@ import {
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import RNShare from 'react-native-share';
 import { useInvoice } from '../../hooks/useInvoice';
+import { canUseFeature } from '../../utils/subscriptionHelpers';
+import { loadSubscription } from '../../store/slices/subscriptionSlice';
 import { invoiceStyles as styles } from '../../styles/invoice.styles';
 import type { InvoiceItem } from '../../types/invoice.types';
 import { STATUT_OPTIONS_DETAIL_MODAL, resolvePaymentMethod, resolveStatus } from '../../types/invoice.types';
@@ -48,6 +52,9 @@ const DetailModal: React.FC<DetailModalProps> = ({
 }) => {
   const { t, i18n } = useTranslation();
   const token = useSelector((state: any) => state.user.token);
+  const dispatch = useDispatch<AppDispatch>();
+  const subscription = useSelector((state: any) => state.subscription.data);
+  const upgradeUrl = subscription?.upgrade_url;
   const { getPdfDownloadUrl, duplicateInvoice, getInvoice, updateInvoiceStatus } = useInvoice();
 
   // ── Fetched detail state ──────────────────────────────────────────
@@ -298,10 +305,18 @@ const DetailModal: React.FC<DetailModalProps> = ({
             <TouchableOpacity
               style={styles.detailCloseBtn}
               onPress={async () => {
+                if (!canUseFeature(subscription, 'invoices')) {
+                  Alert.alert(t('subscription_limit_title'), t('subscription_limit_invoices'), [
+                    { text: t('button_maybe_later'), style: 'cancel' },
+                    { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+                  ]);
+                  return;
+                }
                 setDuplicating(true);
                 try {
                   const result = await duplicateInvoice(item.id);
                   if (result.success) {
+                    dispatch(loadSubscription() as any);
                     Alert.alert(t('success_title'), t('success_invoice_duplicated'));
                   } else {
                     Alert.alert(t('error_title'), result.error ?? t('error_generic'));

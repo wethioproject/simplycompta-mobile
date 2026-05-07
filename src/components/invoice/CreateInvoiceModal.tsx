@@ -29,6 +29,11 @@ import {
   Search,
   Eye,
 } from 'lucide-react-native';
+import { useSelector } from 'react-redux';
+import { canUseFeature } from '../../utils/subscriptionHelpers';
+import { loadSubscription } from '../../store/slices/subscriptionSlice';
+import { useDispatch } from 'react-redux';
+import type { AppDispatch } from '../../store';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { pick, types, isErrorWithCode, errorCodes } from '@react-native-documents/picker';
 import { launchCamera } from 'react-native-image-picker';
@@ -108,6 +113,8 @@ const CreateInvoiceModal: React.FC<{
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const { getInvoiceResources } = useInvoice();
+  const dispatch = useDispatch<AppDispatch>();
+  const subscription = useSelector((state: any) => state.subscription.data);
 
   // Non-form UI states
   const [showArticleModal, setShowArticleModal] = useState(false);
@@ -126,6 +133,8 @@ const CreateInvoiceModal: React.FC<{
   const [fileSizeError, setFileSizeError] = useState(false);
 
   const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
+  const storageExhausted = (subscription?.usage?.storage?.remaining_mb ?? 1) <= 0;
+  const upgradeUrl = subscription?.upgrade_url;
 
   const [localClients, setLocalClients] = useState<Client[]>(clients);
   React.useEffect(() => { setLocalClients(clients); }, [clients]);
@@ -291,10 +300,25 @@ const CreateInvoiceModal: React.FC<{
   };
 
   const handlePickDocument = async () => {
+    if (storageExhausted) {
+      Alert.alert(t('error_title'), t('error_storage_full'), [
+        { text: t('button_maybe_later'), style: 'cancel' },
+        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+      ]);
+      return;
+    }
     try {
       const [file] = await pick({ type: [types.pdf, types.docx, types.doc, types.images] });
       if (file.size && file.size > MAX_FILE_SIZE) {
         setFileSizeError(true);
+        return;
+      }
+      const remainingBytes = (subscription?.usage?.storage?.remaining_mb ?? Infinity) * 1024 * 1024;
+      if (file.size && file.size > remainingBytes) {
+        Alert.alert(t('error_title'), t('error_file_exceeds_storage'), [
+          { text: t('button_maybe_later'), style: 'cancel' },
+          { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+        ]);
         return;
       }
       setFileSizeError(false);
@@ -306,6 +330,13 @@ const CreateInvoiceModal: React.FC<{
   };
 
   const handleTakePhoto = async () => {
+    if (storageExhausted) {
+      Alert.alert(t('error_title'), t('error_storage_full'), [
+        { text: t('button_maybe_later'), style: 'cancel' },
+        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+      ]);
+      return;
+    }
     launchCamera(
       { mediaType: 'photo', saveToPhotos: false, quality: 0.8 },
       (response) => {
@@ -314,6 +345,14 @@ const CreateInvoiceModal: React.FC<{
         if (!asset?.uri) return;
         if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
           setFileSizeError(true);
+          return;
+        }
+        const remainingBytes = (subscription?.usage?.storage?.remaining_mb ?? Infinity) * 1024 * 1024;
+        if (asset.fileSize && asset.fileSize > remainingBytes) {
+          Alert.alert(t('error_title'), t('error_file_exceeds_storage'), [
+            { text: t('button_maybe_later'), style: 'cancel' },
+            { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+          ]);
           return;
         }
         setFileSizeError(false);
@@ -355,7 +394,16 @@ const CreateInvoiceModal: React.FC<{
   const totalTTC = totalHT + totalTVA;
 
   const onSubmit = async (data: InvoiceFormValues) => {
-    if (fileSizeError) return;
+    if (fileSizeError && document) return;
+
+    if (!editItem && !canUseFeature(subscription, 'invoices')) {
+      Alert.alert(t('subscription_limit_title'), t('subscription_limit_invoices'), [
+        { text: t('button_maybe_later'), style: 'cancel' },
+        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+      ]);
+      return;
+    }
+
     setSaving(true);
     try {
       const payload = {
@@ -367,7 +415,7 @@ const CreateInvoiceModal: React.FC<{
         status: data.status,
         due_date: data.validUntil || null,
         notes: data.notes || null,
-        document: document?.isExisting ? null : document,
+        document: document?.isExisting ? null : document ?? null,
         remove_document: !document && removedExistingDocument ? 1 : 0,
         articles: (data.articles ?? []).map(a => ({
           designation: a.designation,
@@ -385,6 +433,7 @@ const CreateInvoiceModal: React.FC<{
         const result = await onUpdate(editItem.id, payload);
         if (result.success) {
           Alert.alert(t('success_title'), t('success_invoice_updated'));
+          dispatch(loadSubscription() as any);
           onCreated();
           onClose();
         } else {
@@ -395,6 +444,7 @@ const CreateInvoiceModal: React.FC<{
         const result = await onSave(payload);
         if (result.success) {
           Alert.alert(t('success_title'), t('success_invoice_created'));
+          dispatch(loadSubscription() as any);
           onCreated();
           onClose();
         } else {
@@ -466,15 +516,26 @@ const CreateInvoiceModal: React.FC<{
                 </View>
               ) : (
                 <View style={styles.uploadArea}>
-                  <TouchableOpacity style={styles.uploadBtn} activeOpacity={0.8} onPress={handleTakePhoto}>
+                  <TouchableOpacity
+                    style={[styles.uploadBtn, storageExhausted && { opacity: 0.4 }]}
+                    activeOpacity={0.8}
+                    onPress={handleTakePhoto}
+                  >
                     <Camera size={20} color="#1E5BAC" />
                     <Text style={styles.uploadBtnText}>{t('button_take_photo')}</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.uploadBtn} activeOpacity={0.8} onPress={handlePickDocument}>
+                  <TouchableOpacity
+                    style={[styles.uploadBtn, storageExhausted && { opacity: 0.4 }]}
+                    activeOpacity={0.8}
+                    onPress={handlePickDocument}
+                  >
                     <FileText size={20} color="#16A34A" />
                     <Text style={styles.uploadBtnText}>{t('button_select_file')}</Text>
                   </TouchableOpacity>
                 </View>
+              )}
+              {storageExhausted && !document && (
+                <Text style={styles.fieldError}>{t('error_storage_full')}</Text>
               )}
               {fileSizeError && (
                 <Text style={styles.fieldError}>{t('error_file_too_large')}</Text>

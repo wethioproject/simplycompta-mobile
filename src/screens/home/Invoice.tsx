@@ -10,12 +10,13 @@ import {
   RefreshControl,
   Platform,
   Share,
+  Linking,
   TextInput,
   Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import {
   ChevronLeft,
@@ -29,6 +30,9 @@ import {
 } from 'lucide-react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { useInvoice } from '../../hooks/useInvoice';
+import { canUseFeature } from '../../utils/subscriptionHelpers';
+import { loadSubscription } from '../../store/slices/subscriptionSlice';
+import type { AppDispatch } from '../../store';
 import { useInvoiceList } from '../../hooks/useInvoiceList';
 import CreateInvoiceModal from '../../components/invoice/CreateInvoiceModal';
 import DetailModal from '../../components/invoice/DetailModal';
@@ -62,6 +66,9 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
   const { createInvoice, updateInvoice, exportInvoices, deleteInvoice, getInvoiceResources, duplicateInvoice, updateInvoiceStatus } = useInvoice();
   const token = useSelector((state: any) => state.user.token);
   const user = useSelector((state: any) => state.user.customer);
+  const subscription = useSelector((state: any) => state.subscription.data);
+  const upgradeUrl = subscription?.upgrade_url;
+  const dispatch = useDispatch<AppDispatch>();
 
   const {
     invoices,
@@ -157,6 +164,7 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
     if (result.success) {
       setSelectedItem(null);
       fetchInvoices(getFilterParams());
+      dispatch(loadSubscription() as any);
       Alert.alert(t('success_title'), t('success_invoice_deleted'));
     } else {
       Alert.alert(t('error_title'), result.error ?? t('error_delete_invoice'));
@@ -165,6 +173,13 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
 
   const handleExport = async () => {
     if (exporting) return;
+    if (!canUseFeature(subscription, 'export_enabled')) {
+      Alert.alert(t('subscription_limit_title'), t('subscription_limit_export'), [
+        { text: t('button_maybe_later'), style: 'cancel' },
+        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+      ]);
+      return;
+    }
     setExporting(true);
     try {
       const result = await exportInvoices();
@@ -191,9 +206,17 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
   };
 
   const handleDuplicate = async (item: InvoiceItem) => {
+    if (!canUseFeature(subscription, 'invoices')) {
+      Alert.alert(t('subscription_limit_title'), t('subscription_limit_invoices'), [
+        { text: t('button_maybe_later'), style: 'cancel' },
+        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+      ]);
+      return;
+    }
     const result = await duplicateInvoice(item.id);
     if (result.success) {
       fetchInvoices(getFilterParams());
+      dispatch(loadSubscription() as any);
       Alert.alert(t('success'), t('success_invoice_duplicated'));
     } else {
       Alert.alert(t('error'), result.error ?? t('error_generic'));
