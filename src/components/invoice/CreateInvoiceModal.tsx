@@ -195,30 +195,39 @@ const CreateInvoiceModal: React.FC<{
       const datePart = editItem.date.split('T')[0];
       const [ey, em, ed] = datePart.split('-').map(Number);
       setTempDate(new Date(ey, em - 1, ed));
-      const client = localClients.find(c => c.id === editItem.client_id) ?? null;
       if (editItem.document_path) {
         const fileName = editItem.document_path.split('/').pop() ?? 'document';
         setDocument({ name: fileName, isExisting: true });
       } else {
         setDocument(null);
       }
-      reset({
-        invoiceNumber: editItem.invoice_number,
-        date: datePart,
-        validUntil: (editItem.due_date ?? editItem.valid_until) ? (editItem.due_date ?? editItem.valid_until ?? '').split('T')[0] : '',
-        clientId: client?.id ?? undefined,
-        accountId: editItem.payment_method ?? undefined,
-        status: editItem.status,
-        notes: editItem.notes ?? '',
-        articles: editItem.articles.map(a => ({
-          designation: a.designation,
-          unitPriceHT: parseFloat(a.unit_price_ht),
-          quantity: a.quantity,
-          totalHT: parseFloat(a.total_price_ht),
-          tva: parseFloat(a.tva_percentage),
-          product_id: a.product_id,
-        })),
-      });
+      (async () => {
+        const resourcesResult = await getInvoiceResources();
+        const freshClients: Client[] = ((resourcesResult.resources as any)?.clients ?? []).map((c: any) => ({
+          id: c.id,
+          name: c.company_name ?? c.client_name ?? c.name ?? '',
+        }));
+        const resolvedClients = freshClients.length > 0 ? freshClients : localClients;
+        if (freshClients.length > 0) setLocalClients(freshClients);
+        const client = resolvedClients.find(c => c.id === editItem.client_id) ?? null;
+        reset({
+          invoiceNumber: editItem.invoice_number,
+          date: datePart,
+          validUntil: (editItem.due_date ?? editItem.valid_until) ? (editItem.due_date ?? editItem.valid_until ?? '').split('T')[0] : '',
+          clientId: client?.id ?? undefined,
+          accountId: editItem.payment_method ?? undefined,
+          status: editItem.status,
+          notes: editItem.notes ?? '',
+          articles: editItem.articles.map(a => ({
+            designation: a.designation,
+            unitPriceHT: parseFloat(a.unit_price_ht),
+            quantity: a.quantity,
+            totalHT: parseFloat(a.total_price_ht),
+            tva: parseFloat(a.tva_percentage),
+            product_id: a.product_id,
+          })),
+        });
+      })();
     } else {
       const today = new Date();
       const y = today.getFullYear();
@@ -235,6 +244,11 @@ const CreateInvoiceModal: React.FC<{
       (async () => {
         const resourcesResult = await getInvoiceResources();
         const autoInvoiceNumber = (resourcesResult.resources as any)?.invoice_number ?? '';
+        const freshClients: Client[] = ((resourcesResult.resources as any)?.clients ?? []).map((c: any) => ({
+          id: c.id,
+          name: c.company_name ?? c.client_name ?? c.name ?? '',
+        }));
+        if (freshClients.length > 0) setLocalClients(freshClients);
         reset({
           invoiceNumber: autoInvoiceNumber,
           date: `${y}-${mo}-${d}`,
