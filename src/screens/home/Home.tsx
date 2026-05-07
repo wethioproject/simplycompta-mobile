@@ -17,6 +17,7 @@ import { DrawerNavigationProp } from '@react-navigation/drawer';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
+import { loadSubscription } from '../../store/slices/subscriptionSlice';
 import { setIsEnableLogin } from '../../store/slices/appSlice';
 import {
   Bell,
@@ -511,6 +512,8 @@ const Home: React.FC = () => {
   }, []);
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
+
+  useEffect(() => { dispatch(loadSubscription() as any); }, []);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);

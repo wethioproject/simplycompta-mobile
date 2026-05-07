@@ -44,4 +44,5 @@ export const Api_Endpoints = {
   customerQuoteDuplicate: 'customer/duplicate-quote',
   customerRevenues: 'customer/customer-revenues',
   customerRevenue: 'customer/customer-revenue',
+  getSubscriptionStatus: 'customer/get-subscription-status',
 }
