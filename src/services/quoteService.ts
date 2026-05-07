@@ -96,7 +96,7 @@ class QuoteService {
                 description: payload.description,
                 reference: payload.reference,
                 type: payload.type,
-                ...(payload.category_id != null ? { category_id: String(payload.category_id) } : {}),
+                // ...(payload.category_id != null ? { category_id: String(payload.category_id) } : {}),
                 unit_price_ht: String(payload.unit_price_ht),
                 tva_percentage: String(payload.tva_percentage),
                 quantity: String(payload.quantity),
