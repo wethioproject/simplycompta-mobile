@@ -10,10 +10,13 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import { canUseFeature } from '../../utils/subscriptionHelpers';
 import { ArrowLeft, MessageCircle, Phone, CheckCircle2, PhoneOff, RefreshCw } from 'lucide-react-native';
 import api from '../../api';
 import { Api_Endpoints } from '../../services/endpoints';
@@ -27,6 +30,8 @@ interface BotStatus {
 const WhatsAppBot: React.FC = () => {
   const navigation = useNavigation<any>();
   const { t } = useTranslation();
+  const subscription = useSelector((state: any) => state.subscription.data);
+  const upgradeUrl = subscription?.upgrade_url;
 
 
   const [statusLoading, setStatusLoading] = useState(true);
@@ -58,6 +63,13 @@ const WhatsAppBot: React.FC = () => {
   }, [fetchStatus]);
 
   const handleSubmit = async () => {
+    if (!canUseFeature(subscription, 'whatsapp_bot_enabled')) {
+      Alert.alert(t('subscription_limit_title'), t('subscription_limit_whatsapp'), [
+        { text: t('button_maybe_later'), style: 'cancel' },
+        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+      ]);
+      return;
+    }
     const cleaned = `+${countryCode.trim()}${phoneNumber.trim()}`;
     if (!phoneNumber.trim()) {
       Alert.alert(t('error_title'), t('whatsapp_error_phone_required'));
