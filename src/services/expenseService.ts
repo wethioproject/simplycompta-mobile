@@ -58,7 +58,7 @@ class ExpenseService {
             if (payload.notes != null) {
                 formData.append('notes', String(payload.notes));
             }
-
+            formData.append('is_ocr', String(payload.is_ocr ?? 0));
             if (payload.document) {
                 const file = payload.document;
                 formData.append('file', {
@@ -104,6 +104,8 @@ class ExpenseService {
             if (payload.notes != null) {
                 formData.append('notes', String(payload.notes));
             }
+
+            formData.append('is_ocr', String(payload.is_ocr ?? 0));
 
             if (payload.document) {
                 const file = payload.document;

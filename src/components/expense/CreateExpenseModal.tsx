@@ -904,6 +904,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
         expense_reference: data.expenseReference ?? '',
         notes: data.description ?? '',
         description: data.description ?? '',
+        is_ocr: ocrRaw ? 1 : 0,
         ocr_raw: ocrRaw,
         ocr_confidence_score: ocrSuggestion?.confidenceScore ?? null,
         ocr_warnings: ocrSuggestion?.warnings ?? [],
@@ -925,6 +926,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
       } else {
         const result = await onSave(payload);
         if (result.success) {
+          dispatch(loadSubscription() as any);
           Alert.alert(t('success_title'), t('success_expense_created'));
           onCreated();
           onClose();
