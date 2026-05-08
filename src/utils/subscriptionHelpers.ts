@@ -11,7 +11,7 @@ export const canUseFeature = (
   feature: AnyFeature,
 ): boolean => {
   if (!subscriptionData) return false;
-  if (!subscriptionData.is_b2c) return true;
+//   if (!subscriptionData.is_b2c) return true;
 //   const activeSubscription = subscriptionData.subscription?.find(
 //     s => s.status === 'active'
 //   );
