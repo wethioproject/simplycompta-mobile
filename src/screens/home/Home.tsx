@@ -34,9 +34,13 @@ import {
   FolderOpen,
   ChevronRight,
   ClipboardList,
+  AlertTriangle,
 } from 'lucide-react-native';
 import notificationService from '../../services/notificationService';
 import dashboardService from '../../services/dashboardService';
+import ConnectedAccountantCard from '../../components/home/ConnectedAccountantCard';
+import OCRScannerCard from '../../components/home/OCRScannerCard';
+import WhatsAppBotCard from '../../components/home/WhatsAppBotCard';
 
 type DrawerNavigation = DrawerNavigationProp<any>;
 
@@ -181,6 +185,8 @@ const TasksSection: React.FC<{
     unreadDocumentsCount: number;
     unpaidInvoiceSum: number;
     hasStatement: boolean;
+    expiredInvoicesCount: number;
+    expiredInvoiceSum: number;
   };
   onNavigate: (page: string) => void;
   bankStatementMonth: string;
@@ -188,6 +194,7 @@ const TasksSection: React.FC<{
 }> = ({ stats, onNavigate, bankStatementMonth, t }) => {
   const showUnpaidTask = stats.unpaidInvoicesCount > 0;
   const showUnreadTask = stats.unreadDocumentsCount > 0;
+  const showExpiredTask = stats.expiredInvoicesCount > 0;
 
   return (
   <View style={styles.tasksSection}>
@@ -284,6 +291,35 @@ const TasksSection: React.FC<{
         </View>
       </View>
       )}
+
+      {showUnreadTask && showExpiredTask && <View style={styles.taskDivider} />}
+
+      {/* Task 4: Expired invoices */}
+      {showExpiredTask && (
+      <View style={styles.taskRow}>
+        <View style={[styles.taskIcon, { backgroundColor: '#FEF3C7' }]}>
+          <AlertTriangle size={20} color="#D97706" />
+        </View>
+        <View style={styles.taskInfo}>
+          <Text style={styles.taskTitle}>{t('todo_expired_invoices', { count: stats.expiredInvoicesCount })}</Text>
+          <Text style={styles.taskDesc}>
+            {t('todo_amount_pending', { amount: stats.expiredInvoiceSum.toLocaleString('fr-FR') })}
+          </Text>
+        </View>
+        <View style={styles.taskActions}>
+          <View style={[styles.taskBadgePriority, { backgroundColor: '#FEF3C7' }]}>
+            <Text style={[styles.taskBadgePriorityText, { color: '#D97706' }]}>{t('badge_expired')}</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.taskActionBtn, { backgroundColor: '#F59E0B' }]}
+            onPress={() => onNavigate('invoices-expired')}
+            activeOpacity={0.8}
+          >
+            <Eye size={16} color="#FFFFFF" strokeWidth={2.5} />
+          </TouchableOpacity>
+        </View>
+      </View>
+      )}
     </View>
   </View>
   );
@@ -320,6 +356,10 @@ const ActivitiesSection: React.FC<{
     unpaidInvoiceSum: number;
     total_quote_count: number;
     total_quote_sum: number;
+    sentQuotesCount: number;
+    sentQuoteSum: number;
+    expiredInvoicesCount: number;
+    expiredInvoiceSum: number;
   };
   loading: boolean;
   onNavigate: (page: string) => void;
@@ -392,6 +432,36 @@ const ActivitiesSection: React.FC<{
       </View>
       <ChevronRight size={20} color="#9CA3AF" />
     </TouchableOpacity>
+
+    {/* Devis envoyés */}
+    {stats.sentQuotesCount > 0 && (
+    <TouchableOpacity
+      style={styles.activityCard}
+      onPress={() => onNavigate('quotes-sent')}
+      activeOpacity={0.8}
+    >
+      <View style={[styles.activityIcon, { backgroundColor: '#FFFBEB' }]}>
+        <Send size={20} color="#F59E0B" />
+      </View>
+      <View style={styles.activityInfo}>
+        <Text style={styles.activityTitle}>{t('label_devis_envoyes')}</Text>
+        <Text style={styles.activitySubtitle}>{t('label_15_devis', { count: stats.sentQuotesCount })}</Text>
+      </View>
+      <View style={styles.activityRight}>
+        {loading ? (
+          <ActivityIndicator size="small" color="#F59E0B" />
+        ) : (
+          <Text style={[styles.activityAmount, { color: '#F59E0B' }]}>
+            {stats.sentQuoteSum.toLocaleString('fr-FR')} MAD
+          </Text>
+        )}
+        <View style={[styles.activityBadgePending, { backgroundColor: '#FFFBEB' }]}>
+          <Text style={[styles.activityBadgePendingText, { color: '#D97706' }]}>📤 {t('badge_sent')}</Text>
+        </View>
+      </View>
+      <ChevronRight size={20} color="#9CA3AF" />
+    </TouchableOpacity>
+    )}
   </View>
   );
 };
@@ -419,12 +489,17 @@ const Home: React.FC = () => {
     total_quote_sum: 0,
     total_issued_count: 0,
     total_quote_count: 0,
+    sentQuotesCount: 0,
+    sentQuoteSum: 0,
+    expiredInvoicesCount: 0,
+    expiredInvoiceSum: 0,
     total_pending_actions: 0,
     unpaidInvoicesCount: 0,
     unpaidInvoiceSum: 0,
     unreadDocumentsCount: 0,
     total_progress_score: 0,
     hasStatement: false,
+    whatsapp_bot_enabled: false,
   });
 
   // Animation values
@@ -505,6 +580,11 @@ const Home: React.FC = () => {
           unreadDocumentsCount: res.data.unreadDocumentsCount ?? 0,
           total_progress_score: res.data.total_progress_score ?? 0,
           hasStatement: res.data.hasStatement ?? false,
+          sentQuotesCount: res.data.sentQuotesCount ?? 0,
+          sentQuoteSum: res.data.sentQuoteSum ?? 0,
+          expiredInvoiceSum: res.data.expiredInvoiceSum ?? 0,
+          expiredInvoicesCount: res.data.expiredInvoicesCount ?? 0,
+          whatsapp_bot_enabled: res.data.whatsapp_bot_enabled ?? false,
         });
       }
     } catch {}
@@ -556,6 +636,18 @@ const Home: React.FC = () => {
       quotes: 'Quote',
       'contact-comptable': 'Contact',
     };
+    if (page === 'quotes-sent') {
+      navigation.navigate('Quote', { defaultTab: 'sent' });
+      return;
+    }
+    if (page === 'invoices-expired') {
+      navigation.navigate('Invoice');
+      return;
+    }
+    if (page === 'whatsapp-bot') {
+      navigation.navigate('WhatsApp Bot');
+      return;
+    }
     const route = routes[page];
     if (route) navigation.navigate(route);
   };
@@ -605,6 +697,18 @@ const Home: React.FC = () => {
         {/* Status Badges */}
         <StatusBadges stats={stats} t={t} />
 
+        {/* Connected Accountant Card */}
+        <ConnectedAccountantCard onPress={() => handleNavigate('accounting')} />
+
+        {/* OCR Scanner CTA Card */}
+        <OCRScannerCard onScan={() => navigation.navigate('Expenses', { openCreateModal: true })} />
+
+        {/* WhatsApp Bot Card */}
+        <WhatsAppBotCard
+          enabled={stats.whatsapp_bot_enabled}
+          onActivate={() => handleNavigate('whatsapp-bot')}
+        />
+
         {/* Stats Cards */}
         <StatsCards stats={stats} loading={statsLoading} previousMonthName={previousMonthName} t={t} />
 
@@ -623,6 +727,10 @@ const Home: React.FC = () => {
             unpaidInvoiceSum: stats.unpaidInvoiceSum,
             total_quote_count: stats.total_quote_count,
             total_quote_sum: stats.total_quote_sum,
+            sentQuotesCount: stats.sentQuotesCount,
+            sentQuoteSum: stats.sentQuoteSum,
+            expiredInvoiceSum: stats.expiredInvoiceSum,
+            expiredInvoicesCount: stats.expiredInvoicesCount,
           }}
           loading={statsLoading}
           onNavigate={handleNavigate}

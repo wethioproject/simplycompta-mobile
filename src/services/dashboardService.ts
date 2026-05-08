@@ -41,6 +41,10 @@ export interface ActivityStats {
     total_issued_sum: number;
     total_quote_sum: number;
     total_issued_count: number;
+    sentQuotesCount: number;
+    sentQuoteSum: number;
+    expiredInvoicesCount: number;
+    expiredInvoiceSum: number;
     total_quote_count: number;
     total_pending_actions: number;
     unpaidInvoicesCount: number;
@@ -49,6 +53,7 @@ export interface ActivityStats {
     total_progress_score: number;
     hasStatement: boolean;
     is_enable_login: 0 | 1;
+    whatsapp_bot_enabled: boolean;
 }
 
 export interface ActivityResponse {
