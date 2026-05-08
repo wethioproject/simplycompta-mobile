@@ -29,6 +29,7 @@ import {
   Edit2,
   FolderOpen,
   MessageCircle,
+  CreditCard,
 } from 'lucide-react-native';
 
 const MenuRow: React.FC<{
@@ -80,6 +81,7 @@ const Plus: React.FC = ({ navigation }: any) => {
     else if (action === 'whatsapp')    navigation.navigate('WhatsApp Bot');
     else if (action === 'documents')   navigation.navigate('Documents List');
     else if (action === 'support')     navigation.navigate('Contact');
+    else if (action === 'plan')        navigation.navigate('My Plan');
     else if (action === 'logout')      handleLogout();
   };
 
@@ -157,7 +159,8 @@ const Plus: React.FC = ({ navigation }: any) => {
             <MenuRow Icon={FolderOpen}     iconColor="#1E5BAC" label={t('menu_documents')} onPress={() => handleMenuPress('documents')} />
             <MenuRow Icon={Package}         iconColor="#1E5BAC" label={t('menu_products')}  onPress={() => handleMenuPress('products')}  />
             <MenuRow Icon={Languages}       iconColor="#1E5BAC" label={t('menu_language')}  onPress={() => handleMenuPress('language')}  />
-            <MenuRow Icon={MessageCircle}   iconColor="#25D366" label={t('menu_whatsapp')}  onPress={() => handleMenuPress('whatsapp')}  isLast />
+            <MenuRow Icon={MessageCircle}   iconColor="#25D366" label={t('menu_whatsapp')}  onPress={() => handleMenuPress('whatsapp')}  />
+            <MenuRow Icon={CreditCard}       iconColor="#1E5BAC" label={t('menu_my_plan')}   onPress={() => handleMenuPress('plan')}      isLast />
           </View>
         </View>
 

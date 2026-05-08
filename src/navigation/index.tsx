@@ -69,6 +69,7 @@ import LanguageSettings from '../screens/home/LanguageSettings';
 import DocumentsList from '../screens/home/DocumentsList';
 import WhatsAppBot from '../screens/home/WhatsAppBot';
 import WhatsAppBotOtp from '../screens/home/WhatsAppBotOtp';
+import MyPlan from '../screens/home/MyPlan';
 
 const Stack = createStackNavigator();
 
@@ -144,6 +145,7 @@ const AppNavigator = () => {
         <Stack.Screen name="Documents List" component={DocumentsList} options={{ headerShown: false }} />
         <Stack.Screen name="WhatsApp Bot" component={WhatsAppBot} options={{ headerShown: false }} />
         <Stack.Screen name="WhatsApp Bot OTP" component={WhatsAppBotOtp} options={{ headerShown: false }} />
+        <Stack.Screen name="My Plan" component={MyPlan} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
     <Toast />
