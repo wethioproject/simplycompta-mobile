@@ -735,13 +735,6 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   };
 
   const handlePickFromGallery = async () => {
-    if (!canUseFeature(subscription, 'ocr')) {
-      Alert.alert(t('error_title'), t('error_ocr_limit'), [
-        { text: t('button_maybe_later'), style: 'cancel' },
-        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
-      ]);
-      return;
-    }
     if (storageExhausted) {
       Alert.alert(t('error_title'), t('error_storage_full'), [
         { text: t('button_maybe_later'), style: 'cancel' },
@@ -765,7 +758,9 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
       }
       setFileSizeError(false);
       setDocument(file);
-      await sendToOcr(file);
+      if (canUseFeature(subscription, 'ocr')) {
+        await sendToOcr(file);
+      }
     } catch (e: any) {
       if (isErrorWithCode(e) && e.code === errorCodes.OPERATION_CANCELED) return;
       Alert.alert(t('error_title'), t('error_select_file'));
@@ -773,13 +768,6 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   };
 
   const handlePickFromFiles = async () => {
-    if (!canUseFeature(subscription, 'ocr')) {
-      Alert.alert(t('error_title'), t('error_ocr_limit'), [
-        { text: t('button_maybe_later'), style: 'cancel' },
-        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
-      ]);
-      return;
-    }
     if (storageExhausted) {
       Alert.alert(t('error_title'), t('error_storage_full'), [
         { text: t('button_maybe_later'), style: 'cancel' },
@@ -803,7 +791,9 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
       }
       setFileSizeError(false);
       setDocument(file);
-      await sendToOcr(file);
+      if (canUseFeature(subscription, 'ocr')) {
+        await sendToOcr(file);
+      }
     } catch (e: any) {
       if (isErrorWithCode(e) && e.code === errorCodes.OPERATION_CANCELED) return;
       Alert.alert(t('error_title'), t('error_select_file'));
@@ -811,13 +801,6 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   };
 
   const handleTakePhoto = async () => {
-    if (!canUseFeature(subscription, 'ocr')) {
-      Alert.alert(t('error_title'), t('error_ocr_limit'), [
-        { text: t('button_maybe_later'), style: 'cancel' },
-        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
-      ]);
-      return;
-    }
     if (storageExhausted) {
       Alert.alert(t('error_title'), t('error_storage_full'), [
         { text: t('button_maybe_later'), style: 'cancel' },
@@ -843,7 +826,9 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
       };
 
       setDocument(photoFile);
-      await sendToOcr(photoFile);
+      if (canUseFeature(subscription, 'ocr')) {
+        await sendToOcr(photoFile);
+      }
     });
   };
 
