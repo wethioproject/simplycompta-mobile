@@ -823,7 +823,7 @@
   "action_delete": "Delete",
   "button_update": "Update",
   "type_product": "Product",
-  "error_file_too_large": "File size must not exceed 2 MB.",
+  "error_file_too_large": "File size must not exceed 20 MB.",
   "login_title": "Sign In",
   "login_email_placeholder": "Email *",
   "login_password_placeholder": "Password *",

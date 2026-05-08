@@ -106,7 +106,7 @@ const BankStatements: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [uploadingSlot, setUploadingSlot] = useState<string | null>(null);
 
-  const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
+  const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
   // ── FAB ────────────────────────────────────────────────────────────────────
   const [isFabOpen, setIsFabOpen] = useState(false);

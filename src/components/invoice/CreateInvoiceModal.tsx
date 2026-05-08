@@ -132,7 +132,7 @@ const CreateInvoiceModal: React.FC<{
   const [removedExistingDocument, setRemovedExistingDocument] = useState(false);
   const [fileSizeError, setFileSizeError] = useState(false);
 
-  const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2 MB
+  const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
   const storageExhausted = (subscription?.usage?.storage?.remaining_mb ?? 1) <= 0;
   const upgradeUrl = subscription?.upgrade_url;
 
