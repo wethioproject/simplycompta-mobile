@@ -139,6 +139,7 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
     if (!loading && route.params?.openCreateModal) {
       setDefaultSupplierId(route.params?.defaultSupplierId ?? undefined);
       setShowCreateModal(true);
+      navigation.setParams({ openCreateModal: undefined, defaultSupplierId: undefined } as any);
     }
   }, [loading, route.params?.openCreateModal]);
 
