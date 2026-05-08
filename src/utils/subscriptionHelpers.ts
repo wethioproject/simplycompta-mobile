@@ -1,7 +1,7 @@
 import type { SubscriptionData, SubscriptionUsageItem } from '../types/subscription.types';
 
 
-export type UsageFeature = 'invoices' | 'quotes' | 'expenses' | 'receipts' | 'ocr';
+export type UsageFeature = 'invoices' | 'quotes' | 'expenses' | 'receipts' | 'ocr' | 'clients' | 'suppliers';
 export type BooleanFeature = 'export_enabled' | 'whatsapp_bot_enabled';
 export type AnyFeature = UsageFeature | BooleanFeature;
 

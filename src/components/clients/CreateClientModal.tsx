@@ -19,6 +19,11 @@ import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { clientSchema, ClientFormValues } from '../../types/client.types';
 import { createClient } from '../../services/client.service';
+import { useSelector, useDispatch } from 'react-redux';
+import { Linking } from 'react-native';
+import { canUseFeature } from '../../utils/subscriptionHelpers';
+import { loadSubscription } from '../../store/slices/subscriptionSlice';
+import type { AppDispatch } from '../../store';
 
 interface CreateClientModalProps {
   visible: boolean;
@@ -33,6 +38,9 @@ export const CreateClientModal: React.FC<CreateClientModalProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const dispatch = useDispatch<AppDispatch>();
+  const subscription = useSelector((state: any) => state.subscription.data);
+  const upgradeUrl = subscription?.upgrade_url;
   const [saving, setSaving] = useState(false);
   const [showTypePicker, setShowTypePicker] = useState(false);
 
@@ -69,9 +77,17 @@ export const CreateClientModal: React.FC<CreateClientModalProps> = ({
   }, [visible]);
 
   const onSubmit = async (data: ClientFormValues) => {
+    if (!canUseFeature(subscription, 'clients')) {
+      Alert.alert(t('subscription_limit_title'), t('subscription_limit_clients'), [
+        { text: t('button_maybe_later'), style: 'cancel' },
+        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+      ]);
+      return;
+    }
     setSaving(true);
     try {
       await createClient(data);
+      dispatch(loadSubscription() as any);
       Alert.alert(t('success_title'), t('success_client_created'));
       await onCreated();
       onClose();

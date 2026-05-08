@@ -9,11 +9,14 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Edit2, Mail, Phone, MapPin, Trash2,
   Building2, Copy, Layers, FileText, ChevronRight,
 } from 'lucide-react-native';
+import { loadSubscription } from '../../store/slices/subscriptionSlice';
+import type { AppDispatch } from '../../store';
 
 import { getClientDetails, deleteClient } from '../../services/client.service';
 import { EditClientModal } from '../../components/clients/EditClientModal';
@@ -38,6 +41,7 @@ const BAR_MAX_H = 72;
 const ClientDetail: React.FC = ({ navigation, route }: any) => {
   const { client: routeClient } = route.params ?? {};
   const { t } = useTranslation();
+  const dispatch = useDispatch<AppDispatch>();
 
   const [clientData, setClientData] = useState<any>(null);
   const [invoiceCount, setInvoiceCount] = useState<number>(0);
@@ -83,6 +87,7 @@ const ClientDetail: React.FC = ({ navigation, route }: any) => {
             setDeleting(true);
             try {
               await deleteClient(clientData.id);
+              dispatch(loadSubscription() as any);
               Alert.alert(t('success_title'), t('success_client_deleted'), [
                 { text: t('button_ok'), onPress: () => navigation.goBack() },
               ]);

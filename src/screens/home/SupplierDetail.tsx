@@ -15,6 +15,7 @@ import {
   Linking,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useDispatch } from 'react-redux';
 import {
   ArrowLeft,
   Edit2,
@@ -33,6 +34,9 @@ import {
 import { useSupplier } from '../../hooks/useSupplier';
 import { SupplierPayload } from '../../services/supplierService';
 import { SupplierItem } from './Suppliers';
+import { loadSubscription } from '../../store/slices/subscriptionSlice';
+import type { AppDispatch } from '../../store';
+
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 const getInitials = (name: string): string => {
@@ -192,7 +196,7 @@ const SupplierDetail: React.FC = ({ navigation, route }: any) => {
   const { supplier: routeSupplier } = route.params ?? {};
   const { t } = useTranslation();
   const { getSupplierById, getSupplierExpenses, deleteSupplier } = useSupplier();
-
+  const dispatch = useDispatch<AppDispatch>();
   const [supplierData, setSupplierData] = useState<any>(null);
   const [expenses, setExpenses] = useState<any[]>([]);
   const [loadingDetail, setLoadingDetail] = useState(true);
@@ -234,6 +238,7 @@ const SupplierDetail: React.FC = ({ navigation, route }: any) => {
           text: t('button_delete'), style: 'destructive', onPress: async () => {
             setDeleting(true);
             const result = await deleteSupplier(supplierData.id);
+            dispatch(loadSubscription() as any);
             setDeleting(false);
             if (result.success) {
               Alert.alert(t('success_title'), t('success_supplier_deleted'), [

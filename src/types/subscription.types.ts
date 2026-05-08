@@ -55,6 +55,8 @@ export interface SubscriptionData {
     storage: SubscriptionStorageItem;
     receipts: SubscriptionUsageItem;
     ocr: SubscriptionUsageItem;
+    clients: SubscriptionUsageItem;
+    suppliers: SubscriptionUsageItem;
   } | null;
   features: {
     export_enabled: boolean;
@@ -91,6 +93,8 @@ export const mockSubscription: SubscriptionData = {
     storage:  { used_mb: 0, limit_mb: 10240, remaining_mb: 10240 },
     receipts: { used: 0, limit: null, remaining: -1 },
     ocr:      { used: 0, limit: null, remaining: -1 },
+    clients:  { used: 0, limit: null, remaining: -1 },
+    suppliers: { used: 0, limit: null, remaining: -1 },
   },
   features: {
     export_enabled: true,

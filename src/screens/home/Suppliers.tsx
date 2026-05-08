@@ -22,6 +22,11 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { appLogoIcon } from '../../assets/icons';
 import { useSupplier } from '../../hooks/useSupplier';
+import { useSelector, useDispatch } from 'react-redux';
+import { Linking } from 'react-native';
+import { canUseFeature } from '../../utils/subscriptionHelpers';
+import { loadSubscription } from '../../store/slices/subscriptionSlice';
+import type { AppDispatch } from '../../store';
 import { SupplierPayload } from '../../services/supplierService';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -79,6 +84,9 @@ export const CreateSupplierModal: React.FC<{
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { createSupplier } = useSupplier();
+  const dispatch = useDispatch<AppDispatch>();
+  const subscription = useSelector((state: any) => state.subscription.data);
+  const upgradeUrl = subscription?.upgrade_url;
 
 //   const [companyName, setCompanyName] = useState('');
 //   const [supplierName, setSupplierName] = useState('');
@@ -165,6 +173,13 @@ export const CreateSupplierModal: React.FC<{
 //   };
 
     const onSubmit = async (data: SupplierFormValues) => {
+    if (!canUseFeature(subscription, 'suppliers')) {
+      Alert.alert(t('subscription_limit_title'), t('subscription_limit_suppliers'), [
+        { text: t('button_maybe_later'), style: 'cancel' },
+        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+      ]);
+      return;
+    }
     setSaving(true);
     try {
     const payload: SupplierPayload = {
@@ -178,6 +193,7 @@ export const CreateSupplierModal: React.FC<{
       ice: data.ice ?? '',
     };
     await createSupplier(payload);
+      dispatch(loadSubscription() as any);
       Alert.alert(t('success_title'), t('success_supplier_created'));
       onCreated();
       onClose();
