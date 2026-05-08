@@ -105,6 +105,13 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
   const [editingItem, setEditingItem] = useState<InvoiceItem | null>(null);
   const [exporting, setExporting] = useState(false);
   const [activeTab, setActiveTab] = useState<QuoteTabType>('all');
+
+  useEffect(() => {
+    if (route.params?.defaultTab) {
+      setActiveTab(route.params.defaultTab as QuoteTabType);
+      navigation.setParams({ defaultTab: undefined } as any);
+    }
+  }, [route.params?.defaultTab]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
