@@ -12,7 +12,8 @@ import {
   Alert,
   ActivityIndicator,
   Share,
-  Linking
+  Linking,
+  Animated,
 } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { useForm, Controller } from 'react-hook-form';
@@ -35,6 +36,7 @@ import {
   Plus,
   AlertTriangle,
   CheckCircle2,
+  ScanLine,
 } from 'lucide-react-native';
 
 import { useSupplier } from '../../hooks/useSupplier';
@@ -187,6 +189,8 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   const [ocrSuggestion, setOcrSuggestion] = useState<OcrSuggestion | null>(null);
   const [ocrRaw, setOcrRaw] = useState<any>(null);
   const [ocrApplied, setOcrApplied] = useState(false);
+  const ocrPulse = useRef(new Animated.Value(1)).current;
+  const ocrScanLine = useRef(new Animated.Value(0)).current;
   const [showSupplierSearch, setShowSupplierSearch] = useState(false);
   const [supplierSearchQuery, setSupplierSearchQuery] = useState('');
   const [supplierSearchResults, setSupplierSearchResults] = useState<Supplier[] | null>(null);
@@ -665,6 +669,29 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   }, [visible]);
 
   useEffect(() => {
+    if (!ocrLoading) {
+      ocrPulse.setValue(1);
+      ocrScanLine.setValue(0);
+      return;
+    }
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(ocrPulse, { toValue: 0.5, duration: 700, useNativeDriver: true }),
+        Animated.timing(ocrPulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+      ])
+    );
+    const scan = Animated.loop(
+      Animated.sequence([
+        Animated.timing(ocrScanLine, { toValue: 1, duration: 1400, useNativeDriver: true }),
+        Animated.timing(ocrScanLine, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ])
+    );
+    pulse.start();
+    scan.start();
+    return () => { pulse.stop(); scan.stop(); };
+  }, [ocrLoading]);
+
+  useEffect(() => {
     if (supplierSearchTimer.current) clearTimeout(supplierSearchTimer.current);
     if (!supplierSearchQuery.trim()) {
       setSupplierSearchResults(null);
@@ -955,15 +982,36 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
           <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
             <View style={styles.formCard}>
               {ocrLoading && (
-                <View style={{ padding: 12, marginBottom: 12, borderRadius: 10, backgroundColor: '#EFF6FF' }}>
-                  <Text style={{ color: '#1E5BAC', fontWeight: '600', textAlign: 'center' }}>
-                    {t('ocr_loading')}
-                  </Text>
+                <View style={styles.ocrLoadingCard}>
+                  <Animated.View style={[styles.ocrIconWrap, { opacity: ocrPulse }]}>
+                    <ScanLine size={32} color="#1E5BAC" strokeWidth={1.8} />
+                  </Animated.View>
+
+                  <View style={styles.ocrScanTrack}>
+                    <Animated.View
+                      style={[
+                        styles.ocrScanBeam,
+                        {
+                          transform: [{
+                            translateX: ocrScanLine.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [-120, 120],
+                            }),
+                          }],
+                        },
+                      ]}
+                    />
+                  </View>
+
+                  <Text style={styles.ocrTitle}>{t('ocr_loading_title')}</Text>
+                  <Text style={styles.ocrSubtitle}>{t('ocr_loading_subtitle')}</Text>
+
+                  <ActivityIndicator size="small" color="#1E5BAC" style={{ marginTop: 8 }} />
                 </View>
               )}
 
               {ocrSuggestion && (
-                <View style={{ padding: 12, marginBottom: 12, borderRadius: 12, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E5E7EB' }}>
+                <View style={[{ padding: 12, marginBottom: 12, borderRadius: 12, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E5E7EB' }, ocrLoading && { opacity: 0.4 }]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                     {ocrSuggestion.duplicateWarning ? (
                       <AlertTriangle size={18} color="#DC2626" />

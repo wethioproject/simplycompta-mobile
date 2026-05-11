@@ -805,6 +805,8 @@
   "expense_cat_salaires": "Salaires",
   "expense_cat_transport": "Transport",
   "ocr_loading": "Extraction OCR en cours...",
+  "ocr_loading_title": "Scan en cours...",
+  "ocr_loading_subtitle": "Extraction des données par IA",
   "ocr_data_detected": "Données OCR détectées",
   "ocr_apply": "Appliquer les données OCR",
   "ocr_success_title": "OCR",
