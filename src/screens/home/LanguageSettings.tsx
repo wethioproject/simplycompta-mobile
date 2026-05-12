@@ -14,6 +14,7 @@ import { appLogoIcon } from '../../assets/icons';
 const LANGUAGES = [
   { code: 'fr', label: 'Français', nativeLabel: 'French', flag: '🇫🇷' },
   { code: 'en', label: 'English', nativeLabel: 'Anglais', flag: '🇬🇧' },
+  { code: 'ar', label: 'العربية', nativeLabel: 'Arabe', flag: '🇲🇦' },
 ];
 
 const LanguageSettings: React.FC = ({ navigation }: any) => {
