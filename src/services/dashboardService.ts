@@ -52,6 +52,7 @@ export interface ActivityStats {
     unreadDocumentsCount: number;
     total_progress_score: number;
     hasStatement: boolean;
+    hasLastMonthStatement: boolean;
     is_enable_login: 0 | 1;
     whatsapp_bot_enabled: boolean;
 }

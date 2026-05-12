@@ -185,6 +185,7 @@ const TasksSection: React.FC<{
     unreadDocumentsCount: number;
     unpaidInvoiceSum: number;
     hasStatement: boolean;
+    hasLastMonthStatement: boolean;
     expiredInvoicesCount: number;
     expiredInvoiceSum: number;
   };
@@ -212,7 +213,7 @@ const TasksSection: React.FC<{
 
     <View style={styles.tasksCard}>
       {/* Task 1: Send bank statement */}
-      {stats.hasStatement && (
+      {!stats.hasLastMonthStatement && (
       <View style={styles.taskRow}>
         <View style={[styles.taskIcon, { backgroundColor: '#F0FDF4' }]}>
           <Building2 size={20} color="#16A34A" />
@@ -236,7 +237,7 @@ const TasksSection: React.FC<{
       </View>
       )}
 
-      {stats.hasStatement && <View style={styles.taskDivider} />}
+      {!stats.hasLastMonthStatement && <View style={styles.taskDivider} />}
 
       {/* Task 2: Unpaid invoices */}
       {showUnpaidTask && (
@@ -499,6 +500,7 @@ const Home: React.FC = () => {
     unreadDocumentsCount: 0,
     total_progress_score: 0,
     hasStatement: false,
+    hasLastMonthStatement: false,
     whatsapp_bot_enabled: false,
   });
 
@@ -580,6 +582,7 @@ const Home: React.FC = () => {
           unreadDocumentsCount: res.data.unreadDocumentsCount ?? 0,
           total_progress_score: res.data.total_progress_score ?? 0,
           hasStatement: res.data.hasStatement ?? false,
+          hasLastMonthStatement: res.data.hasLastMonthStatement ?? false,
           sentQuotesCount: res.data.sentQuotesCount ?? 0,
           sentQuoteSum: res.data.sentQuoteSum ?? 0,
           expiredInvoiceSum: res.data.expiredInvoiceSum ?? 0,
