@@ -192,7 +192,11 @@ export const CreateSupplierModal: React.FC<{
       commercial_register: data.commercialRegister ?? '',
       ice: data.ice ?? '',
     };
-    await createSupplier(payload);
+    const res = await createSupplier(payload);
+    if (!res.success) {
+      Alert.alert(t('error_title'), res.error ?? t('error_create_supplier'));
+      return;
+    }
       dispatch(loadSubscription() as any);
       Alert.alert(t('success_title'), t('success_supplier_created'));
       onCreated();
