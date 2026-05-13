@@ -1,0 +1,104 @@
+import api from '../api';
+import { Api_Endpoints } from './endpoints';
+
+class ProductService {
+
+    async getCustomerProducts(params?: { like?: string }) {
+        try {
+            const response = await api.get(Api_Endpoints.customerProducts, { params });
+            return response.data;
+        } catch (error) {
+            console.error('Customer products fetch error:', error);
+            throw error;
+        }
+    }
+
+    async getCustomerProduct(id: number) {
+        try {
+            const response = await api.get(`${Api_Endpoints.customerProduct}/${id}`)
+            return response.data;
+        } catch (error: any) {
+            console.error('Customer product fetch error:', error.response?.data || error.message);
+            throw error;
+        }
+    }
+
+    async createCustomerProduct(payload: any): Promise<any> {
+        try {
+            const body: any = {
+                customer_id: String(payload.customer_id),
+                designation: payload.designation,
+                description: payload.description,
+                reference: payload.reference,
+                type: payload.type,
+                unit_price_ht: String(payload.unit_price_ht),
+                tva_percentage: String(payload.tva_percentage),
+                quantity: String(payload.quantity),
+                total_price_ht: String(payload.total_price_ht),
+            };
+            if (payload.category_id != null) body.category_id = String(payload.category_id);
+            if (payload.unit_id != null) body.unit_id = String(payload.unit_id);
+
+            const response = await api.post(
+                Api_Endpoints.customerProduct,
+                body
+            );
+
+            return response.data;
+        } catch (error: any) {
+            console.error(
+                'Create Customer product error:',
+                error.response?.data || error.message
+            );
+            throw error;
+        }
+    }
+
+
+    async updateCustomerProduct(id: number, payload: any): Promise<any> {
+        try {
+            const body: any = {
+                customer_id: String(payload.customer_id),
+                designation: payload.designation,
+                description: payload.description,
+                reference: payload.reference,
+                type: payload.type,
+                unit_price_ht: String(payload.unit_price_ht),
+                tva_percentage: String(payload.tva_percentage),
+                quantity: String(payload.quantity),
+                total_price_ht: String(payload.total_price_ht),
+            };
+            if (payload.category_id != null) body.category_id = String(payload.category_id);
+            if (payload.unit_id != null) body.unit_id = String(payload.unit_id);
+
+            const response = await api.put(
+                `${Api_Endpoints.customerProduct}/${id}`,
+                body
+            );
+
+            return response.data;
+        } catch (error: any) {
+            console.error(
+                'Update Customer Product error:',
+                error.response?.data || error.message
+            );
+            throw error;
+        }
+    }
+
+    async deleteCustomerProduct(id: number) {
+        try {
+            const response = await api.delete(`${Api_Endpoints.customerProduct}/${id}`)
+            return response.data;
+        } catch (error: any) {
+            console.error('Customer Product delete error:', error.response?.data || error.message);
+            throw error;
+        }
+    }
+
+}
+
+
+const productService = new ProductService();
+export default productService;
+
