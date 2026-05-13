@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import authService, { LoginCredentials, RegisterPayload } from '../services/authService';
 import { loginSuccess, loginFailure, logout as logoutAction, setLoading } from '../store/slices/userSlice';
+import { resetOnboardingSession } from '../store/slices/onboardingSlice';
 import { RootState } from '../store';
 
 
@@ -80,6 +81,7 @@ export const useAuth = () => {
     try {
       dispatch(setLoading(true));
       const response = await authService.register(payload);
+      dispatch(resetOnboardingSession());
       dispatch(loginSuccess({
         customer: response.customer,
         token: response.token,
@@ -98,10 +100,12 @@ export const useAuth = () => {
   const logout = useCallback(async () => {
     try {
       await authService.logout();
+      dispatch(resetOnboardingSession());
       dispatch(logoutAction());
     } catch (error) {
       console.error('Logout error:', error);
       // Still logout locally even if API fails
+      dispatch(resetOnboardingSession());
       dispatch(logoutAction());
     }
   }, [dispatch]);

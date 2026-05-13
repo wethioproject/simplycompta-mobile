@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import { loadSubscription } from '../../store/slices/subscriptionSlice';
 import { setIsEnableLogin } from '../../store/slices/appSlice';
+import { fetchChecklist } from '../../store/slices/onboardingSlice';
 import {
   Bell,
   FileText,
@@ -613,6 +614,7 @@ const Home: React.FC = () => {
     useCallback(() => {
       checkUnread();
       pollIntervalRef.current = setInterval(checkUnread, 30_000);
+      dispatch(fetchChecklist() as any);
       return () => {
         if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       };

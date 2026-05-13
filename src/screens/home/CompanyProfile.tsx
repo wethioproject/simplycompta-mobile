@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,9 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useDispatch } from 'react-redux';
+import { useRoute } from '@react-navigation/native';
+import { fetchChecklist } from '../../store/slices/onboardingSlice';
 import { Save, Building2, Upload, ChevronDown, X, ImageIcon, PenLine, Camera, ArrowLeft, Palette, Check, Copy } from 'lucide-react-native';
 import { appLogoIcon } from '../../assets/icons';
 import api from '../../api';
@@ -40,6 +43,9 @@ const PREDEFINED_COLORS = [
 const CompanyProfile: React.FC = ({ navigation }: any) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const dispatch = useDispatch();
+  const route = useRoute<any>();
+  const fromChecklistRef = useRef(!!route.params?.fromChecklist);
   const [billingName, setBillingName] = useState('');
   const [siret, setSiret] = useState('');
   const [vatNumber, setVatNumber] = useState('');
@@ -186,7 +192,17 @@ const CompanyProfile: React.FC = ({ navigation }: any) => {
       await api.post(Api_Endpoints.customerProfile, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      Alert.alert(t('success_title'), t('success_company_updated'));
+      Alert.alert(t('success_title'), t('success_company_updated'), [
+        {
+          text: 'OK',
+          onPress: () => {
+            if (fromChecklistRef.current) {
+              dispatch(fetchChecklist() as any);
+              navigation.navigate('Home');
+            }
+          },
+        },
+      ]);
     } catch (e: any) {
       const msg = e?.response?.data?.message ?? t('error_company_update');
       Alert.alert(t('error_title'), msg);

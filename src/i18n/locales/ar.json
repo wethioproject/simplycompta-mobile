@@ -993,5 +993,24 @@
   "label_devis_envoyes": "العروض المرسلة",
   "badge_sent": "مرسل",
   "badge_expired": "منتهية",
-  "todo_expired_invoices": "{{count}} فاتورة منتهية الصلاحية"
+  "todo_expired_invoices": "{{count}} فاتورة منتهية الصلاحية",
+
+  "checklist_header_title": "🚀 أكمل إعداد حسابك",
+  "checklist_header_subtitle": "دقيقتان فقط لإتمام إعداد حسابك.",
+  "checklist_progress_label": "{{completed}}/{{total}} خطوات مكتملة",
+  "checklist_footer_hint": "{{count}} خطوات متبقية للاستفادة الكاملة من التطبيق.",
+  "checklist_cta_continue": "متابعة الإعداد",
+  "checklist_cta_later": "لاحقاً",
+  "checklist_badge_completed": "مكتمل",
+
+  "checklist_company_title": "إعداد شركتي",
+  "checklist_company_subtitle": "ICE، IF، العنوان، الشعار",
+  "checklist_client_title": "إضافة أول عميل",
+  "checklist_client_subtitle": "الاسم، ICE، بيانات الاتصال",
+  "checklist_invoice_title": "إنشاء أول فاتورة",
+  "checklist_invoice_subtitle": "الترقيم الرسمي مفعّل",
+  "checklist_supplier_title": "إضافة مورد",
+  "checklist_supplier_subtitle": "إدارة الموردين والمصاريف",
+  "checklist_expense_title": "إنشاء أول مصروف",
+  "checklist_expense_subtitle": "تتبع مصاريفك المهنية"
 }

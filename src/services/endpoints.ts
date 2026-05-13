@@ -45,4 +45,5 @@ export const Api_Endpoints = {
   customerRevenues: 'customer/customer-revenues',
   customerRevenue: 'customer/customer-revenue',
   getSubscriptionStatus: 'customer/get-subscription-status',
+  onboardingChecklist: 'customer/onboarding-checklist',
 }

@@ -25,8 +25,10 @@ import {
   CheckCircle2,
 } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { useDispatch } from 'react-redux';
+import { fetchChecklist } from '../../store/slices/onboardingSlice';
 
 import { appLogoIcon } from '../../assets/icons';
 import { ClientItem } from '../../types/client.types';
@@ -55,7 +57,9 @@ const getInitials = (name: string): string => {
 const Contacts: React.FC = ({ navigation: navProp }: any) => {
   const navigation = useNavigation<StackNavigation>();
   const nav = navProp ?? navigation;
+  const route = useRoute<any>();
   const { t } = useTranslation();
+  const dispatch = useDispatch();
   const { getSuppliers } = useSupplier();
 
 
@@ -106,6 +110,24 @@ const Contacts: React.FC = ({ navigation: navProp }: any) => {
     fetchClients();
     fetchSuppliers();
   }, []);
+
+  // Auto-open create modal when navigated from onboarding checklist
+  const fromChecklistRef = useRef(false);
+  useEffect(() => {
+    if (!route.params?.autoOpen) return;
+    fromChecklistRef.current = true;
+    if (route.params?.tab === 'suppliers') {
+      setActiveTab('suppliers');
+      setSuppliersLoading(false);
+      setShowCreateSupplierModal(true);
+    } else {
+      setActiveTab('clients');
+      setClientsLoading(false);
+      setShowCreateClientModal(true);
+    }
+    // Clear params so re-visiting the screen doesn't re-trigger
+    navigation.setParams({ autoOpen: undefined, tab: undefined } as any);
+  }, [route.params?.autoOpen, route.params?.tab]);
 
   useFocusEffect(
     useCallback(() => {
@@ -470,12 +492,26 @@ const Contacts: React.FC = ({ navigation: navProp }: any) => {
       <CreateClientModal
         visible={showCreateClientModal}
         onClose={() => setShowCreateClientModal(false)}
-        onCreated={async () => { await fetchClients(); }}
+        onCreated={async () => {
+          await fetchClients();
+          if (fromChecklistRef.current) {
+            fromChecklistRef.current = false;
+            dispatch(fetchChecklist() as any);
+            navigation.navigate('Home' as any);
+          }
+        }}
       />
       <CreateSupplierModal
         visible={showCreateSupplierModal}
         onClose={() => setShowCreateSupplierModal(false)}
-        onCreated={() => fetchSuppliers()}
+        onCreated={async () => {
+          fetchSuppliers();
+          if (fromChecklistRef.current) {
+            fromChecklistRef.current = false;
+            dispatch(fetchChecklist() as any);
+            navigation.navigate('Home' as any);
+          }
+        }}
       />
     </SafeAreaView>
   );

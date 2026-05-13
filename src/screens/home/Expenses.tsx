@@ -15,6 +15,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { fetchChecklist } from '../../store/slices/onboardingSlice';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Plus, AlertTriangle } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
@@ -137,8 +138,11 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
     fetchData(getFilterParams());
   }, [selectedMonth, selectedYear]);
 
+  const fromChecklistRef = useRef(false);
+
   useEffect(() => {
     if (!loading && route.params?.openCreateModal) {
+      fromChecklistRef.current = true;
       setDefaultSupplierId(route.params?.defaultSupplierId ?? undefined);
       setShowCreateModal(true);
       navigation.setParams({ openCreateModal: undefined, defaultSupplierId: undefined } as any);
@@ -322,7 +326,14 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
         suppliers={suppliers}
         onSave={createExpense}
         onClose={() => { setShowCreateModal(false); setDefaultSupplierId(undefined); }}
-        onCreated={fetchData}
+        onCreated={async () => {
+          await fetchData();
+          if (fromChecklistRef.current) {
+            fromChecklistRef.current = false;
+            dispatch(fetchChecklist() as any);
+            navigation.navigate('Home' as any);
+          }
+        }}
         onSuppliersRefresh={refreshSuppliers}
         defaultSupplierId={defaultSupplierId}
       />

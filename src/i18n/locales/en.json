@@ -993,5 +993,24 @@
   "label_devis_envoyes": "Sent quotes",
   "badge_sent": "Sent",
   "badge_expired": "Expired",
-  "todo_expired_invoices": "{{count}} expired invoice(s)"
+  "todo_expired_invoices": "{{count}} expired invoice(s)",
+
+  "checklist_header_title": "🚀 Complete your setup",
+  "checklist_header_subtitle": "Just 2 minutes to finish configuring your account.",
+  "checklist_progress_label": "{{completed}}/{{total}} steps completed",
+  "checklist_footer_hint": "{{count}} steps remaining to get the most out of the app.",
+  "checklist_cta_continue": "Continue setup",
+  "checklist_cta_later": "Later",
+  "checklist_badge_completed": "Done",
+
+  "checklist_company_title": "Set up my company",
+  "checklist_company_subtitle": "ICE, IF, address, logo",
+  "checklist_client_title": "Add my first client",
+  "checklist_client_subtitle": "Name, ICE, contact details",
+  "checklist_invoice_title": "Create my first invoice",
+  "checklist_invoice_subtitle": "Official numbering enabled",
+  "checklist_supplier_title": "Add a supplier",
+  "checklist_supplier_subtitle": "Manage your suppliers and expenses",
+  "checklist_expense_title": "Create my first expense",
+  "checklist_expense_subtitle": "Track your business expenses"
 }

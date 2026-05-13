@@ -3,6 +3,7 @@ import { StatusBar } from 'react-native';
 import './i18n/i18n';
 import AppNavigator from './navigation';
 import RestrictedAccessModal from './components/RestrictedAccessModal';
+import OnboardingChecklistModal from './components/onboarding/OnboardingChecklistModal';
 
 const App = () => {
   return (
@@ -14,6 +15,7 @@ const App = () => {
       />
       <AppNavigator />
       <RestrictedAccessModal />
+      <OnboardingChecklistModal />
     </>
   );
 };

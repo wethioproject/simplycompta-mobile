@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -32,6 +32,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import { useInvoice } from '../../hooks/useInvoice';
 import { canUseFeature } from '../../utils/subscriptionHelpers';
 import { loadSubscription } from '../../store/slices/subscriptionSlice';
+import { fetchChecklist } from '../../store/slices/onboardingSlice';
 import type { AppDispatch } from '../../store';
 import { useInvoiceList } from '../../hooks/useInvoiceList';
 import CreateInvoiceModal from '../../components/invoice/CreateInvoiceModal';
@@ -239,8 +240,11 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
     Alert.alert(t('invoice_relancer_tout'), t('error_generic'));
   };
 
+  const fromChecklistRef = useRef(false);
+
   useEffect(() => {
     if (!loading && route.params?.openCreateModal) {
+      fromChecklistRef.current = true;
       setDefaultClientId(route.params?.defaultClientId ?? undefined);
       setShowCreateModal(true);
     }
@@ -521,7 +525,14 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
         accounts={accounts}
         clients={clients}
         customerId={user?.id ?? 0}
-        onCreated={() => fetchInvoices(getFilterParams())}
+        onCreated={() => {
+          fetchInvoices(getFilterParams());
+          if (fromChecklistRef.current) {
+            fromChecklistRef.current = false;
+            dispatch(fetchChecklist() as any);
+            navigation.navigate('Home' as any);
+          }
+        }}
         onSave={createInvoice}
         onClientsRefresh={refreshClients}
         defaultClientId={defaultClientId}

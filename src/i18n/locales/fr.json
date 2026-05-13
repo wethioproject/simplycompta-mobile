@@ -993,5 +993,24 @@
   "label_devis_envoyes": "Devis envoyés",
   "badge_sent": "Envoyé",
   "badge_expired": "Expirée",
-  "todo_expired_invoices": "{{count}} facture(s) expirée(s)"
+  "todo_expired_invoices": "{{count}} facture(s) expirée(s)",
+
+  "checklist_header_title": "🚀 Finalisez votre espace",
+  "checklist_header_subtitle": "Encore 2 minutes pour configurer votre compte.",
+  "checklist_progress_label": "{{completed}}/{{total}} étapes complétées",
+  "checklist_footer_hint": "{{count}} étapes restantes pour profiter pleinement de l'application.",
+  "checklist_cta_continue": "Continuer la configuration",
+  "checklist_cta_later": "Plus tard",
+  "checklist_badge_completed": "Complété",
+
+  "checklist_company_title": "Configurer mon entreprise",
+  "checklist_company_subtitle": "ICE, IF, adresse, logo",
+  "checklist_client_title": "Ajouter mon premier client",
+  "checklist_client_subtitle": "Nom, ICE, coordonnées",
+  "checklist_invoice_title": "Créer ma première facture",
+  "checklist_invoice_subtitle": "Numérotation officielle activée",
+  "checklist_supplier_title": "Ajouter fournisseur",
+  "checklist_supplier_subtitle": "Gérer vos fournisseurs et dépenses",
+  "checklist_expense_title": "Créer ma première dépense",
+  "checklist_expense_subtitle": "Suivez vos dépenses professionnelles"
 }
