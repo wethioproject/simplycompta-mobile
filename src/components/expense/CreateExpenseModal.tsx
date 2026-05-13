@@ -71,7 +71,7 @@ const expenseSchema = yup.object({
     .typeError('Category is required')
     .required('Category is required')
     .positive('Category is required'),
-  supplierId: yup.number().nullable().optional(),
+  supplierId: yup.number().typeError('Supplier is required').required('Supplier is required').positive('Supplier is required'),
   expenseReference: yup.string().nullable().optional(),
   description: yup.string().nullable().optional(),
 });
@@ -215,7 +215,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
       amountTVA: '',
       accountId: undefined,
       categoryId: undefined,
-      supplierId: null,
+      supplierId: undefined,
       expenseReference: '',
       description: '',
     },
@@ -644,7 +644,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
         amountTVA: editItem.tva,
         accountId: editItem.payment_method ?? undefined,
         categoryId: cat?.id ?? undefined,
-        supplierId: sup?.id ?? null,
+        supplierId: sup?.id ?? undefined,
         expenseReference: (editItem as any).reference ?? (editItem as any).expense_reference ?? '',
         description: (editItem as any).description ?? (editItem as any).notes ?? '',
       } as any);
@@ -663,7 +663,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
         amountTVA: '',
         accountId: undefined,
         categoryId: undefined,
-        supplierId: defaultSupplierId ?? null,
+        supplierId: defaultSupplierId ?? undefined,
         expenseReference: '',
         description: '',
       } as any);
@@ -1251,9 +1251,9 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
               </View>
 
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>{t('label_supplier')}</Text>
+                <Text style={styles.fieldLabel}>{t('label_supplier')} <Text style={styles.required}>*</Text></Text>
                 <TouchableOpacity
-                  style={styles.pickerRow}
+                  style={[styles.pickerRow, errors.supplierId && styles.fieldInputError]}
                   onPress={() => setShowSupplierPicker(true)}
                   activeOpacity={0.7}
                 >
@@ -1262,6 +1262,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                   </Text>
                   <ChevronDown size={18} color="#1E5BAC" />
                 </TouchableOpacity>
+                {errors.supplierId && <Text style={styles.fieldError}>{errors.supplierId.message}</Text>}
               </View>
 
               <View style={styles.totalsBlock}>
