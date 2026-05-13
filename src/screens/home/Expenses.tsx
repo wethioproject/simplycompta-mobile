@@ -36,6 +36,7 @@ import CreateExpenseModal from '../../components/expense/CreateExpenseModal';
 
 import type { ExpenseItem, Account, Supplier } from '../../types/expense.types';
 import { styles } from '../../styles/expenses.styles';
+import { useUpgradeWebView } from '../../utils/upgradeWebView';
 
 type StackNavigation = StackNavigationProp<any>;
 
@@ -48,6 +49,7 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
   const subscription = useSelector((state: any) => state.subscription.data);
   const upgradeUrl = subscription?.upgrade_url;
   const dispatch = useDispatch<AppDispatch>();
+  const { openUpgradeWebView, upgradeWebViewElement } = useUpgradeWebView();
 
   const {
     getExpenses,
@@ -188,7 +190,7 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
     if (!canUseFeature(subscription, 'export_enabled')) {
       Alert.alert(t('subscription_limit_title'), t('subscription_limit_export'), [
         { text: t('button_maybe_later'), style: 'cancel' },
-        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+        { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
       ]);
       return;
     }
@@ -352,6 +354,7 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
           onEdit={() => handleEditExpense(selectedItem)}
         />
       )}
+          {upgradeWebViewElement}
     </SafeAreaView>
   );
 };

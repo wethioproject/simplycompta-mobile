@@ -48,6 +48,7 @@ import { CreateSupplierModal } from '../../screens/home/Suppliers';
 import type { Account, Category, Supplier, ExpenseItem, ExpenseFormValues } from '../../types/expense.types';
 import { PAYMENT_METHODS } from '../../types/invoice.types';
 import { styles } from '../../styles/expenses.styles';
+import { useUpgradeWebView } from '../../utils/upgradeWebView';
 
 const OCR_API_URL = 'https://ocr.simply-compta.com/api/expenses/ocr';
 
@@ -166,6 +167,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   const { t, i18n } = useTranslation();
   const { getSuppliers } = useSupplier();
   const dispatch = useDispatch<AppDispatch>();
+  const { openUpgradeWebView, upgradeWebViewElement } = useUpgradeWebView(onClose);
   const subscription = useSelector((state: any) => state.subscription.data);
   const storageExhausted = (subscription?.usage?.storage?.remaining_mb ?? 1) <= 0;
   const upgradeUrl = subscription?.upgrade_url;
@@ -765,7 +767,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
     if (storageExhausted) {
       Alert.alert(t('error_title'), t('error_storage_full'), [
         { text: t('button_maybe_later'), style: 'cancel' },
-        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+        { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
       ]);
       return;
     }
@@ -779,7 +781,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
       if (file.size && file.size > remainingBytes) {
         Alert.alert(t('error_title'), t('error_file_exceeds_storage'), [
           { text: t('button_maybe_later'), style: 'cancel' },
-          { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+          { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
         ]);
         return;
       }
@@ -798,7 +800,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
     if (storageExhausted) {
       Alert.alert(t('error_title'), t('error_storage_full'), [
         { text: t('button_maybe_later'), style: 'cancel' },
-        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+        { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
       ]);
       return;
     }
@@ -812,7 +814,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
       if (file.size && file.size > remainingBytes) {
         Alert.alert(t('error_title'), t('error_file_exceeds_storage'), [
           { text: t('button_maybe_later'), style: 'cancel' },
-          { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+          { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
         ]);
         return;
       }
@@ -831,7 +833,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
     if (storageExhausted) {
       Alert.alert(t('error_title'), t('error_storage_full'), [
         { text: t('button_maybe_later'), style: 'cancel' },
-        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+        { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
       ]);
       return;
     }
@@ -893,7 +895,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
     if (!editItem && !canUseFeature(subscription, 'expenses')) {
       Alert.alert(t('subscription_limit_title'), t('subscription_limit_expenses'), [
         { text: t('button_maybe_later'), style: 'cancel' },
-        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+        { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
       ]);
       return;
     }
@@ -1477,6 +1479,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
           }}
         />
       </View>
+          {upgradeWebViewElement}
     </Modal>
   );
 };

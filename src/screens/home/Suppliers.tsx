@@ -31,6 +31,7 @@ import { SupplierPayload } from '../../services/supplierService';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
+import { useUpgradeWebView } from '../../utils/upgradeWebView';
 
 type StackNavigation = StackNavigationProp<any>;
 
@@ -85,6 +86,7 @@ export const CreateSupplierModal: React.FC<{
   const { t } = useTranslation();
   const { createSupplier } = useSupplier();
   const dispatch = useDispatch<AppDispatch>();
+  const { openUpgradeWebView, upgradeWebViewElement } = useUpgradeWebView();
   const subscription = useSelector((state: any) => state.subscription.data);
   const upgradeUrl = subscription?.upgrade_url;
 
@@ -176,7 +178,7 @@ export const CreateSupplierModal: React.FC<{
     if (!canUseFeature(subscription, 'suppliers')) {
       Alert.alert(t('subscription_limit_title'), t('subscription_limit_suppliers'), [
         { text: t('button_maybe_later'), style: 'cancel' },
-        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+        { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
       ]);
       return;
     }
@@ -400,6 +402,7 @@ export const CreateSupplierModal: React.FC<{
           </ScrollView>
         </KeyboardAvoidingView>
       </View>
+          {upgradeWebViewElement}
     </Modal>
   );
 };

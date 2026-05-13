@@ -21,6 +21,7 @@ import {
 } from 'lucide-react-native';
 import { appLogoIcon } from '../../assets/icons';
 import UsageCard from '../../components/common/UsageCard';
+import { useUpgradeWebView } from '../../utils/upgradeWebView';
 
 const USAGE_ITEMS = [
   { key: 'invoices', labelKey: 'usage_label_invoices', isStorage: false },
@@ -34,6 +35,7 @@ const USAGE_ITEMS = [
 const MyPlan: React.FC = ({ navigation }: any) => {
   const { t, i18n } = useTranslation();
   const subscription = useSelector((state: any) => state.subscription.data);
+  const { openUpgradeWebView, upgradeWebViewElement } = useUpgradeWebView();
 
   const plan = subscription?.plan;
   const usage = subscription?.usage;
@@ -163,7 +165,7 @@ const MyPlan: React.FC = ({ navigation }: any) => {
         {upgradeUrl && (
           <TouchableOpacity
             style={styles.upgradeBtn}
-            onPress={() => Linking.openURL(upgradeUrl)}
+            onPress={() => openUpgradeWebView(upgradeUrl)}
             activeOpacity={0.85}
           >
             <ExternalLink size={18} color="#FFFFFF" />
@@ -173,6 +175,7 @@ const MyPlan: React.FC = ({ navigation }: any) => {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+          {upgradeWebViewElement}
     </SafeAreaView>
   );
 };

@@ -24,6 +24,7 @@ import { Linking } from 'react-native';
 import { canUseFeature } from '../../utils/subscriptionHelpers';
 import { loadSubscription } from '../../store/slices/subscriptionSlice';
 import type { AppDispatch } from '../../store';
+import { useUpgradeWebView } from '../../utils/upgradeWebView';
 
 interface CreateClientModalProps {
   visible: boolean;
@@ -39,6 +40,7 @@ export const CreateClientModal: React.FC<CreateClientModalProps> = ({
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
+  const { openUpgradeWebView, upgradeWebViewElement } = useUpgradeWebView(onClose);
   const subscription = useSelector((state: any) => state.subscription.data);
   const upgradeUrl = subscription?.upgrade_url;
   const [saving, setSaving] = useState(false);
@@ -80,7 +82,7 @@ export const CreateClientModal: React.FC<CreateClientModalProps> = ({
     if (!canUseFeature(subscription, 'clients')) {
       Alert.alert(t('subscription_limit_title'), t('subscription_limit_clients'), [
         { text: t('button_maybe_later'), style: 'cancel' },
-        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+        { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
       ]);
       return;
     }

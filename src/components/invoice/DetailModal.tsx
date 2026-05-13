@@ -34,6 +34,7 @@ import { loadSubscription } from '../../store/slices/subscriptionSlice';
 import { invoiceStyles as styles } from '../../styles/invoice.styles';
 import type { InvoiceItem } from '../../types/invoice.types';
 import { STATUT_OPTIONS_DETAIL_MODAL, resolvePaymentMethod, resolveStatus } from '../../types/invoice.types';
+import { useUpgradeWebView } from '../../utils/upgradeWebView';
 
 interface DetailModalProps {
   item: InvoiceItem;
@@ -53,6 +54,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
   const { t, i18n } = useTranslation();
   const token = useSelector((state: any) => state.user.token);
   const dispatch = useDispatch<AppDispatch>();
+  const { openUpgradeWebView, upgradeWebViewElement } = useUpgradeWebView(onClose);
   const subscription = useSelector((state: any) => state.subscription.data);
   const upgradeUrl = subscription?.upgrade_url;
   const { getPdfDownloadUrl, duplicateInvoice, getInvoice, updateInvoiceStatus } = useInvoice();
@@ -308,7 +310,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
                 if (!canUseFeature(subscription, 'invoices')) {
                   Alert.alert(t('subscription_limit_title'), t('subscription_limit_invoices'), [
                     { text: t('button_maybe_later'), style: 'cancel' },
-                    { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+                    { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
                   ]);
                   return;
                 }
@@ -534,6 +536,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
           </TouchableOpacity>
         </Modal>
       </SafeAreaView>
+          {upgradeWebViewElement}
     </Modal>
   );
 };

@@ -20,6 +20,7 @@ import { canUseFeature } from '../../utils/subscriptionHelpers';
 import { ArrowLeft, MessageCircle, Phone, CheckCircle2, PhoneOff, RefreshCw } from 'lucide-react-native';
 import api from '../../api';
 import { Api_Endpoints } from '../../services/endpoints';
+import { useUpgradeWebView } from '../../utils/upgradeWebView';
 
 interface BotStatus {
   bot_active: 0 | 1;
@@ -31,6 +32,7 @@ const WhatsAppBot: React.FC = () => {
   const navigation = useNavigation<any>();
   const { t } = useTranslation();
   const subscription = useSelector((state: any) => state.subscription.data);
+  const { openUpgradeWebView, upgradeWebViewElement } = useUpgradeWebView();
   const upgradeUrl = subscription?.upgrade_url;
 
 
@@ -66,7 +68,7 @@ const WhatsAppBot: React.FC = () => {
     if (!canUseFeature(subscription, 'whatsapp_bot_enabled')) {
       Alert.alert(t('subscription_limit_title'), t('subscription_limit_whatsapp'), [
         { text: t('button_maybe_later'), style: 'cancel' },
-        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+        { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
       ]);
       return;
     }
@@ -303,6 +305,7 @@ const WhatsAppBot: React.FC = () => {
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
+          {upgradeWebViewElement}
     </SafeAreaView>
   );
 };

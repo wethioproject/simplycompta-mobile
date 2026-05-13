@@ -46,6 +46,7 @@ import ArticleModal from './ArticleModal';
 import { invoiceStyles as styles } from '../../styles/invoice.styles';
 import type { Account, Client, InvoiceArticle, InvoiceItem, Article } from '../../types/invoice.types';
 import { STATUT_OPTIONS, STATUT_OPTIONS_DETAIL_MODAL, PAYMENT_METHODS } from '../../types/invoice.types';
+import { useUpgradeWebView } from '../../utils/upgradeWebView';
 
 const invoiceSchema = yup.object({
   invoiceNumber: yup.string().trim().required('Invoice number is required'),
@@ -114,6 +115,7 @@ const CreateInvoiceModal: React.FC<{
   const insets = useSafeAreaInsets();
   const { getInvoiceResources } = useInvoice();
   const dispatch = useDispatch<AppDispatch>();
+  const { openUpgradeWebView, upgradeWebViewElement } = useUpgradeWebView(onClose);
   const subscription = useSelector((state: any) => state.subscription.data);
 
   // Non-form UI states
@@ -317,7 +319,7 @@ const CreateInvoiceModal: React.FC<{
     if (storageExhausted) {
       Alert.alert(t('error_title'), t('error_storage_full'), [
         { text: t('button_maybe_later'), style: 'cancel' },
-        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+        { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
       ]);
       return;
     }
@@ -331,7 +333,7 @@ const CreateInvoiceModal: React.FC<{
       if (file.size && file.size > remainingBytes) {
         Alert.alert(t('error_title'), t('error_file_exceeds_storage'), [
           { text: t('button_maybe_later'), style: 'cancel' },
-          { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+          { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
         ]);
         return;
       }
@@ -347,7 +349,7 @@ const CreateInvoiceModal: React.FC<{
     if (storageExhausted) {
       Alert.alert(t('error_title'), t('error_storage_full'), [
         { text: t('button_maybe_later'), style: 'cancel' },
-        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+        { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
       ]);
       return;
     }
@@ -365,7 +367,7 @@ const CreateInvoiceModal: React.FC<{
         if (asset.fileSize && asset.fileSize > remainingBytes) {
           Alert.alert(t('error_title'), t('error_file_exceeds_storage'), [
             { text: t('button_maybe_later'), style: 'cancel' },
-            { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+            { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
           ]);
           return;
         }
@@ -413,7 +415,7 @@ const CreateInvoiceModal: React.FC<{
     if (!editItem && !canUseFeature(subscription, 'invoices')) {
       Alert.alert(t('subscription_limit_title'), t('subscription_limit_invoices'), [
         { text: t('button_maybe_later'), style: 'cancel' },
-        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+        { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
       ]);
       return;
     }
@@ -1015,6 +1017,7 @@ const CreateInvoiceModal: React.FC<{
           }}
         />
       </View>
+          {upgradeWebViewElement}
     </Modal>
   );
 };

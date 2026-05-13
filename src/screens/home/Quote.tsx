@@ -43,6 +43,7 @@ import type { Account, Category, Client, StackNavigation } from '../../types/inv
 import type { InvoiceItem } from '../../types/quote.types';
 import { invoiceStyles as styles } from '../../styles/quote.styles';
 import i18n from '../../i18n/i18n';
+import { useUpgradeWebView } from '../../utils/upgradeWebView';
 
 type QuoteTabType = 'all' | 'expired' | 'draft' | 'sent' | 'accepted' | 'rejected';
 const QUOTE_TABS: QuoteTabType[] = ['all', 'expired', 'draft', 'sent', 'accepted', 'rejected'];
@@ -78,6 +79,7 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
   const subscription = useSelector((state: any) => state.subscription.data);
   const upgradeUrl = subscription?.upgrade_url;
   const dispatch = useDispatch<AppDispatch>();
+  const { openUpgradeWebView, upgradeWebViewElement } = useUpgradeWebView();
 
   const {
     quotes,
@@ -211,7 +213,7 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
     if (!canUseFeature(subscription, 'export_enabled')) {
       Alert.alert(t('subscription_limit_title'), t('subscription_limit_export'), [
         { text: t('button_maybe_later'), style: 'cancel' },
-        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+        { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
       ]);
       return;
     }
@@ -243,7 +245,7 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
     if (!canUseFeature(subscription, 'quotes')) {
       Alert.alert(t('subscription_limit_title'), t('subscription_limit_quotes'), [
         { text: t('button_maybe_later'), style: 'cancel' },
-        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+        { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
       ]);
       return;
     }
@@ -609,6 +611,7 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
           onClientsRefresh={refreshClients}
         />
       )}
+          {upgradeWebViewElement}
     </SafeAreaView>
   );
 };

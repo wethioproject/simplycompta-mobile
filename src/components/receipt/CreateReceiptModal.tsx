@@ -29,6 +29,7 @@ import type { ReceiptItem, ReceiptFormData, PaymentMethod } from '../../types/re
 import { PAYMENT_METHODS } from '../../types/receipt.types';
 import { getPaymentMethodLabel } from './ReceiptCard';
 import { receiptStyles as styles } from '../../styles/receipt.styles';
+import { useUpgradeWebView } from '../../utils/upgradeWebView';
 
 interface CreateReceiptModalProps {
   visible: boolean;
@@ -60,6 +61,7 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch<AppDispatch>();
+  const { openUpgradeWebView, upgradeWebViewElement } = useUpgradeWebView(onClose);
   const subscription = useSelector((state: any) => state.subscription.data);
   const storageExhausted = (subscription?.usage?.storage?.remaining_mb ?? 1) <= 0;
   const upgradeUrl = subscription?.upgrade_url;
@@ -138,7 +140,7 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
     if (storageExhausted) {
       Alert.alert(t('error_title'), t('error_storage_full'), [
         { text: t('button_maybe_later'), style: 'cancel' },
-        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+        { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
       ]);
       return;
     }
@@ -152,7 +154,7 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
       if (file.size && file.size > remainingBytes) {
         Alert.alert(t('error_title'), t('error_file_exceeds_storage'), [
           { text: t('button_maybe_later'), style: 'cancel' },
-          { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+          { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
         ]);
         return;
       }
@@ -168,7 +170,7 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
     if (storageExhausted) {
       Alert.alert(t('error_title'), t('error_storage_full'), [
         { text: t('button_maybe_later'), style: 'cancel' },
-        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+        { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
       ]);
       return;
     }
@@ -184,7 +186,7 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
       if (asset.fileSize && asset.fileSize > remainingBytes) {
         Alert.alert(t('error_title'), t('error_file_exceeds_storage'), [
           { text: t('button_maybe_later'), style: 'cancel' },
-          { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+          { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
         ]);
         return;
       }
@@ -215,7 +217,7 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
         if (!editItem && !canUseFeature(subscription, 'receipts')) {
           Alert.alert(t('subscription_limit_title'), t('subscription_limit_receipts'), [
             { text: t('button_maybe_later'), style: 'cancel' },
-            { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+            { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
           ]);
           return;
         }
@@ -486,6 +488,7 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
         )}
 
       </View>
+          {upgradeWebViewElement}
     </Modal>
   );
 };

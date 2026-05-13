@@ -40,6 +40,7 @@ import { loadSubscription } from '../../store/slices/subscriptionSlice';
 import { invoiceStyles as styles } from '../../styles/quote.styles';
 import type { InvoiceItem } from '../../types/quote.types';
 import { STATUT_OPTIONS, resolvePaymentMethod, resolveStatus } from '../../types/quote.types';
+import { useUpgradeWebView } from '../../utils/upgradeWebView';
 
 interface DetailModalProps {
   item: InvoiceItem;
@@ -60,6 +61,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
   const { t, i18n } = useTranslation();
   const token = useSelector((state: any) => state.user.token);
   const dispatch = useDispatch<AppDispatch>();
+  const { openUpgradeWebView, upgradeWebViewElement } = useUpgradeWebView(onClose);
   const {
     fetchQuotes,
     getFilterParams,
@@ -420,7 +422,7 @@ console.log('Initiating document download for quote:102', src);
                 if (!canUseFeature(subscription, 'quotes')) {
                   Alert.alert(t('subscription_limit_title'), t('subscription_limit_quotes'), [
                     { text: t('button_maybe_later'), style: 'cancel' },
-                    { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+                    { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
                   ]);
                   return;
                 }
@@ -725,6 +727,7 @@ console.log('Initiating document download for quote:102', src);
           </TouchableOpacity>
         </Modal>
       </SafeAreaView>
+          {upgradeWebViewElement}
     </Modal>
   );
 };

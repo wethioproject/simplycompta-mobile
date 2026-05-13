@@ -41,6 +41,7 @@ import type { Account, Category, Client, InvoiceItem, InvoiceTabType, StackNavig
 import { invoiceStyles as styles } from '../../styles/invoice.styles';
 import { INVOICE_TABS } from '../../types/invoice.types';
 import i18n from '../../i18n/i18n';
+import { useUpgradeWebView } from '../../utils/upgradeWebView';
 
 /** i18n key for each tab */
 const TAB_LABEL_KEYS: Record<InvoiceTabType, string> = {
@@ -69,6 +70,7 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
   const subscription = useSelector((state: any) => state.subscription.data);
   const upgradeUrl = subscription?.upgrade_url;
   const dispatch = useDispatch<AppDispatch>();
+  const { openUpgradeWebView, upgradeWebViewElement } = useUpgradeWebView();
 
   const {
     invoices,
@@ -176,7 +178,7 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
     if (!canUseFeature(subscription, 'export_enabled')) {
       Alert.alert(t('subscription_limit_title'), t('subscription_limit_export'), [
         { text: t('button_maybe_later'), style: 'cancel' },
-        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+        { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
       ]);
       return;
     }
@@ -209,7 +211,7 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
     if (!canUseFeature(subscription, 'invoices')) {
       Alert.alert(t('subscription_limit_title'), t('subscription_limit_invoices'), [
         { text: t('button_maybe_later'), style: 'cancel' },
-        { text: t('button_upgrade_plan'), onPress: () => Linking.openURL(upgradeUrl) },
+        { text: t('button_upgrade_plan'), onPress: () => openUpgradeWebView(upgradeUrl) },
       ]);
       return;
     }
@@ -551,6 +553,7 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
           onClientsRefresh={refreshClients}
         />
       )}
+          {upgradeWebViewElement}
     </SafeAreaView>
   );
 };
