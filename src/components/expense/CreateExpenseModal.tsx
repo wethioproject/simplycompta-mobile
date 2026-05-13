@@ -699,7 +699,9 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
     scan.start();
     return () => { pulse.stop(); scan.stop(); };
   }, [ocrLoading]);
-    if (!visible || !ocrSupplierData?.supplier_name) return;
+
+useEffect(() => {
+  if (!visible || !ocrSupplierData?.supplier_name) return;
     const applyOCRSupplier = async () => {
       setApplyingOCRSupplier(true);
       const normalize = (v?: string) => (v ?? '').trim().toLowerCase();
@@ -1505,31 +1507,43 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
         </Modal>
 
         <CreateSupplierModal
-          visible={showCreateSupplierModal}
-          initialSupplier={{
-            companyName: pendingSupplierName,
-            supplierName: pendingSupplierName,
-          }}
-          onClose={() => {
-            setShowCreateSupplierModal(false);
-            setPendingSupplierName('');
-          }}
-          onCreated={() => {
-          onClose={() => setShowCreateSupplierModal(false)}
-          initialValues={supplierPrefillValues}
-          onCreated={(createdSupplier?: any) => {
-            onSuppliersRefresh?.();
-            const createdId = createdSupplier?.id;
-            if (createdId) {
-              setValue('supplierId', createdId, { shouldValidate: true });
-              Toast.show({ type: 'success', text1: t('success_title'), text2: 'Supplier detected and selected' });
-            }
-            setShowCreateSupplierModal(false);
-            setPendingSupplierName('');
-            closeSupplierPicker();
-            setSupplierPrefillValues(undefined);
-          }}
-        />
+  visible={showCreateSupplierModal}
+  initialValues={{
+    companyName: supplierPrefillValues?.companyName || pendingSupplierName,
+    supplierName: supplierPrefillValues?.supplierName || pendingSupplierName,
+    email: supplierPrefillValues?.email || '',
+    telephone: supplierPrefillValues?.telephone || '',
+    postalCode: supplierPrefillValues?.postalCode || '',
+    city: supplierPrefillValues?.city || '',
+    commercialRegister: supplierPrefillValues?.commercialRegister || '',
+    ice: supplierPrefillValues?.ice || '',
+  }}
+  onClose={() => {
+    setShowCreateSupplierModal(false);
+    setPendingSupplierName('');
+    setSupplierPrefillValues(undefined);
+  }}
+  onCreated={(createdSupplier?: any) => {
+    onSuppliersRefresh?.();
+
+    const createdId = createdSupplier?.id;
+
+    if (createdId) {
+      setValue('supplierId', createdId, { shouldValidate: true });
+
+      Toast.show({
+        type: 'success',
+        text1: t('success_title'),
+        text2: 'Supplier detected and selected',
+      });
+    }
+
+    setShowCreateSupplierModal(false);
+    setPendingSupplierName('');
+    setSupplierPrefillValues(undefined);
+    closeSupplierPicker();
+  }}
+/>
       </View>
           {upgradeWebViewElement}
     </Modal>
