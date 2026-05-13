@@ -12,7 +12,9 @@ import {
   Alert,
   ActivityIndicator,
   Share,
+  Vibration,
 } from 'react-native';
+import Toast from 'react-native-toast-message';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -76,6 +78,7 @@ interface CreateExpenseModalProps {
   onUpdate?: (id: number, payload: any) => Promise<{ success: boolean; error?: string }>;
   onSuppliersRefresh?: () => void;
   defaultSupplierId?: number;
+  ocrSupplierData?: any;
 }
 
 
@@ -92,6 +95,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   onUpdate,
   onSuppliersRefresh,
   defaultSupplierId,
+  ocrSupplierData,
 }) => {
   const insets = useSafeAreaInsets();
   const { t, i18n } = useTranslation();
@@ -107,6 +111,8 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   const [tempDate, setTempDate] = useState<Date>(new Date());
   const [showCreateSupplierModal, setShowCreateSupplierModal] = useState(false);
   const [showImagePreview, setShowImagePreview] = useState(false);
+  const [supplierPrefillValues, setSupplierPrefillValues] = useState<any>(undefined);
+  const [applyingOCRSupplier, setApplyingOCRSupplier] = useState(false);
 
   const [showSupplierSearch, setShowSupplierSearch] = useState(false);
   const [supplierSearchQuery, setSupplierSearchQuery] = useState('');
@@ -194,6 +200,37 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
       });
     }
   }, [visible]);
+
+  useEffect(() => {
+    if (!visible || !ocrSupplierData?.supplier_name) return;
+    const applyOCRSupplier = async () => {
+      setApplyingOCRSupplier(true);
+      const normalize = (v?: string) => (v ?? '').trim().toLowerCase();
+      const detectedName = normalize(ocrSupplierData?.supplier_name);
+      const localMatch = suppliers.find(s => normalize(s.name) === detectedName);
+      if (localMatch?.id) {
+        setValue('supplierId', localMatch.id, { shouldValidate: true });
+        Vibration.vibrate(18);
+        Toast.show({ type: 'success', text1: t('success_title'), text2: 'Supplier detected and selected' });
+        setApplyingOCRSupplier(false);
+        return;
+      }
+      setSupplierPrefillValues({
+        supplierName: ocrSupplierData?.supplier_name ?? '',
+        companyName: ocrSupplierData?.company_name ?? ocrSupplierData?.legal_name ?? '',
+        ice: ocrSupplierData?.ice ?? '',
+        commercialRegister: ocrSupplierData?.rc ?? '',
+        telephone: ocrSupplierData?.phone ?? '',
+        city: ocrSupplierData?.city ?? '',
+        email: ocrSupplierData?.email ?? '',
+        postalCode: '',
+      });
+      Vibration.vibrate(18);
+      setShowCreateSupplierModal(true);
+      setApplyingOCRSupplier(false);
+    };
+    applyOCRSupplier();
+  }, [visible, ocrSupplierData, suppliers, setValue, t]);
 
 
   useEffect(() => {
@@ -516,6 +553,12 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                   </Text>
                   <ChevronDown size={18} color="#1E5BAC" />
                 </TouchableOpacity>
+                {applyingOCRSupplier && (
+                  <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <ActivityIndicator size="small" color="#1E5BAC" />
+                    <Text style={{ color: '#6B7280', fontSize: 12 }}>Applying OCR supplier...</Text>
+                  </View>
+                )}
               </View>
 
               {/* Totals */}
@@ -768,11 +811,17 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
         <CreateSupplierModal
           visible={showCreateSupplierModal}
           onClose={() => setShowCreateSupplierModal(false)}
-          onCreated={() => {
+          initialValues={supplierPrefillValues}
+          onCreated={(createdSupplier?: any) => {
             onSuppliersRefresh?.();
+            const createdId = createdSupplier?.id;
+            if (createdId) {
+              setValue('supplierId', createdId, { shouldValidate: true });
+              Toast.show({ type: 'success', text1: t('success_title'), text2: 'Supplier detected and selected' });
+            }
             setShowCreateSupplierModal(false);
             closeSupplierPicker();
-            setShowSupplierPicker(true);
+            setSupplierPrefillValues(undefined);
           }}
         />
       </View>
