@@ -15,7 +15,7 @@ const OnboardingProgressBar: React.FC<OnboardingProgressBarProps> = ({ completed
   useEffect(() => {
     Animated.timing(animatedWidth, {
       toValue: percentage,
-      duration: 800,
+      duration: 320,
       useNativeDriver: false,
     }).start();
   }, [percentage]);

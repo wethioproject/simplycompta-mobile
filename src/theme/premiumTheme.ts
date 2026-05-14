@@ -1,0 +1,52 @@
+export const premiumTheme = {
+  colors: {
+    surface: '#FFFFFF',
+    canvas: '#F5F7FF',
+    border: '#E5EAF2',
+    primary: '#1E5BAC',
+    primarySoft: '#EFF6FF',
+    text: '#111827',
+    muted: '#6B7280',
+    success: '#16A34A',
+    successSoft: '#F0FDF4',
+    warning: '#D97706',
+    warningSoft: '#FFFBEB',
+    danger: '#DC2626',
+    dangerSoft: '#FEF2F2',
+  },
+  radius: {
+    sm: 8,
+    md: 12,
+    lg: 16,
+    xl: 20,
+    pill: 99,
+  },
+  spacing: {
+    xs: 4,
+    sm: 8,
+    md: 12,
+    lg: 16,
+    xl: 20,
+  },
+  shadow: {
+    card: {
+      shadowColor: '#0F172A',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.06,
+      shadowRadius: 12,
+      elevation: 3,
+    },
+    lifted: {
+      shadowColor: '#1E5BAC',
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.16,
+      shadowRadius: 18,
+      elevation: 6,
+    },
+  },
+  motion: {
+    fast: 180,
+    normal: 240,
+    slow: 320,
+  },
+} as const;

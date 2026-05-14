@@ -53,6 +53,7 @@ import { PAYMENT_METHODS } from '../../types/invoice.types';
 import { styles } from '../../styles/expenses.styles';
 import { CATEGORY_KEY_MAP, resolveCategoryKey } from '../../utils/expense.helpers';
 import { useUpgradeWebView } from '../../utils/upgradeWebView';
+import { showPremiumToast } from '../../utils/premiumToast';
 
 const OCR_API_URL = 'https://ocr.simply-compta.com/api/expenses/ocr';
 
@@ -100,6 +101,7 @@ type OcrSuggestion = {
   description?: string;
   items?: OcrItem[];
   duplicateWarning?: string;
+  supplierData?: any;
 };
 
 interface CreateExpenseModalProps {
@@ -131,7 +133,8 @@ const normalizeText = (value: any) =>
 const includesAny = (text: string, keywords: string[]) =>
   keywords.some(k => text.includes(normalizeText(k)));
 
-
+const pickFirst = (...values: any[]) =>
+  values.find(value => value !== undefined && value !== null && String(value).trim() !== '');
 
 const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   visible,
@@ -168,7 +171,9 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   const [removedExistingDocument, setRemovedExistingDocument] = useState(false);
   const [fileSizeError, setFileSizeError] = useState(false);
 
-  const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
+  const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
+  const ACCEPTED_OCR_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'pdf'];
+  const ACCEPTED_OCR_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'application/pdf'];
 
   const [tempDate, setTempDate] = useState<Date>(new Date());
   const [showCreateSupplierModal, setShowCreateSupplierModal] = useState(false);
@@ -177,10 +182,13 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   const [ocrSuggestion, setOcrSuggestion] = useState<OcrSuggestion | null>(null);
   const [ocrRaw, setOcrRaw] = useState<any>(null);
   const [ocrApplied, setOcrApplied] = useState(false);
+  const [ocrSuccessVisible, setOcrSuccessVisible] = useState(false);
+  const [ocrLoadingStep, setOcrLoadingStep] = useState(0);
   const ocrPulse = useRef(new Animated.Value(1)).current;
   const ocrScanLine = useRef(new Animated.Value(0)).current;
   const [supplierPrefillValues, setSupplierPrefillValues] = useState<any>(undefined);
   const [applyingOCRSupplier, setApplyingOCRSupplier] = useState(false);
+  const appliedRouteOcrSupplierKey = useRef<string | null>(null);
 
   const [showSupplierSearch, setShowSupplierSearch] = useState(false);
   const [supplierSearchQuery, setSupplierSearchQuery] = useState('');
@@ -241,6 +249,101 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
       return `${y}-${m}-${d}`;
     }
     return raw;
+  };
+
+  const triggerLightHaptic = () => {
+    Vibration.vibrate(Platform.OS === 'ios' ? 10 : 18);
+  };
+
+  const showSupplierSelectedFeedback = () => {
+    triggerLightHaptic();
+    Toast.show({
+      type: 'success',
+      text1: t('success_title'),
+      text2: t('ocr_supplier_detected_selected', { defaultValue: 'Supplier detected and selected' }),
+    });
+  };
+
+  const getOcrData = (response: any) =>
+    response?.extracted ||
+    response?.data ||
+    response?.result ||
+    response?.expense ||
+    response;
+
+  const getOcrSupplierSource = (data: any) =>
+    data?.supplier && typeof data.supplier === 'object'
+      ? { ...data.supplier, ...data }
+      : data;
+
+  const buildSupplierPrefillFromOcr = (rawData: any) => {
+    const data = getOcrSupplierSource(rawData ?? {});
+    const supplierName = pickFirst(
+      data?.supplier_name,
+      data?.supplierName,
+      data?.vendor_name,
+      data?.merchant_name,
+      typeof data?.supplier === 'string' ? data.supplier : '',
+      data?.vendor,
+      data?.merchant
+    );
+    const companyName = pickFirst(
+      data?.company_name,
+      data?.legal_name,
+      data?.companyName,
+      data?.legalName,
+      data?.supplier_company_name,
+      supplierName
+    );
+
+    return {
+      supplierName: supplierName ? String(supplierName) : '',
+      companyName: companyName ? String(companyName) : '',
+      ice: String(pickFirst(data?.ice, data?.ICE) ?? ''),
+      ifNumber: String(pickFirst(data?.ifNumber, data?.if, data?.IF, data?.if_number, data?.tax_id, data?.identifiant_fiscal) ?? ''),
+      commercialRegister: String(pickFirst(data?.commercialRegister, data?.rc, data?.RC, data?.commercial_register, data?.registre_commerce) ?? ''),
+      cnss: String(pickFirst(data?.cnss, data?.CNSS) ?? ''),
+      telephone: String(pickFirst(data?.telephone, data?.phone, data?.tel, data?.mobile) ?? ''),
+      email: String(pickFirst(data?.email, data?.mail) ?? ''),
+      address: String(pickFirst(data?.address, data?.adresse, data?.billing_address, data?.street) ?? ''),
+      city: String(pickFirst(data?.city, data?.ville) ?? ''),
+      postalCode: String(pickFirst(data?.postalCode, data?.postal_code, data?.zip) ?? ''),
+    };
+  };
+
+  const getCreatedSupplierId = (createdSupplier: any) =>
+    createdSupplier?.id ??
+    createdSupplier?.supplier?.id ??
+    createdSupplier?.data?.id ??
+    createdSupplier?.data?.supplier?.id;
+
+  const isAcceptedOcrFile = (file: any) => {
+    const fileName = String(file?.name || file?.fileName || '').toLowerCase();
+    const extension = fileName.includes('.') ? fileName.split('.').pop() : '';
+    const mime = String(file?.type || getMimeType(fileName) || '').toLowerCase();
+
+    return (
+      ACCEPTED_OCR_MIME_TYPES.includes(mime) ||
+      (!!extension && ACCEPTED_OCR_EXTENSIONS.includes(extension))
+    );
+  };
+
+  const validateOcrFile = (file: any) => {
+    const fileSize = file?.size ?? file?.fileSize;
+    if (fileSize && fileSize > MAX_FILE_SIZE) {
+      setFileSizeError(true);
+      Alert.alert(t('error_title'), t('error_file_too_large'));
+      return false;
+    }
+    if (!isAcceptedOcrFile(file)) {
+      Alert.alert(
+        t('error_title'),
+        t('ocr_unsupported_file_type', { defaultValue: 'Please upload a JPG, PNG, WEBP, or PDF file.' })
+      );
+      return false;
+    }
+    setFileSizeError(false);
+    return true;
   };
 
   const getCategoryKeywordsTarget = (sourceText: string) => {
@@ -410,12 +513,8 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   };
 
   const buildOcrSuggestion = (response: any, file?: any): OcrSuggestion => {
-    const data =
-      response?.extracted ||
-      response?.data ||
-      response?.result ||
-      response?.expense ||
-      response;
+    const data = getOcrData(response);
+    const supplierPrefill = buildSupplierPrefillFromOcr(data);
 
     const date = normalizeDate(
       data?.date ||
@@ -445,8 +544,8 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
     );
 
     const supplierName =
-      data?.supplier_name ||
-      data?.supplier ||
+      supplierPrefill.supplierName ||
+      (typeof data?.supplier === 'string' ? data.supplier : '') ||
       data?.vendor ||
       data?.merchant ||
       '';
@@ -480,7 +579,34 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
       description,
       items: data?.items || data?.articles || data?.line_items || data?.products || [],
       duplicateWarning: detectDuplicate(date, amountTTC, supplierName),
+      supplierData: supplierPrefill,
     };
+  };
+
+  const applySupplierFromOcr = (rawSupplierData: any, fallbackName?: string) => {
+    const prefill = {
+      ...buildSupplierPrefillFromOcr(rawSupplierData),
+      ...(rawSupplierData?.supplierName || rawSupplierData?.supplier_name ? {} : { supplierName: fallbackName ?? '' }),
+    };
+    const detectedName = prefill.supplierName || fallbackName;
+
+    if (!detectedName) return;
+
+    const matchedSupplier = findSupplier(detectedName);
+    if (matchedSupplier) {
+      setValue('supplierId', matchedSupplier.id, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
+      showSupplierSelectedFeedback();
+      return;
+    }
+
+    setPendingSupplierName(String(detectedName));
+    setSupplierPrefillValues({
+      ...prefill,
+      companyName: prefill.companyName || String(detectedName),
+      supplierName: prefill.supplierName || String(detectedName),
+    });
+    triggerLightHaptic();
+    setShowCreateSupplierModal(true);
   };
 
   const applyOcrSuggestionToForm = (suggestion: OcrSuggestion) => {
@@ -515,17 +641,11 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
       setValue('categoryId', matchedCategory.id, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
     }
 
-    if (suggestion.supplierName) {
-      const matchedSupplier = findSupplier(suggestion.supplierName);
-      if (matchedSupplier) {
-        setValue('supplierId', matchedSupplier.id, { shouldValidate: true, shouldDirty: true, shouldTouch: true });
-      } else {
-        setPendingSupplierName(String(suggestion.supplierName));
-        setShowCreateSupplierModal(true);
-      }
-    }
+    applySupplierFromOcr(suggestion.supplierData, suggestion.supplierName);
 
     setOcrApplied(true);
+    setOcrSuccessVisible(true);
+    setTimeout(() => setOcrSuccessVisible(false), 2400);
   };
 
   const applyOcrDataToForm = (response: any, file?: any) => {
@@ -536,10 +656,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
     setOcrRaw(response);
     setOcrApplied(false);
 
-    const confidence = suggestion.confidenceScore ?? 0;
-    if (confidence >= 0.85 && !suggestion.duplicateWarning) {
-      applyOcrSuggestionToForm(suggestion);
-    }
+    applyOcrSuggestionToForm(suggestion);
   };
 
   const sendToOcr = async (file: any) => {
@@ -592,7 +709,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
 
       applyOcrDataToForm(data, { ...file, name: fileName });
 
-      Alert.alert(t('ocr_success_title'), t('ocr_success_message'));
+      showPremiumToast('success', t('ocr_success_title'), t('ocr_success_message'));
     } catch (e: any) {
       console.log('❌ OCR FETCH ERROR:', e?.message || e);
       Alert.alert(t('ocr_error_title'), e?.message || t('ocr_error_failed'));
@@ -609,9 +726,12 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
     setOcrSuggestion(null);
     setOcrRaw(null);
     setOcrApplied(false);
+    setOcrSuccessVisible(false);
     setPendingSupplierName('');
     setRemovedExistingDocument(false);
     setFileSizeError(false);
+    setSupplierPrefillValues(undefined);
+    appliedRouteOcrSupplierKey.current = null;
 
     if (editItem) {
       const datePart = editItem.date.split('T')[0];
@@ -663,12 +783,13 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
     if (!ocrLoading) {
       ocrPulse.setValue(1);
       ocrScanLine.setValue(0);
+      setOcrLoadingStep(0);
       return;
     }
     const pulse = Animated.loop(
       Animated.sequence([
-        Animated.timing(ocrPulse, { toValue: 0.5, duration: 700, useNativeDriver: true }),
-        Animated.timing(ocrPulse, { toValue: 1, duration: 700, useNativeDriver: true }),
+        Animated.timing(ocrPulse, { toValue: 0.82, duration: 900, useNativeDriver: true }),
+        Animated.timing(ocrPulse, { toValue: 1, duration: 900, useNativeDriver: true }),
       ])
     );
     const scan = Animated.loop(
@@ -679,39 +800,28 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
     );
     pulse.start();
     scan.start();
-    return () => { pulse.stop(); scan.stop(); };
+    const textTimer = setInterval(() => {
+      setOcrLoadingStep(step => (step + 1) % 3);
+    }, 1400);
+    return () => {
+      pulse.stop();
+      scan.stop();
+      clearInterval(textTimer);
+    };
   }, [ocrLoading]);
 
-useEffect(() => {
-  if (!visible || !ocrSupplierData?.supplier_name) return;
-    const applyOCRSupplier = async () => {
-      setApplyingOCRSupplier(true);
-      const normalize = (v?: string) => (v ?? '').trim().toLowerCase();
-      const detectedName = normalize(ocrSupplierData?.supplier_name);
-      const localMatch = suppliers.find(s => normalize(s.name) === detectedName);
-      if (localMatch?.id) {
-        setValue('supplierId', localMatch.id, { shouldValidate: true });
-        Vibration.vibrate(18);
-        Toast.show({ type: 'success', text1: t('success_title'), text2: 'Supplier detected and selected' });
-        setApplyingOCRSupplier(false);
-        return;
-      }
-      setSupplierPrefillValues({
-        supplierName: ocrSupplierData?.supplier_name ?? '',
-        companyName: ocrSupplierData?.company_name ?? ocrSupplierData?.legal_name ?? '',
-        ice: ocrSupplierData?.ice ?? '',
-        commercialRegister: ocrSupplierData?.rc ?? '',
-        telephone: ocrSupplierData?.phone ?? '',
-        city: ocrSupplierData?.city ?? '',
-        email: ocrSupplierData?.email ?? '',
-        postalCode: '',
-      });
-      Vibration.vibrate(18);
-      setShowCreateSupplierModal(true);
+  useEffect(() => {
+    const prefill = buildSupplierPrefillFromOcr(ocrSupplierData);
+    const supplierKey = normalizeText(prefill.supplierName);
+    if (!visible || !supplierKey || appliedRouteOcrSupplierKey.current === supplierKey) return;
+
+    appliedRouteOcrSupplierKey.current = supplierKey;
+    setApplyingOCRSupplier(true);
+    requestAnimationFrame(() => {
+      applySupplierFromOcr(prefill, prefill.supplierName);
       setApplyingOCRSupplier(false);
-    };
-    applyOCRSupplier();
-  }, [visible, ocrSupplierData, suppliers, setValue, t]);
+    });
+  }, [visible, ocrSupplierData, suppliers]);
 
 
   useEffect(() => {
@@ -794,10 +904,7 @@ useEffect(() => {
     }
     try {
       const [file] = await pick({ type: [types.images] });
-      if (file.size && file.size > MAX_FILE_SIZE) {
-        setFileSizeError(true);
-        return;
-      }
+      if (!validateOcrFile(file)) return;
       const remainingBytes = (subscription?.usage?.storage?.remaining_mb ?? Infinity) * 1024 * 1024;
       if (file.size && file.size > remainingBytes) {
         Alert.alert(t('error_title'), t('error_file_exceeds_storage'), [
@@ -827,10 +934,7 @@ useEffect(() => {
     }
     try {
       const [file] = await pick({ type: [types.pdf, types.images] });
-      if (file.size && file.size > MAX_FILE_SIZE) {
-        setFileSizeError(true);
-        return;
-      }
+      if (!validateOcrFile(file)) return;
       const remainingBytes = (subscription?.usage?.storage?.remaining_mb ?? Infinity) * 1024 * 1024;
       if (file.size && file.size > remainingBytes) {
         Alert.alert(t('error_title'), t('error_file_exceeds_storage'), [
@@ -862,18 +966,15 @@ useEffect(() => {
       if (response.didCancel || response.errorCode) return;
       const asset = response.assets?.[0];
       if (!asset?.uri) return;
-      if (asset.fileSize && asset.fileSize > MAX_FILE_SIZE) {
-        setFileSizeError(true);
-        return;
-      }
-      setFileSizeError(false);
-
       const photoFile = {
         uri: asset.uri,
         fileCopyUri: asset.uri,
         name: asset.fileName ?? `photo_${Date.now()}.jpg`,
         type: asset.type ?? 'image/jpeg',
+        fileSize: asset.fileSize,
       };
+
+      if (!validateOcrFile(photoFile)) return;
 
       setDocument(photoFile);
       if (canUseFeature(subscription, 'ocr')) {
@@ -952,7 +1053,7 @@ useEffect(() => {
         const result = await onUpdate(editItem.id, payload);
         if (result.success) {
           dispatch(loadSubscription() as any);
-          Alert.alert(t('success_title'), t('success_expense_updated'));
+          showPremiumToast('success', t('success_title'), t('success_expense_updated'));
           onCreated();
           onClose();
         } else {
@@ -962,7 +1063,7 @@ useEffect(() => {
         const result = await onSave(payload);
         if (result.success) {
           dispatch(loadSubscription() as any);
-          Alert.alert(t('success_title'), t('success_expense_created'));
+          showPremiumToast('success', t('success_title'), t('success_expense_created'));
           onCreated();
           onClose();
         } else {
@@ -977,6 +1078,21 @@ useEffect(() => {
   const confidencePercent = ocrSuggestion?.confidenceScore !== undefined
     ? Math.round((ocrSuggestion.confidenceScore ?? 0) * 100)
     : null;
+  const confidenceTone =
+    confidencePercent === null ? 'neutral' :
+      confidencePercent >= 85 ? 'high' :
+        confidencePercent >= 60 ? 'medium' : 'low';
+  const confidenceLabel =
+    confidenceTone === 'high' ? t('ocr_confidence_high', { defaultValue: 'High confidence' }) :
+      confidenceTone === 'medium' ? t('ocr_confidence_medium', { defaultValue: 'Review recommended' }) :
+        confidenceTone === 'low' ? t('ocr_confidence_low', { defaultValue: 'Low confidence' }) :
+          t('ocr_confidence_unknown', { defaultValue: 'Needs review' });
+  const ocrLoadingMessages = [
+    t('ocr_loading_analyzing', { defaultValue: 'Analyzing document...' }),
+    t('ocr_loading_detecting_supplier', { defaultValue: 'Detecting supplier...' }),
+    t('ocr_loading_extracting_accounting', { defaultValue: 'Extracting accounting data...' }),
+    t('ocr_loading_preparing_expense', { defaultValue: 'Preparing your expense...' }),
+  ];
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
@@ -1006,7 +1122,7 @@ useEffect(() => {
             <View style={styles.formCard}>
               {ocrLoading && (
                 <View style={styles.ocrLoadingCard}>
-                  <Animated.View style={[styles.ocrIconWrap, { opacity: ocrPulse }]}>
+                  <Animated.View style={[styles.ocrIconWrap, { opacity: ocrPulse, transform: [{ scale: ocrPulse }] }]}>
                     <ScanLine size={32} color="#1E5BAC" strokeWidth={1.8} />
                   </Animated.View>
 
@@ -1026,36 +1142,92 @@ useEffect(() => {
                     />
                   </View>
 
-                  <Text style={styles.ocrTitle}>{t('ocr_loading_title')}</Text>
+                  <Text style={styles.ocrTitle}>{ocrLoadingMessages[ocrLoadingStep]}</Text>
                   <Text style={styles.ocrSubtitle}>{t('ocr_loading_subtitle')}</Text>
 
                   <ActivityIndicator size="small" color="#1E5BAC" style={{ marginTop: 8 }} />
                 </View>
               )}
 
-              {ocrSuggestion && (
-                <View style={[{ padding: 12, marginBottom: 12, borderRadius: 12, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E5E7EB' }, ocrLoading && { opacity: 0.4 }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                    {ocrSuggestion.duplicateWarning ? (
-                      <AlertTriangle size={18} color="#DC2626" />
-                    ) : (
-                      <CheckCircle2 size={18} color="#16A34A" />
-                    )}
-                    <Text style={{ fontWeight: '700', color: '#111827', flex: 1 }}>
-                      {t('ocr_data_detected')}{confidencePercent !== null ? ` (${confidencePercent}%)` : ''}
+              {ocrSuccessVisible && !ocrLoading && (
+                <View style={styles.ocrSuccessCard}>
+                  <View style={styles.ocrSuccessIcon}>
+                    <CheckCircle2 size={18} color="#FFFFFF" strokeWidth={2.4} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.ocrSuccessTitle}>
+                      {t('ocr_success_applied_title', { defaultValue: 'Expense prepared' })}
                     </Text>
+                    <Text style={styles.ocrSuccessSubtitle}>
+                      {t('ocr_success_applied_subtitle', { defaultValue: 'Review the extracted details before saving.' })}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {ocrSuggestion && (
+                <View style={[styles.ocrReviewCard, ocrLoading && { opacity: 0.4 }]}>
+                  <View style={styles.ocrReviewHeader}>
+                    <View style={styles.ocrReviewTitleRow}>
+                      {ocrSuggestion.duplicateWarning ? (
+                        <AlertTriangle size={18} color="#DC2626" />
+                      ) : (
+                        <CheckCircle2 size={18} color="#16A34A" />
+                      )}
+                      <Text style={styles.ocrReviewTitle}>{t('ocr_data_detected')}</Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.ocrConfidenceBadge,
+                        confidenceTone === 'high' && styles.ocrConfidenceHigh,
+                        confidenceTone === 'medium' && styles.ocrConfidenceMedium,
+                        confidenceTone === 'low' && styles.ocrConfidenceLow,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.ocrConfidenceText,
+                          confidenceTone === 'high' && styles.ocrConfidenceTextHigh,
+                          confidenceTone === 'medium' && styles.ocrConfidenceTextMedium,
+                          confidenceTone === 'low' && styles.ocrConfidenceTextLow,
+                        ]}
+                      >
+                        {confidencePercent !== null ? `${confidencePercent}% · ` : ''}{confidenceLabel}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.ocrReviewGrid}>
+                    {!!ocrSuggestion.supplierName && (
+                      <View style={styles.ocrReviewPill}>
+                        <Text style={styles.ocrReviewPillLabel}>{t('label_supplier')}</Text>
+                        <Text style={styles.ocrReviewPillValue} numberOfLines={1}>{ocrSuggestion.supplierName}</Text>
+                      </View>
+                    )}
+                    {!!ocrSuggestion.amountTTC && (
+                      <View style={styles.ocrReviewPill}>
+                        <Text style={styles.ocrReviewPillLabel}>{t('label_amount_ttc')}</Text>
+                        <Text style={styles.ocrReviewPillValue}>{ocrSuggestion.amountTTC} MAD</Text>
+                      </View>
+                    )}
+                    {!!ocrSuggestion.date && (
+                      <View style={styles.ocrReviewPill}>
+                        <Text style={styles.ocrReviewPillLabel}>{t('label_date')}</Text>
+                        <Text style={styles.ocrReviewPillValue}>{ocrSuggestion.date}</Text>
+                      </View>
+                    )}
                   </View>
 
                   {!!ocrSuggestion.duplicateWarning && (
-                    <Text style={{ color: '#DC2626', fontSize: 12, marginBottom: 8 }}>
+                    <Text style={styles.ocrReviewDangerText}>
                       {ocrSuggestion.duplicateWarning}
                     </Text>
                   )}
 
                   {!!ocrSuggestion.warnings?.length && (
-                    <View style={{ marginBottom: 8 }}>
+                    <View style={styles.ocrReviewWarnings}>
                       {ocrSuggestion.warnings.map((warning, index) => (
-                        <Text key={`${warning}-${index}`} style={{ color: '#92400E', fontSize: 12 }}>
+                        <Text key={`${warning}-${index}`} style={styles.ocrReviewWarningText}>
                           • {warning}
                         </Text>
                       ))}
@@ -1064,10 +1236,10 @@ useEffect(() => {
 
                   {!ocrApplied && (
                     <TouchableOpacity
-                      style={{ backgroundColor: '#1E5BAC', borderRadius: 8, paddingVertical: 10, alignItems: 'center' }}
+                      style={styles.ocrApplyButton}
                       onPress={() => applyOcrSuggestionToForm(ocrSuggestion)}
                     >
-                      <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>{t('ocr_apply')}</Text>
+                      <Text style={styles.ocrApplyButtonText}>{t('ocr_apply')}</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -1287,7 +1459,9 @@ useEffect(() => {
                 {applyingOCRSupplier && (
                   <View style={{ marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <ActivityIndicator size="small" color="#1E5BAC" />
-                    <Text style={{ color: '#6B7280', fontSize: 12 }}>Applying OCR supplier...</Text>
+                    <Text style={{ color: '#6B7280', fontSize: 12 }}>
+                      {t('ocr_applying_supplier', { defaultValue: 'Applying OCR supplier...' })}
+                    </Text>
                   </View>
                 )}
               </View>
@@ -1499,6 +1673,9 @@ useEffect(() => {
     city: supplierPrefillValues?.city || '',
     commercialRegister: supplierPrefillValues?.commercialRegister || '',
     ice: supplierPrefillValues?.ice || '',
+    ifNumber: supplierPrefillValues?.ifNumber || '',
+    cnss: supplierPrefillValues?.cnss || '',
+    address: supplierPrefillValues?.address || '',
   }}
   onClose={() => {
     setShowCreateSupplierModal(false);
@@ -1508,7 +1685,7 @@ useEffect(() => {
   onCreated={(createdSupplier?: any) => {
     onSuppliersRefresh?.();
 
-    const createdId = createdSupplier?.id;
+    const createdId = getCreatedSupplierId(createdSupplier);
 
     if (createdId) {
       setValue('supplierId', createdId, { shouldValidate: true });
@@ -1516,7 +1693,7 @@ useEffect(() => {
       Toast.show({
         type: 'success',
         text1: t('success_title'),
-        text2: 'Supplier detected and selected',
+        text2: t('ocr_supplier_detected_selected', { defaultValue: 'Supplier detected and selected' }),
       });
     }
 

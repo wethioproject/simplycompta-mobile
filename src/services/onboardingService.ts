@@ -4,6 +4,6 @@ import { ChecklistItemAPI } from '../types/onboarding.types';
 
 
 export const fetchOnboardingChecklist = async (): Promise<ChecklistItemAPI[]> => {
-  const response = await api.get<ChecklistItemAPI[]>(Api_Endpoints.onboardingChecklist);
+  const response = await api.get<{ data: ChecklistItemAPI[] }>(Api_Endpoints.onboardingChecklist);
   return response.data.data;
 };

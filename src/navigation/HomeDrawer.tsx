@@ -8,7 +8,7 @@ const Drawer = createDrawerNavigator();
 const HomeDrawer: React.FC = () => {
   return (
     <Drawer.Navigator
-      drawerContent={(props) => <DrawerContent {...props} />}
+      drawerContent={({ navigation }) => <DrawerContent navigation={navigation as any} />}
       screenOptions={{
         headerShown: false,
         // drawerPosition: 'left', // Opens from right side

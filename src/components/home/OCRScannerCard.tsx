@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { I18nManager, View, Text, StyleSheet } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { Camera, Sparkles, ArrowRight } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
+import { PremiumTouchable } from '../common/PremiumMotion';
 
 interface Props {
   onScan?: () => void;
@@ -22,7 +23,7 @@ const OCRScannerCard: React.FC<Props> = ({ onScan }) => {
     style={styles.card}
     >
       {/* Top row: badge + camera icon */}
-      <View style={styles.topRow}>
+      <View style={[styles.topRow, I18nManager.isRTL && styles.rowReverse]}>
         <View style={styles.ocrBadge}>
           <Sparkles size={13} color="#FFFFFF" fill="#FFFFFF" />
           <Text style={styles.ocrBadgeText}>{t('ocr_card_badge')}</Text>
@@ -37,11 +38,11 @@ const OCRScannerCard: React.FC<Props> = ({ onScan }) => {
       <Text style={styles.subtitle}>{t('ocr_card_subtitle')}</Text>
 
       {/* CTA Button */}
-      <TouchableOpacity style={styles.ctaBtn} onPress={onScan} activeOpacity={0.9}>
+      <PremiumTouchable style={[styles.ctaBtn, I18nManager.isRTL && styles.rowReverse]} onPress={onScan} haptic>
         <Camera size={16} color="#1E5BAC" />
         <Text style={styles.ctaText}>{t('ocr_card_cta')}</Text>
         <ArrowRight size={16} color="#1E5BAC" />
-      </TouchableOpacity>
+      </PremiumTouchable>
     </View>
     </LinearGradient>
   );
@@ -65,6 +66,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 16,
+  },
+  rowReverse: {
+    flexDirection: 'row-reverse',
   },
   ocrBadge: {
     flexDirection: 'row',
@@ -122,4 +126,3 @@ const styles = StyleSheet.create({
 });
 
 export default OCRScannerCard;
-

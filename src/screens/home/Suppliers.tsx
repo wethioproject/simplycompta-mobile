@@ -15,6 +15,7 @@ import {
   ScrollView,
   TextInput,
   RefreshControl,
+  Vibration,
 } from 'react-native';
 import { ArrowLeft, Plus, Search, X, ChevronRight } from 'lucide-react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -32,6 +33,8 @@ import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useUpgradeWebView } from '../../utils/upgradeWebView';
+import ContactsSkeleton from '../../components/clients/ContactsSkeleton';
+import { showPremiumToast } from '../../utils/premiumToast';
 
 type StackNavigation = StackNavigationProp<any>;
 
@@ -55,18 +58,21 @@ export interface SupplierItem {
 
 // ─── Yup schema (Supplier) ─────────────────────────────────────────────────────
 const supplierSchema = yup.object({
-  companyName: yup.string().required('Company name is required'),
+  companyName: yup.string().optional(),
   supplierName: yup.string().trim().required('Supplier name is required'),
-  email: yup.string().trim().required('Email is required').test('email-format', 'Invalid email address', v => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)),
-  telephone: yup.string().trim().required('Phone is required'),
+  email: yup.string().trim().optional().test('email-format', 'Invalid email address', v => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)),
+  telephone: yup.string().trim().optional(),
   postalCode: yup.string().optional(),
   city: yup.string().optional(),
   commercialRegister: yup.string().optional(),
   ice: yup.string().optional(),
+  ifNumber: yup.string().optional(),
+  cnss: yup.string().optional(),
+  address: yup.string().optional(),
 });
 
 type SupplierFormValues = {
-  companyName: string;
+  companyName?: string;
   supplierName: string;
   email?: string;
   telephone?: string;
@@ -74,6 +80,9 @@ type SupplierFormValues = {
   city: string;
   commercialRegister?: string;
   ice?: string;
+  ifNumber?: string;
+  cnss?: string;
+  address?: string;
 };
 
 // ─── Create Supplier Modal ─────────────────────────────────────────────────────
@@ -126,6 +135,9 @@ export const CreateSupplierModal: React.FC<{
       city: '',
       commercialRegister: '',
       ice: '',
+      ifNumber: '',
+      cnss: '',
+      address: '',
     },
   });
 
@@ -141,6 +153,9 @@ export const CreateSupplierModal: React.FC<{
         city: initialValues?.city ?? '',
         commercialRegister: initialValues?.commercialRegister ?? '',
         ice: initialValues?.ice ?? '',
+        ifNumber: initialValues?.ifNumber ?? '',
+        cnss: initialValues?.cnss ?? '',
+        address: initialValues?.address ?? '',
       });
       return;
     }
@@ -200,8 +215,9 @@ export const CreateSupplierModal: React.FC<{
     }
     setSaving(true);
     try {
+    const supplierName = data.supplierName.trim();
     const payload: SupplierPayload = {
-      company_name: data.companyName,
+      company_name: data.companyName?.trim() || supplierName,
       supplier_name: data.supplierName,
       email: data.email ?? '',
       telephone: data.telephone ?? '',
@@ -209,20 +225,19 @@ export const CreateSupplierModal: React.FC<{
       city: data.city,
       commercial_register: data.commercialRegister ?? '',
       ice: data.ice ?? '',
+      if_number: data.ifNumber ?? '',
+      cnss: data.cnss ?? '',
+      address: data.address ?? '',
     };
-    const res = await createSupplier(payload);
-    if (!res.success) {
-      Alert.alert(t('error_title'), res.error ?? t('error_create_supplier'));
-      return;
-    }
-      dispatch(loadSubscription() as any);
     const result = await createSupplier(payload);
     if (!result?.success) {
       Alert.alert(t('error_title'), result?.error ?? t('error_create_supplier'));
       return;
     }
-      Alert.alert(t('success_title'), t('success_supplier_created'));
-      onCreated(result?.supplier ?? result?.data ?? payload);
+      dispatch(loadSubscription() as any);
+      Vibration.vibrate(12);
+      showPremiumToast('success', t('success_title'), t('success_supplier_created'));
+      onCreated(result?.supplier ?? payload);
       onClose();
     } catch (e: any) {
       const msg = e?.response?.data?.message ?? t('error_create_supplier');
@@ -263,7 +278,7 @@ export const CreateSupplierModal: React.FC<{
               <View style={styles.fieldBlock}>
                 {/* <Text style={styles.fieldLabel}>{t('label_company_name')} <Text style={styles.required}>*</Text></Text>
                 <TextInput style={styles.fieldInput} value={companyName} onChangeText={setCompanyName} placeholder="Bureautique Maroc SARL" placeholderTextColor="#AAAAAA" /> */}
-                                <Text style={styles.fieldLabel}>{t('label_company_name')} <Text style={styles.required}>*</Text></Text>
+                                <Text style={styles.fieldLabel}>{t('label_company_name')}</Text>
                                 <Controller
                                     control={control}
                                     name="companyName"
@@ -297,7 +312,7 @@ export const CreateSupplierModal: React.FC<{
                 {errors.supplierName && <Text style={styles.fieldError}>{errors.supplierName.message}</Text>}
               </View>
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>{t('label_email')} <Text style={styles.required}>*</Text></Text>
+                <Text style={styles.fieldLabel}>{t('label_email')}</Text>
                 {/* <TextInput style={styles.fieldInput} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" placeholder="contact@bureautique.ma" placeholderTextColor="#AAAAAA" /> */}
                                 <Controller
                                   control={control}
@@ -316,7 +331,7 @@ export const CreateSupplierModal: React.FC<{
                                 {errors.email && <Text style={styles.fieldError}>{errors.email.message}</Text>}
               </View>
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>{t('label_phone')} <Text style={styles.required}>*</Text></Text>
+                <Text style={styles.fieldLabel}>{t('label_phone')}</Text>
                 <Controller
                   control={control}
                   name="telephone"
@@ -388,6 +403,24 @@ export const CreateSupplierModal: React.FC<{
                 {errors.commercialRegister && <Text style={styles.fieldError}>{errors.commercialRegister.message}</Text>}
               </View>
               <View style={styles.fieldBlock}>
+                <Text style={styles.fieldLabel}>{t('label_if')}</Text>
+                <Controller
+                  control={control}
+                  name="ifNumber"
+                  render={({ field: { value, onChange, onBlur } }) => (
+                    <TextInput
+                      style={[styles.fieldInput, errors.ifNumber && styles.fieldInputError]}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      placeholder={t('signup_if_placeholder')}
+                      placeholderTextColor="#AAAAAA"
+                    />
+                  )}
+                />
+                {errors.ifNumber && <Text style={styles.fieldError}>{errors.ifNumber.message}</Text>}
+              </View>
+              <View style={styles.fieldBlock}>
                 <Text style={styles.fieldLabel}>{t('label_ice')}</Text>
                 <Controller
                   control={control}
@@ -405,6 +438,43 @@ export const CreateSupplierModal: React.FC<{
                   )}
                 />
                 {errors.ice && <Text style={styles.fieldError}>{errors.ice.message}</Text>}
+              </View>
+              <View style={styles.fieldBlock}>
+                <Text style={styles.fieldLabel}>{t('label_cnss')}</Text>
+                <Controller
+                  control={control}
+                  name="cnss"
+                  render={({ field: { value, onChange, onBlur } }) => (
+                    <TextInput
+                      style={[styles.fieldInput, errors.cnss && styles.fieldInputError]}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      placeholder={t('placeholder_cnss')}
+                      placeholderTextColor="#AAAAAA"
+                    />
+                  )}
+                />
+                {errors.cnss && <Text style={styles.fieldError}>{errors.cnss.message}</Text>}
+              </View>
+              <View style={styles.fieldBlock}>
+                <Text style={styles.fieldLabel}>{t('label_address')}</Text>
+                <Controller
+                  control={control}
+                  name="address"
+                  render={({ field: { value, onChange, onBlur } }) => (
+                    <TextInput
+                      style={[styles.fieldInput, errors.address && styles.fieldInputError, { minHeight: 76, textAlignVertical: 'top' }]}
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      placeholder={t('placeholder_address')}
+                      placeholderTextColor="#AAAAAA"
+                      multiline
+                    />
+                  )}
+                />
+                {errors.address && <Text style={styles.fieldError}>{errors.address.message}</Text>}
               </View>
             </View>
 
@@ -521,9 +591,7 @@ const Suppliers: React.FC = ({ navigation: navProp }: any) => {
 
       {/* List */}
       {loading ? (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="large" color="#1E5BAC" />
-        </View>
+        <ContactsSkeleton isSupplier />
       ) : (
         <FlatList
           data={suppliers}
@@ -540,7 +608,18 @@ const Suppliers: React.FC = ({ navigation: navProp }: any) => {
           }
           ListEmptyComponent={
             <View style={styles.emptyBox}>
-              <Text style={styles.emptyText}>{t('text_no_suppliers_found')}</Text>
+              <View style={styles.emptyIconContainer}>
+                <Plus size={24} color="#1E5BAC" strokeWidth={2.2} />
+              </View>
+              <Text style={styles.emptyTitle}>{t('empty_no_suppliers_title')}</Text>
+              <Text style={styles.emptySubtitle}>{t('empty_no_suppliers_hint')}</Text>
+              <TouchableOpacity
+                style={styles.emptyCTABtn}
+                onPress={() => setShowCreateModal(true)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.emptyCTAText}>{t('button_create_supplier')}</Text>
+              </TouchableOpacity>
             </View>
           }
         />
@@ -597,8 +676,26 @@ const styles = StyleSheet.create({
   // List
   listContent: { padding: 12, paddingBottom: 100, gap: 8 },
   loadingBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyBox: { alignItems: 'center', paddingVertical: 60 },
-  emptyText: { fontSize: 15, color: '#9CA3AF' },
+  emptyBox: { alignItems: 'center', paddingVertical: 56, paddingHorizontal: 24, gap: 10 },
+  emptyIconContainer: {
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  emptyTitle: { fontSize: 17, fontWeight: '700', color: '#111827', textAlign: 'center' },
+  emptySubtitle: { fontSize: 13, color: '#6B7280', textAlign: 'center', lineHeight: 19 },
+  emptyCTABtn: {
+    backgroundColor: '#1E5BAC',
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+    marginTop: 6,
+  },
+  emptyCTAText: { fontSize: 13, fontWeight: '700', color: '#FFFFFF' },
 
   // Supplier Card
   supplierCard: {
