@@ -851,7 +851,7 @@
   "signup_phone_label": "الهاتف",
   "signup_phone_placeholder": "0612345678",
   "signup_password_label": "كلمة المرور",
-  "signup_password_placeholder": "الحد الأدنى 6 أحرف",
+  "signup_password_placeholder": "الحد الأدنى 8 أحرف",
   "signup_continue_button": "متابعة",
   "signup_already_account": "هل لديك حساب بالفعل؟ ",
   "signup_signin_link": "تسجيل الدخول",

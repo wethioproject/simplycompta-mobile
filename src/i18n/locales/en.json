@@ -851,7 +851,7 @@
   "signup_phone_label": "Phone",
   "signup_phone_placeholder": "0612345678",
   "signup_password_label": "Password",
-  "signup_password_placeholder": "Minimum 6 characters",
+  "signup_password_placeholder": "Minimum 8 characters",
   "signup_continue_button": "Continue",
   "signup_already_account": "Already have an account? ",
   "signup_signin_link": "Sign in",
