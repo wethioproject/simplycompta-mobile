@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { useTranslation } from 'react-i18next';
 import SignupStep1, { Step1Data } from '../../components/auth/SignupStep1';
+import SignupOtpVerification from '../../components/auth/SignupOtpVerification';
 import SignupStep2, { Step2Data } from '../../components/auth/SignupStep2';
 import SignupStep3, { Step3Data } from '../../components/auth/SignupStep3';
 import LanguageToggle from '../../components/auth/LanguageToggle';
@@ -16,7 +17,7 @@ interface SignupProps {
 const Signup: React.FC<SignupProps> = ({ navigation }) => {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
-  const { checkEmail, signup, isLoading } = useAuth();
+  const { checkEmail, signup, verifyOtp, isLoading } = useAuth();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [step1Data, setStep1Data] = useState<Step1Data>({
@@ -53,7 +54,15 @@ const Signup: React.FC<SignupProps> = ({ navigation }) => {
       return;
     }
     setStep1Data(data);
-    setCurrentStep(2);
+    setCurrentStep(1.5 as any);
+  };
+
+  const handleOtpVerify = async (otp: string) => {
+    return await verifyOtp(step1Data.email, otp);
+  };
+
+  const handleOtpResend = async () => {
+    return await checkEmail(step1Data.email);
   };
 
   const handleStep2Next = (data: Step2Data) => {
@@ -130,10 +139,20 @@ const Signup: React.FC<SignupProps> = ({ navigation }) => {
           onSignIn={() => navigation.replace('Login')}
         />
       )}
+      {(currentStep as any) === 1.5 && (
+        <SignupOtpVerification
+          email={step1Data.email}
+          onVerified={() => setCurrentStep(2)}
+          onVerify={handleOtpVerify}
+          onResend={handleOtpResend}
+          onBack={() => setCurrentStep(1)}
+          isLoading={isLoading}
+        />
+      )}
       {currentStep === 2 && (
         <SignupStep2
           onNext={handleStep2Next}
-          onBack={() => setCurrentStep(1)}
+          onBack={() => setCurrentStep(1.5 as any)}
         />
       )}
       {currentStep === 3 && (

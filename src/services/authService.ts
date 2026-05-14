@@ -51,6 +51,11 @@ export interface CheckEmailResponse {
   message?: string;
 }
 
+export interface VerifyOtpResponse {
+  success: boolean;
+  message?: string;
+}
+
 export interface RegisterPayload {
   first_name: string;
   last_name?: string;
@@ -84,6 +89,16 @@ class AuthService {
       return response.data;
     } catch (error: any) {
       console.error('Check email error:', error.response?.data || error.message);
+      throw error;
+    }
+  }
+
+  async verifyOtp(email: string, otp: string): Promise<VerifyOtpResponse> {
+    try {
+      const response = await api.post<VerifyOtpResponse>('/customer/verify-otp', { email, otp });
+      return response.data;
+    } catch (error: any) {
+      console.error('Verify OTP error:', error.response?.data || error.message);
       throw error;
     }
   }

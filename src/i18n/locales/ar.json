@@ -1031,5 +1031,15 @@
   "checklist_supplier_title": "إضافة مورد",
   "checklist_supplier_subtitle": "إدارة الموردين والمصاريف",
   "checklist_expense_title": "إنشاء أول مصروف",
-  "checklist_expense_subtitle": "تتبع مصاريفك المهنية"
+  "checklist_expense_subtitle": "تتبع مصاريفك المهنية",
+
+  "otp_step_label": "الخطوة 2 من 4",
+  "otp_title": "تحقق من بريدك الإلكتروني",
+  "otp_subtitle": "أدخل الرمز المكون من 6 أرقام المرسل إلى",
+  "otp_verify_button": "تحقق واستمر",
+  "otp_no_code": "لم تستلم رمزاً؟",
+  "otp_resend": "إعادة إرسال الرمز",
+  "otp_resend_in": "إعادة الإرسال خلال {{seconds}}ث",
+  "otp_error_invalid": "رمز غير صحيح أو منتهي الصلاحية. يرجى المحاولة مجدداً.",
+  "otp_error_resend_failed": "تعذر إعادة إرسال الرمز. يرجى المحاولة مجدداً."
 }

@@ -74,6 +74,19 @@ export const useAuth = () => {
     }
   }, []);
 
+  const verifyOtp = useCallback(async (email: string, otp: string) => {
+    try {
+      dispatch(setLoading(true));
+      const res = await authService.verifyOtp(email, otp);
+      return { success: true, message: res.message };
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || 'OTP verification failed. Please try again.';
+      return { success: false, error: errorMessage };
+    } finally {
+      dispatch(setLoading(false));
+    }
+  }, [dispatch]);
+
   /**
    * Register a new customer
    */
@@ -140,6 +153,7 @@ export const useAuth = () => {
     login,
     signup,
     checkEmail,
+    verifyOtp,
     resetPassword,
     logout,
     forgotPassword,

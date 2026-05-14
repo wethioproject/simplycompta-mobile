@@ -107,7 +107,7 @@ const SignupStep3: React.FC<SignupStep3Props> = ({ onComplete, onBack, onSkip })
         {/* Progress */}
         <View style={styles.progressBlock}>
           <View style={styles.progressLabelRow}>
-            <Text style={styles.progressStep}>{'Étape 3 sur 3'}</Text>
+            <Text style={styles.progressStep}>{'Étape 4 sur 4'}</Text>
             <Text style={styles.progressPercent}>100%</Text>
           </View>
           <View style={styles.progressTrack}>

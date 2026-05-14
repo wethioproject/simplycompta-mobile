@@ -1031,5 +1031,15 @@
   "checklist_supplier_title": "Add a supplier",
   "checklist_supplier_subtitle": "Manage your suppliers and expenses",
   "checklist_expense_title": "Create my first expense",
-  "checklist_expense_subtitle": "Track your business expenses"
+  "checklist_expense_subtitle": "Track your business expenses",
+
+  "otp_step_label": "Step 2 of 4",
+  "otp_title": "Verify your email",
+  "otp_subtitle": "Enter the 6-digit code sent to",
+  "otp_verify_button": "Verify & Continue",
+  "otp_no_code": "Didn't receive a code?",
+  "otp_resend": "Resend code",
+  "otp_resend_in": "Resend in {{seconds}}s",
+  "otp_error_invalid": "Invalid or expired code. Please try again.",
+  "otp_error_resend_failed": "Failed to resend code. Please try again."
 }

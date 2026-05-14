@@ -1031,5 +1031,15 @@
   "checklist_supplier_title": "Ajouter fournisseur",
   "checklist_supplier_subtitle": "Gérer vos fournisseurs et dépenses",
   "checklist_expense_title": "Créer ma première dépense",
-  "checklist_expense_subtitle": "Suivez vos dépenses professionnelles"
+  "checklist_expense_subtitle": "Suivez vos dépenses professionnelles",
+
+  "otp_step_label": "Étape 2 sur 4",
+  "otp_title": "Vérifiez votre email",
+  "otp_subtitle": "Entrez le code à 6 chiffres envoyé à",
+  "otp_verify_button": "Vérifier et continuer",
+  "otp_no_code": "Vous n'avez pas reçu de code ?",
+  "otp_resend": "Renvoyer le code",
+  "otp_resend_in": "Renvoyer dans {{seconds}}s",
+  "otp_error_invalid": "Code invalide ou expiré. Veuillez réessayer.",
+  "otp_error_resend_failed": "Impossible de renvoyer le code. Veuillez réessayer."
 }

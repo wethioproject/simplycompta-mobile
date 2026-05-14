@@ -70,11 +70,11 @@ const SignupStep2: React.FC<SignupStep2Props> = ({ onNext, onBack }) => {
         {/* Progress */}
         <View style={styles.progressBlock}>
           <View style={styles.progressLabelRow}>
-            <Text style={styles.progressStep}>{'Étape 2 sur 3'}</Text>
-            <Text style={styles.progressPercent}>66%</Text>
+            <Text style={styles.progressStep}>{'Étape 3 sur 4'}</Text>
+            <Text style={styles.progressPercent}>75%</Text>
           </View>
           <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: '66%' }]} />
+            <View style={[styles.progressFill, { width: '75%' }]} />
           </View>
         </View>
 
