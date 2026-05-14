@@ -32,6 +32,7 @@ import {
   ChevronDown,
   Calendar,
   FileText,
+  ScanText,
   Camera,
   Eye,
   Search,
@@ -1144,7 +1145,7 @@ useEffect(() => {
                     disabled={ocrLoading}
                   >
                     <Camera size={20} color="#1E5BAC" />
-                    <Text style={styles.uploadBtnText}>{t('button_take_photo')}</Text>
+                    <Text style={styles.uploadBtnText} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.75}>{t('ocr_scan')}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={styles.uploadBtn}
@@ -1152,8 +1153,8 @@ useEffect(() => {
                     onPress={handlePickDocument}
                     disabled={ocrLoading}
                   >
-                    <FileText size={20} color="#16A34A" />
-                    <Text style={styles.uploadBtnText}>{t('button_select_file')}</Text>
+                    <ScanText size={20} color="#16A34A" />
+                    <Text style={styles.uploadBtnText} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.75}>{t('choose_file_to_scan')}</Text>
                   </TouchableOpacity>
                 </View>
               )}

@@ -176,12 +176,12 @@ export const styles = StyleSheet.create({
   },
   uploadArea: { flexDirection: 'row', gap: 12 },
   uploadBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, backgroundColor: '#F9FAFB',
+    flex: 1, flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+    gap: 6, backgroundColor: '#F9FAFB',
     borderWidth: 1, borderColor: '#E0E7FF', borderRadius: 12,
-    paddingVertical: 14,
+    paddingVertical: 14, paddingHorizontal: 8,
   },
-  uploadBtnText: { fontSize: 12, fontWeight: '500', color: '#374151' },
+  uploadBtnText: { fontSize: 11, fontWeight: '500', color: '#374151', textAlign: 'center', flexShrink: 1 },
 
   // Attachment preview card
   attachmentPreview: {

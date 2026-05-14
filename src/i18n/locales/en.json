@@ -612,6 +612,8 @@
   "title_expenses": "Expenses",
   "filter_month": "Month",
   "filter_year": "Year",
+  "ocr_scan": "OCR Scan",
+  "choose_file_to_scan": "Choose file to scan",
   "filter_all_months": "All months",
   "filter_all_years": "All",
   "text_no_expenses_found": "No expenses found",

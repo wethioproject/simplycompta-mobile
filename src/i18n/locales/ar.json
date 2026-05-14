@@ -613,6 +613,8 @@
   "success_expense_duplicated": "تم تكرار المصروف بنجاح.",
   "title_expenses": "المصاريف",
   "filter_month": "الشهر",
+  "ocr_scan": "مسح ضوئي باستخدام OCR",
+  "choose_file_to_scan": "اختر ملفًا لمسحه ضوئيًا",
   "filter_year": "السنة",
   "filter_all_months": "جميع الأشهر",
   "filter_all_years": "الكل",
