@@ -180,8 +180,8 @@ const CreateInvoiceModal: React.FC<{
   // Derived display objects from IDs
   const selectedClient = localClients.find(c => c.id === watchedClientId) ?? null;
   const selectedPaymentMethod = PAYMENT_METHODS.find(p => p.key === watchedAccountId) ?? null;
-  const pmLabel = (pm: { key: string; fr: string; en: string }) =>
-    i18n.language.startsWith('fr') ? pm.fr : pm.en;
+  const pmLabel = (pm: { key: string; fr: string; en: string; ar: string }) =>
+    i18n.language.startsWith('ar') ? pm.ar : i18n.language.startsWith('fr') ? pm.fr : pm.en;
 
   // Reset / populate form when modal opens
   React.useEffect(() => {

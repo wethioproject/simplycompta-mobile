@@ -20,7 +20,7 @@ import {
   Calendar, Folder, CreditCard, User, Hash, Minus,
 } from 'lucide-react-native';
 import { ExpenseItem } from '../../types/expense.types';
-import { formatDate, formatCurrency } from '../../utils/expense.helpers';
+import { formatDate, formatCurrency, resolveCategoryKey } from '../../utils/expense.helpers';
 import { resolvePaymentMethod } from '../../types/invoice.types';
 import { styles } from '../../styles/expenses.styles';
 
@@ -129,7 +129,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
       icon: <Folder size={18} color="#EA580C" />,
       iconBg: '#FFEDD5',
       label: t('label_category'),
-      value: item.category?.name ?? '—',
+      value: (() => { const key = resolveCategoryKey(item.category?.name); return key ? t(key, { defaultValue: item.category?.name ?? '—' }) : (item.category?.name ?? '—'); })(),
     },
     {
       icon: <CreditCard size={18} color="#4F6EF7" />,
@@ -201,7 +201,7 @@ const ExpenseDetailModal: React.FC<ExpenseDetailModalProps> = ({
               <Minus size={24} color="#EC4899" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.detailExpenseCategoryName}>{item.category?.name ?? '—'}</Text>
+              <Text style={styles.detailExpenseCategoryName}>{(() => { const key = resolveCategoryKey(item.category?.name); return key ? t(key, { defaultValue: item.category?.name ?? '—' }) : (item.category?.name ?? '—'); })()}</Text>
               <Text style={styles.detailDate}>{formattedDate}</Text>
             </View>
             <Text style={styles.detailAmount}>-{formatCurrency(item.total_ttc)}</Text>

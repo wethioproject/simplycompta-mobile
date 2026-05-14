@@ -5,16 +5,6 @@ import { MoreVertical, Copy, CheckCircle, X } from 'lucide-react-native';
 import type { InvoiceItem } from '../../types/invoice.types';
 import { invoiceStyles as styles } from '../../styles/invoice.styles';
 import { calculateInvoiceTotals } from '../../utils/invoiceCalculations';
-import { t } from 'i18next';
-
-const STATUS_CONFIG: Record<string, { bg: string; label: string }> = {
-  issued:    { bg: '#3B82F6', label: t('status_issued') },
-  paid:      { bg: '#16A34A', label: t('status_paid') },
-  cancelled: { bg: '#EF4444', label: t('status_cancelled') },
-  canceled:  { bg: '#EF4444', label: t('status_cancelled') },
-};
-
-const DEFAULT_STATUS = { bg: '#E5E7EB', label: t('status_unknown') };
 
 const AMOUNT_COLORS: Record<string, string> = {
   issued:    '#3B82F6',
@@ -44,6 +34,15 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
   const { t } = useTranslation();
   const { totalTTC } = calculateInvoiceTotals(item.articles);
   const formattedDate = new Date(item.date).toLocaleDateString('fr-FR');
+
+  const STATUS_CONFIG: Record<string, { bg: string; label: string }> = {
+    issued:    { bg: '#3B82F6', label: t('status_issued') },
+    paid:      { bg: '#16A34A', label: t('status_paid') },
+    cancelled: { bg: '#EF4444', label: t('status_cancelled') },
+    canceled:  { bg: '#EF4444', label: t('status_cancelled') },
+  };
+  const DEFAULT_STATUS = { bg: '#E5E7EB', label: t('status_unknown') };
+
   const { bg, label } = STATUS_CONFIG[item.status] ?? DEFAULT_STATUS;
   const amountColor = AMOUNT_COLORS[item.status] ?? '#111827';
   const isMenuOpen = openMenuId === item.id;

@@ -4,6 +4,7 @@ import { PieChart } from 'react-native-gifted-charts';
 import { useTranslation } from 'react-i18next';
 import type { ExpenseCategoryItem } from '../../services/dashboardService';
 import { styles } from '../../styles/expenses.styles';
+import { resolveCategoryKey } from '../../utils/expense.helpers';
 
 const PIE_COLORS = [
   '#3B82F6', '#FEE2E2', '#10B981', '#EF4444', '#8B5CF6',
@@ -19,12 +20,15 @@ const ExpensePieChart: React.FC<ExpensePieChartProps> = ({ loading, pieCategorie
   const { t } = useTranslation();
 
   const total = pieCategories.reduce((sum, c) => sum + parseFloat(c.value), 0);
-  const pieData = pieCategories.map((c, i) => ({
-    value: parseFloat(c.value),
-    color: PIE_COLORS[i % PIE_COLORS.length],
-    label: c.label,
-    percentage: total > 0 ? ((parseFloat(c.value) / total) * 100).toFixed(1) : '0.0',
-  }));
+  const pieData = pieCategories.map((c, i) => {
+    const key = resolveCategoryKey(c.label);
+    return {
+      value: parseFloat(c.value),
+      color: PIE_COLORS[i % PIE_COLORS.length],
+      label: key ? t(key, { defaultValue: c.label }) : c.label,
+      percentage: total > 0 ? ((parseFloat(c.value) / total) * 100).toFixed(1) : '0.0',
+    };
+  });
 
   return (
     <View style={styles.pieCard}>

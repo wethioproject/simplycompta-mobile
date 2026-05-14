@@ -89,16 +89,16 @@ export const resolveStatus = (key: string | null | undefined, locale: string): s
 };
 
 export const PAYMENT_METHODS = [
-  { key: 'cash',             fr: 'Espèces',                   en: 'Cash' },
-  { key: 'bank transfer',    fr: 'Virement bancaire',          en: 'Bank Transfer' },
-  { key: 'card',             fr: 'Carte bancaire',             en: 'Credit / Debit Card' },
-  { key: 'cheque',           fr: 'Chèque',                     en: 'Cheque' },
-  { key: 'mobile payment',   fr: 'Paiement mobile',            en: 'Mobile Payment' },
-  { key: 'online payment',   fr: 'Paiement en ligne',          en: 'Online Payment' },
-  { key: 'direct debit',     fr: 'Prélèvement automatique',    en: 'Direct Debit' },
-  { key: 'deferred',         fr: 'Paiement différé',           en: 'Deferred Payment' },
-  { key: 'instant transfer', fr: 'Virement instantané',        en: 'Instant Bank Transfer' },
-  { key: 'other',            fr: 'Autre',                      en: 'Other' },
+  { key: 'cash',             fr: 'Espèces',                   en: 'Cash',                    ar: 'نقدًا' },
+  { key: 'bank transfer',    fr: 'Virement bancaire',          en: 'Bank Transfer',           ar: 'تحويل بنكي' },
+  { key: 'card',             fr: 'Carte bancaire',             en: 'Credit / Debit Card',     ar: 'بطاقة ائتمانية' },
+  { key: 'cheque',           fr: 'Chèque',                     en: 'Cheque',                  ar: 'شيك' },
+  { key: 'mobile payment',   fr: 'Paiement mobile',            en: 'Mobile Payment',          ar: 'دفع عبر الهاتف' },
+  { key: 'online payment',   fr: 'Paiement en ligne',          en: 'Online Payment',          ar: 'دفع إلكتروني' },
+  { key: 'direct debit',     fr: 'Prélèvement automatique',    en: 'Direct Debit',            ar: 'خصم مباشر' },
+  { key: 'deferred',         fr: 'Paiement différé',           en: 'Deferred Payment',        ar: 'دفع مؤجل' },
+  { key: 'instant transfer', fr: 'Virement instantané',        en: 'Instant Bank Transfer',   ar: 'تحويل فوري' },
+  { key: 'other',            fr: 'Autre',                      en: 'Other',                   ar: 'أخرى' },
 ] as const;
 
 /** Resolves a payment_method key (e.g. "mobile_payment") to a display label.
@@ -107,5 +107,6 @@ export const resolvePaymentMethod = (key: string | null | undefined, locale: str
   if (!key) return '—';
   const match = PAYMENT_METHODS.find(p => p.key === key);
   if (!match) return key;
+  if (locale.startsWith('ar')) return match.ar;
   return locale.startsWith('fr') ? match.fr : match.en;
 };

@@ -3,7 +3,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { Minus } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { ExpenseItem } from '../../types/expense.types';
-import { formatDate, formatCurrency, capitalise } from '../../utils/expense.helpers';
+import { formatDate, formatCurrency, capitalise, resolveCategoryKey } from '../../utils/expense.helpers';
 import { resolvePaymentMethod } from '../../types/invoice.types';
 import { styles } from '../../styles/expenses.styles';
 
@@ -13,7 +13,7 @@ interface ExpenseItemCardProps {
 }
 
 const ExpenseItemCard: React.FC<ExpenseItemCardProps> = ({ item, onPress }) => {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const formattedDate = formatDate(item.date);
 
   return (
@@ -28,7 +28,7 @@ const ExpenseItemCard: React.FC<ExpenseItemCardProps> = ({ item, onPress }) => {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.expenseDesc} numberOfLines={1}>
-            {capitalise(item.category.name)}
+            {(() => { const key = resolveCategoryKey(item.category?.name); return key ? t(key, { defaultValue: item.category?.name }) : capitalise(item.category?.name ?? ''); })()}
           </Text>
           <Text style={styles.expenseMeta}>
             {formattedDate} • {resolvePaymentMethod(item.payment_method, i18n.language)}

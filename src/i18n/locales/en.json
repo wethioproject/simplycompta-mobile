@@ -825,6 +825,7 @@
   "expense_cat_restaurant": "Restaurant",
   "expense_cat_salaires": "Salaries",
   "expense_cat_transport": "Transport",
+  "expense_cat_utilities": "Utilities",
   "ocr_loading": "OCR extraction in progress...",
   "ocr_loading_title": "Scanning receipt...",
   "ocr_loading_subtitle": "Extracting data using AI",
