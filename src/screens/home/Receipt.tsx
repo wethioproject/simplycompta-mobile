@@ -7,7 +7,6 @@ import {
   StyleSheet,
   Alert,
   RefreshControl,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -21,6 +20,8 @@ import { loadSubscription } from '../../store/slices/subscriptionSlice';
 import type { AppDispatch } from '../../store';
 import DetailModal from '../../components/receipt/DetailModal';
 import { useReceipt } from '../../hooks/useReceipt';
+import { FontFamily, FontWeight } from '../../theme/typography';
+import ReceiptSkeleton from '../../components/receipt/ReceiptSkeleton';
 
 
 const Receipt: React.FC = ({ navigation: navProp }: any) => {
@@ -139,23 +140,65 @@ const Receipt: React.FC = ({ navigation: navProp }: any) => {
   );
 
 
-  const ListEmpty = (
-    <View style={styles.emptyBox}>
-      <View style={styles.emptyIconCircle}>
-        <Coins size={32} color="#9CA3AF" />
-      </View>
-      <Text style={styles.emptyTitle}>{t('receipt_empty_title')}</Text>
-      <Text style={styles.emptySubtitle}>{t('receipt_empty_subtitle')}</Text>
-      <TouchableOpacity
-        style={styles.emptyAddBtn}
-        onPress={() => setShowCreateModal(true)}
-        activeOpacity={0.85}
-      >
-        <Plus size={16} color="#FFFFFF" strokeWidth={2.5} />
-        <Text style={styles.emptyAddBtnTxt}>{t('receipt_btn_add')}</Text>
-      </TouchableOpacity>
-    </View>
-  );
+    const ListEmpty = (
+        <View style={[styles.emptyBox, { paddingVertical: 48, gap: 12 }]}>
+            {/* Icon */}
+            <View style={{
+                width: 80, height: 80, borderRadius: 40,
+                backgroundColor: '#EFF6FF',
+                justifyContent: 'center', alignItems: 'center',
+            }}>
+                <Coins size={36} color="#1E5BAC" />
+            </View>
+
+            {/* Title */}
+            <Text style={{
+                fontSize: 17,
+                fontFamily: FontFamily.display,
+                fontWeight: FontWeight.bold,
+                color: '#111827',
+                textAlign: 'center',
+            }}>
+                {t('empty_no_receipts_title') || t('receipt_empty_title')}
+            </Text>
+
+            {/* Subtitle */}
+            <Text style={{
+                fontSize: 13,
+                fontFamily: FontFamily.regular,
+                fontWeight: FontWeight.regular,
+                color: '#6B7280',
+                textAlign: 'center',
+                lineHeight: 19,
+                paddingHorizontal: 24,
+            }}>
+                {t('empty_no_receipts_hint') || t('receipt_empty_subtitle')}
+            </Text>
+
+            {/* CTA */}
+            <TouchableOpacity
+                style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 8,
+                    backgroundColor: '#1E5BAC', borderRadius: 14,
+                    paddingHorizontal: 24, paddingVertical: 13, marginTop: 4,
+                    shadowColor: '#1E5BAC', shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.28, shadowRadius: 8, elevation: 5,
+                }}
+                onPress={() => setShowCreateModal(true)}
+                activeOpacity={0.85}
+            >
+                <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
+                <Text style={{
+                    fontSize: 14,
+                    fontFamily: FontFamily.display,
+                    fontWeight: FontWeight.bold,
+                    color: '#FFFFFF',
+                }}>
+                    {t('button_create_receipt') || t('receipt_btn_add')}
+                </Text>
+            </TouchableOpacity>
+        </View>
+    );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -185,9 +228,7 @@ const Receipt: React.FC = ({ navigation: navProp }: any) => {
       </View>
 
       {loading ? (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="large" color="#1E5BAC" />
-        </View>
+        <ReceiptSkeleton />
       ) : (
         <FlatList
           data={receipts}
@@ -333,17 +374,7 @@ const styles = StyleSheet.create({
   listContent: { padding: 16, paddingBottom: 110, gap: 12 },
   loadingBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 
-  emptyBox: {
-    alignItems: 'center',
-    paddingVertical: 48,
-    gap: 12,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    marginTop: 8,
-    paddingHorizontal: 24,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-  },
+  emptyBox: { alignItems: 'center', paddingVertical: 60 },
   emptyIconCircle: {
     width: 68,
     height: 68,

@@ -37,6 +37,8 @@ import CreateQuoteModal from '../../components/quote/CreateQuoteModal';
 import DetailModal from '../../components/quote/DetailModal';
 import QuoteCard from '../../components/quote/QuoteCard';
 import QuotePieChart from '../../components/quote/QuotePieChart';
+import InvoiceSkeleton from '../../components/invoice/InvoiceSkeleton';
+import { FontFamily, FontWeight } from '../../theme/typography';
 import dashboardService from '../../services/dashboardService';
 import type { QuoteChartItem } from '../../services/dashboardService';
 import type { Account, Category, Client, StackNavigation } from '../../types/invoice.types';
@@ -97,7 +99,6 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
     fetchQuotes,
     getFilterParams,
   } = useQuoteList();
-  console.log('quotes', quotes)
 
   const [searchQuery, setSearchQuery] = useState('');
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
@@ -201,6 +202,7 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
     if (result.success) {
       setSelectedItem(null);
       fetchQuotes(getFilterParams());
+      fetchChartData();
       dispatch(loadSubscription() as any);
       Alert.alert(t('success_title'), t('success_quote_deleted'));
     } else {
@@ -253,6 +255,7 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
     if (result.success) {
       dispatch(loadSubscription() as any);
       fetchQuotes(getFilterParams());
+      fetchChartData();
       Alert.alert(t('success'), t('success_quote_duplicated') || t('success_invoice_duplicated'));
     } else {
       Alert.alert(t('error'), result.error ?? t('error_generic'));
@@ -264,6 +267,7 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
     if (result.success) {
       dispatch(loadSubscription() as any);
       fetchQuotes(getFilterParams());
+      fetchChartData();
     } else {
       Alert.alert(t('error'), result.error ?? t('error_generic'));
     }
@@ -466,9 +470,7 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
 
       {/* ── List ────────────────────────────────────────────────────── */}
       {loading ? (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="large" color="#1E5BAC" />
-        </View>
+        <InvoiceSkeleton />
       ) : (
         <FlatList
           data={filtered}
@@ -552,17 +554,43 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
             </View>
           }
           ListEmptyComponent={
-            <View style={styles.emptyBox}>
-              <Receipt size={40} color="#D1D5DB" />
-              <Text style={styles.emptyText}>{t('empty_no_quotes')}</Text>
-            </View>
+              <View style={styles.emptyBox}>
+                {/* Icon container */}
+                <View style={styles.emptyIconContainer}>
+                  <Receipt size={36} color="#1E5BAC" />
+                </View>
+
+                {/* Title */}
+                <Text style={[styles.emptyTitle, { fontFamily: FontFamily.display, fontWeight: FontWeight.bold }]}>
+                  {t('empty_no_quotes_title') || t('empty_no_quotes')}
+                </Text>
+
+                {/* Subtitle */}
+                <Text style={[styles.emptySubtitle, { fontFamily: FontFamily.regular, fontWeight: FontWeight.regular }]}>
+                  {t('empty_no_quotes_hint') || t('empty_no_quotes')}
+                </Text>
+
+                {/* CTA */}
+                <TouchableOpacity
+                  style={[styles.emptyCTABtn, { gap: 8 }]}
+                  onPress={() => setShowCreateModal(true)}
+                  activeOpacity={0.85}
+                >
+                  <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
+                  <Text style={[styles.emptyCTAText, { fontFamily: FontFamily.display, fontWeight: FontWeight.bold }]}>
+                    {t('button_create_quote') || t('button_new')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
           }
           ListFooterComponent={
-            <QuotePieChart
-              loading={pieLoading}
-              chartData={pieChartData}
-              convertedQuotes={convertedQuotes}
-            />
+            pieChartData.length > 0 ? (
+              <QuotePieChart
+                loading={pieLoading}
+                chartData={pieChartData}
+                convertedQuotes={convertedQuotes}
+              />
+            ) : null
           }
         />
       )}
@@ -579,7 +607,10 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
         accounts={accounts}
         clients={clients}
         customerId={user?.id ?? 0}
-        onCreated={() => fetchQuotes(getFilterParams())}
+        onCreated={() => {
+          fetchQuotes(getFilterParams());
+          fetchChartData();
+        }}
         onSave={createQuote}
         onClientsRefresh={refreshClients}
         defaultClientId={defaultClientId}
@@ -604,7 +635,10 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
           accounts={accounts}
           clients={clients}
           customerId={user?.id ?? 0}
-          onCreated={() => fetchQuotes(getFilterParams())}
+          onCreated={() => {
+            fetchQuotes(getFilterParams());
+            fetchChartData();
+          }}
           onSave={createQuote}
           editItem={editingItem}
           onUpdate={updateQuote}

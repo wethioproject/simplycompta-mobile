@@ -194,6 +194,45 @@ export const invoiceStyles = StyleSheet.create({
   loadingBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyBox: { alignItems: 'center', paddingVertical: 60, gap: 12 },
   emptyText: { fontSize: 15, color: '#9CA3AF' },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  emptyTitle: {
+    fontSize: 17,
+    color: '#111827',
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 19,
+    paddingHorizontal: 24,
+  },
+  emptyCTABtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1E5BAC',
+    borderRadius: 14,
+    paddingHorizontal: 24,
+    paddingVertical: 13,
+    marginTop: 8,
+    shadowColor: '#1E5BAC',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.28,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  emptyCTAText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
 
   // Invoice Card
   invoiceCard: {

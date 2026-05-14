@@ -7,7 +7,6 @@ import {
   FlatList,
   StyleSheet,
   Image,
-  ActivityIndicator,
   Alert,
   TextInput,
   RefreshControl,
@@ -37,6 +36,9 @@ import { getClients, searchClients } from '../../services/client.service';
 import { useSupplier } from '../../hooks/useSupplier';
 import { CreateClientModal } from '../../components/clients/CreateClientModal';
 import { CreateSupplierModal } from './Suppliers';
+import ContactsSkeleton from '../../components/clients/ContactsSkeleton';
+import { FontFamily, FontWeight } from '../../theme/typography';
+import { Users, UserCheck } from 'lucide-react-native';
 
 
 type ContactTab = 'clients' | 'suppliers';
@@ -443,9 +445,7 @@ const Contacts: React.FC = ({ navigation: navProp }: any) => {
 
 
       {isLoading ? (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="large" color="#1E5BAC" />
-        </View>
+        <ContactsSkeleton isSupplier={activeTab === 'suppliers'} />
       ) : activeTab === 'clients' ? (
         <FlatList<ClientItem>
           data={sortedClients}
@@ -462,7 +462,25 @@ const Contacts: React.FC = ({ navigation: navProp }: any) => {
           }
           ListEmptyComponent={
             <View style={styles.emptyBox}>
-              <Text style={styles.emptyText}>{t('text_no_clients_found')}</Text>
+              <View style={styles.emptyIconContainer}>
+                <Users size={36} color="#1E5BAC" />
+              </View>
+              <Text style={[styles.emptyTitle, { fontFamily: FontFamily.display, fontWeight: FontWeight.bold }]}>
+                {t('empty_no_clients_title')}
+              </Text>
+              <Text style={[styles.emptySubtitle, { fontFamily: FontFamily.regular, fontWeight: FontWeight.regular }]}>
+                {t('empty_no_clients_hint')}
+              </Text>
+              <TouchableOpacity
+                style={[styles.emptyCTABtn, { gap: 8 }]}
+                onPress={() => setShowCreateClientModal(true)}
+                activeOpacity={0.85}
+              >
+                <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
+                <Text style={[styles.emptyCTAText, { fontFamily: FontFamily.display, fontWeight: FontWeight.bold }]}>
+                  {t('button_create_client')}
+                </Text>
+              </TouchableOpacity>
             </View>
           }
         />
@@ -482,7 +500,25 @@ const Contacts: React.FC = ({ navigation: navProp }: any) => {
           }
           ListEmptyComponent={
             <View style={styles.emptyBox}>
-              <Text style={styles.emptyText}>{t('text_no_suppliers_found')}</Text>
+              <View style={styles.emptyIconContainer}>
+                <UserCheck size={36} color="#1E5BAC" />
+              </View>
+              <Text style={[styles.emptyTitle, { fontFamily: FontFamily.display, fontWeight: FontWeight.bold }]}>
+                {t('empty_no_suppliers_title')}
+              </Text>
+              <Text style={[styles.emptySubtitle, { fontFamily: FontFamily.regular, fontWeight: FontWeight.regular }]}>
+                {t('empty_no_suppliers_hint')}
+              </Text>
+              <TouchableOpacity
+                style={[styles.emptyCTABtn, { gap: 8 }]}
+                onPress={() => setShowCreateSupplierModal(true)}
+                activeOpacity={0.85}
+              >
+                <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
+                <Text style={[styles.emptyCTAText, { fontFamily: FontFamily.display, fontWeight: FontWeight.bold }]}>
+                  {t('button_create_supplier')}
+                </Text>
+              </TouchableOpacity>
             </View>
           }
         />
@@ -687,9 +723,45 @@ const styles = StyleSheet.create({
 
 
   listContent: { padding: 16, paddingBottom: 100, gap: 10 },
-  loadingBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyBox: { alignItems: 'center', paddingVertical: 60 },
-  emptyText: { fontSize: 15, color: '#9CA3AF' },
+  emptyBox: { alignItems: 'center', paddingVertical: 48, gap: 12 },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#EFF6FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyTitle: {
+    fontSize: 17,
+    color: '#111827',
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 19,
+    paddingHorizontal: 24,
+  },
+  emptyCTABtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1E5BAC',
+    borderRadius: 14,
+    paddingHorizontal: 24,
+    paddingVertical: 13,
+    marginTop: 4,
+    shadowColor: '#1E5BAC',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.28,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  emptyCTAText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+  },
 
 
   card: {

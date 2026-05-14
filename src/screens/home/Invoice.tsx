@@ -38,6 +38,8 @@ import { useInvoiceList } from '../../hooks/useInvoiceList';
 import CreateInvoiceModal from '../../components/invoice/CreateInvoiceModal';
 import DetailModal from '../../components/invoice/DetailModal';
 import InvoiceCard from '../../components/invoice/InvoiceCard';
+import InvoiceSkeleton from '../../components/invoice/InvoiceSkeleton';
+import { FontFamily, FontWeight } from '../../theme/typography';
 import type { Account, Category, Client, InvoiceItem, InvoiceTabType, StackNavigation } from '../../types/invoice.types';
 import { invoiceStyles as styles } from '../../styles/invoice.styles';
 import { INVOICE_TABS } from '../../types/invoice.types';
@@ -423,9 +425,7 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
 
       {/* ── List ────────────────────────────────────────────────────── */}
       {loading ? (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="large" color="#1E5BAC" />
-        </View>
+        <InvoiceSkeleton />
       ) : (
         <FlatList
           data={filtered}
@@ -506,8 +506,32 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
           }
           ListEmptyComponent={
             <View style={styles.emptyBox}>
-              <Receipt size={40} color="#D1D5DB" />
-              <Text style={styles.emptyText}>{t('empty_no_invoices')}</Text>
+              {/* Icon container */}
+                  <View style={styles.emptyIconContainer}>
+                    <Receipt size={36} color="#1E5BAC" />
+                  </View>
+
+              {/* Title */}
+              <Text style={[styles.emptyTitle, { fontFamily: FontFamily.display, fontWeight: FontWeight.bold }]}>
+                {t('empty_no_invoices_title') || t('empty_no_invoices')}
+              </Text>
+
+              {/* Subtitle */}
+              <Text style={[styles.emptySubtitle, { fontFamily: FontFamily.regular, fontWeight: FontWeight.regular }]}>
+                {t('empty_no_invoices_hint') || t('empty_no_invoices')}
+              </Text>
+
+              {/* CTA */}
+              <TouchableOpacity
+                style={[styles.emptyCTABtn, { gap: 8 }]}
+                onPress={() => setShowCreateModal(true)}
+                activeOpacity={0.85}
+              >
+                <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
+                <Text style={[styles.emptyCTAText, { fontFamily: FontFamily.display, fontWeight: FontWeight.bold }]}>
+                  {t('button_create_invoice') || t('button_new')}
+                </Text>
+              </TouchableOpacity>
             </View>
           }
         />

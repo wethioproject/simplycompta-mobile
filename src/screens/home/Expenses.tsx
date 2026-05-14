@@ -34,6 +34,8 @@ import ExpenseItemCard from '../../components/expense/ExpenseItemCard';
 import ExpensePieChart from '../../components/expense/ExpensePieChart';
 import ExpenseDetailModal from '../../components/expense/ExpenseDetailModal';
 import CreateExpenseModal from '../../components/expense/CreateExpenseModal';
+import ExpenseSkeleton from '../../components/expense/ExpenseSkeleton';
+import { FontFamily, FontWeight } from '../../theme/typography';
 
 import type { ExpenseItem, Account, Supplier } from '../../types/expense.types';
 import { styles } from '../../styles/expenses.styles';
@@ -273,9 +275,7 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
       )}
 
       {loading ? (
-        <View style={styles.loadingBox}>
-          <ActivityIndicator size="large" color="#1E5BAC" />
-        </View>
+        <ExpenseSkeleton />
       ) : (
         <FlatList
           data={filtered}
@@ -296,14 +296,39 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
             />
           }
           ListFooterComponent={
-            <ExpensePieChart loading={pieLoading} pieCategories={pieCategories} />
+            pieCategories.length > 0 ? (
+              <ExpensePieChart loading={pieLoading} pieCategories={pieCategories} />
+            ) : null
           }
           ListEmptyComponent={
-            <View style={styles.emptyBox}>
-              <View style={styles.emptyBox}>
-                <ActivityIndicator size="small" color="#9CA3AF" style={{ display: 'none' }} />
+              <View style={styles.emptyBoxLarge}>
+                {/* Icon */}
+                <View style={styles.emptyIconContainer}>
+                  <AlertTriangle size={36} color="#1E5BAC" />
+                </View>
+
+                {/* Title */}
+                <Text style={[styles.emptyTitle, { fontFamily: FontFamily.display, fontWeight: FontWeight.bold }]}>
+                  {t('empty_no_expenses_title') || t('empty_no_expenses')}
+                </Text>
+
+                {/* Subtitle */}
+                <Text style={[styles.emptySubtitle, { fontFamily: FontFamily.regular, fontWeight: FontWeight.regular }]}>
+                  {t('empty_no_expenses_hint') || t('empty_no_expenses')}
+                </Text>
+
+                {/* CTA */}
+                <TouchableOpacity
+                  style={[styles.emptyCTABtn, { gap: 8 }]}
+                  onPress={() => setShowCreateModal(true)}
+                  activeOpacity={0.85}
+                >
+                  <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
+                  <Text style={[styles.emptyCTAText, { fontFamily: FontFamily.display, fontWeight: FontWeight.bold }]}>
+                    {t('button_create_expense') || t('button_new')}
+                  </Text>
+                </TouchableOpacity>
               </View>
-            </View>
           }
         />
       )}
