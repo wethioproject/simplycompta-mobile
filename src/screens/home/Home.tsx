@@ -503,6 +503,7 @@ const Home: React.FC = () => {
     hasStatement: false,
     hasLastMonthStatement: false,
     whatsapp_bot_enabled: false,
+    companyName: '',
   });
 
   // Animation values
@@ -589,6 +590,7 @@ const Home: React.FC = () => {
           expiredInvoiceSum: res.data.expiredInvoiceSum ?? 0,
           expiredInvoicesCount: res.data.expiredInvoicesCount ?? 0,
           whatsapp_bot_enabled: res.data.whatsapp_bot_enabled ?? false,
+          companyName: res.data.companyName ?? 'Default company',
         });
       }
     } catch {}
@@ -703,7 +705,7 @@ const Home: React.FC = () => {
         <StatusBadges stats={stats} t={t} />
 
         {/* Connected Accountant Card */}
-        <ConnectedAccountantCard onPress={() => handleNavigate('accounting')} />
+        <ConnectedAccountantCard onPress={() => handleNavigate('accounting')} companyName={stats.companyName} />
 
         {/* OCR Scanner CTA Card */}
         <OCRScannerCard onScan={() => navigation.navigate('Expenses', { openCreateModal: true })} />

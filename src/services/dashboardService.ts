@@ -55,6 +55,7 @@ export interface ActivityStats {
     hasLastMonthStatement: boolean;
     is_enable_login: 0 | 1;
     whatsapp_bot_enabled: boolean;
+    companyName?: string;
 }
 
 export interface ActivityResponse {

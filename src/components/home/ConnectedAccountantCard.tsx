@@ -5,9 +5,10 @@ import { useTranslation } from 'react-i18next';
 
 interface Props {
   onPress?: () => void;
+  companyName?: string;
 }
 
-const ConnectedAccountantCard: React.FC<Props> = ({ onPress }) => {
+const ConnectedAccountantCard: React.FC<Props> = ({ onPress, companyName }) => {
   const { t } = useTranslation();
 
   return (
@@ -26,7 +27,9 @@ const ConnectedAccountantCard: React.FC<Props> = ({ onPress }) => {
 
       {/* Text */}
       <View style={styles.textWrap}>
-        <Text style={styles.title}>{t('accountant_card_title')}</Text>
+        <View>
+          <Text style={styles.title}>{t('accountant_card_title')} {companyName}</Text>
+        </View>
         <Text style={styles.subtitle}>{t('accountant_card_subtitle')}</Text>
       </View>
 
@@ -81,6 +84,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
     marginBottom: 2,
+  },
+  companyName: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#16A34A',
+    marginBottom: 6,
   },
   subtitle: {
     fontSize: 12,
