@@ -80,8 +80,9 @@ type SupplierFormValues = {
 export const CreateSupplierModal: React.FC<{
   visible: boolean;
   onClose: () => void;
-  onCreated: () => void;
-}> = ({ visible, onClose, onCreated }) => {
+  onCreated: (createdSupplier?: any) => void;
+  initialValues?: Partial<SupplierFormValues>;
+}> = ({ visible, onClose, onCreated, initialValues }) => {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { createSupplier } = useSupplier();
@@ -129,7 +130,22 @@ export const CreateSupplierModal: React.FC<{
   });
 
 //   useEffect(() => { if (!visible) resetForm(); }, [visible]);
-  useEffect(() => { if (!visible) reset(); }, [visible]);
+  useEffect(() => {
+    if (visible) {
+      reset({
+        companyName: initialValues?.companyName ?? '',
+        supplierName: initialValues?.supplierName ?? '',
+        email: initialValues?.email ?? '',
+        telephone: initialValues?.telephone ?? '',
+        postalCode: initialValues?.postalCode ?? '',
+        city: initialValues?.city ?? '',
+        commercialRegister: initialValues?.commercialRegister ?? '',
+        ice: initialValues?.ice ?? '',
+      });
+      return;
+    }
+    reset();
+  }, [visible, initialValues, reset]);
 
 //   const handleSave = async () => {
 //     if (!companyName.trim()) {
@@ -200,8 +216,13 @@ export const CreateSupplierModal: React.FC<{
       return;
     }
       dispatch(loadSubscription() as any);
+    const result = await createSupplier(payload);
+    if (!result?.success) {
+      Alert.alert(t('error_title'), result?.error ?? t('error_create_supplier'));
+      return;
+    }
       Alert.alert(t('success_title'), t('success_supplier_created'));
-      onCreated();
+      onCreated(result?.supplier ?? result?.data ?? payload);
       onClose();
     } catch (e: any) {
       const msg = e?.response?.data?.message ?? t('error_create_supplier');

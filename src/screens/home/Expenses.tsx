@@ -84,6 +84,7 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
   const [pieLoading, setPieLoading] = useState(true);
   const [pieCategories, setPieCategories] = useState<ExpenseCategoryItem[]>([]);
   const [defaultSupplierId, setDefaultSupplierId] = useState<number | undefined>(undefined);
+  const [ocrSupplierData, setOcrSupplierData] = useState<any>(undefined);
 
   const MONTHS = [
     t('month_january'), t('month_february'), t('month_march'), t('month_april'),
@@ -146,6 +147,7 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
     if (!loading && route.params?.openCreateModal) {
       fromChecklistRef.current = true;
       setDefaultSupplierId(route.params?.defaultSupplierId ?? undefined);
+      setOcrSupplierData(route.params?.ocrSupplierData ?? undefined);
       setShowCreateModal(true);
       navigation.setParams({ openCreateModal: undefined, defaultSupplierId: undefined } as any);
     }
@@ -359,8 +361,15 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
             navigation.navigate('Home' as any);
           }
         }}
+        onClose={() => {
+          setShowCreateModal(false);
+          setDefaultSupplierId(undefined);
+          setOcrSupplierData(undefined);
+        }}
+        onCreated={fetchData}
         onSuppliersRefresh={refreshSuppliers}
         defaultSupplierId={defaultSupplierId}
+        ocrSupplierData={ocrSupplierData}
       />
 
       {/* Edit modal */}
