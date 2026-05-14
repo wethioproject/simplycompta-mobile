@@ -16,6 +16,7 @@ import {
   Platform,
   Linking,
   Share,
+  Vibration,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -47,6 +48,7 @@ import { invoiceStyles as styles } from '../../styles/invoice.styles';
 import type { Account, Client, InvoiceArticle, InvoiceItem, Article } from '../../types/invoice.types';
 import { STATUT_OPTIONS, STATUT_OPTIONS_DETAIL_MODAL, PAYMENT_METHODS } from '../../types/invoice.types';
 import { useUpgradeWebView } from '../../utils/upgradeWebView';
+import { showPremiumToast } from '../../utils/premiumToast';
 
 const invoiceSchema = yup.object({
   invoiceNumber: yup.string().trim().required('Invoice number is required'),
@@ -448,7 +450,8 @@ const CreateInvoiceModal: React.FC<{
       if (editItem && onUpdate) {
         const result = await onUpdate(editItem.id, payload);
         if (result.success) {
-          Alert.alert(t('success_title'), t('success_invoice_updated'));
+          Vibration.vibrate(12);
+          showPremiumToast('success', t('success_title'), t('success_invoice_updated'));
           dispatch(loadSubscription() as any);
           onCreated();
           onClose();
@@ -459,7 +462,8 @@ const CreateInvoiceModal: React.FC<{
         console.log('fdfdfdfd333', payload);
         const result = await onSave(payload);
         if (result.success) {
-          Alert.alert(t('success_title'), t('success_invoice_created'));
+          Vibration.vibrate(12);
+          showPremiumToast('success', t('success_title'), t('success_invoice_created'));
           dispatch(loadSubscription() as any);
           onCreated();
           onClose();

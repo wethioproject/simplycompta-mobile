@@ -42,6 +42,7 @@ import dashboardService from '../../services/dashboardService';
 import ConnectedAccountantCard from '../../components/home/ConnectedAccountantCard';
 import OCRScannerCard from '../../components/home/OCRScannerCard';
 import WhatsAppBotCard from '../../components/home/WhatsAppBotCard';
+import { FadeInView, PremiumShimmer, PremiumTouchable } from '../../components/common/PremiumMotion';
 
 type DrawerNavigation = DrawerNavigationProp<any>;
 
@@ -65,10 +66,10 @@ const HomeHeader: React.FC<{
           {t('home_subtitle', { month: currentMonth })}
         </Text>
       </View>
-      <TouchableOpacity
+      <PremiumTouchable
         style={styles.notifBtn}
         onPress={onNotifications}
-        activeOpacity={0.7}
+        haptic
       >
         <Bell size={24} color="#374151" />
         {hasUnread && (
@@ -76,7 +77,7 @@ const HomeHeader: React.FC<{
             <Text style={styles.notifBadgeText}>2</Text>
           </View>
         )}
-      </TouchableOpacity>
+      </PremiumTouchable>
     </View>
   </View>
 );
@@ -94,6 +95,25 @@ const StatusBadges: React.FC<{ stats: { total_pending_actions: number }; t: any 
         <Text style={styles.badgeOrangeText}>{t('badge_actions_pending', { count: stats.total_pending_actions })}</Text>
       </View>
     )}
+  </View>
+);
+
+const DashboardSkeleton: React.FC = () => (
+  <View style={styles.dashboardSkeleton}>
+    <View style={styles.skeletonCardTall}>
+      <PremiumShimmer width="42%" height={12} borderRadius={6} />
+      <PremiumShimmer width="68%" height={20} borderRadius={10} />
+      <PremiumShimmer width="54%" height={12} borderRadius={6} />
+    </View>
+    <View style={styles.skeletonRow}>
+      {[0, 1, 2].map(item => (
+        <View key={item} style={styles.skeletonMiniCard}>
+          <PremiumShimmer width={32} height={32} borderRadius={10} />
+          <PremiumShimmer width="70%" height={12} borderRadius={6} />
+          <PremiumShimmer width="86%" height={18} borderRadius={9} />
+        </View>
+      ))}
+    </View>
   </View>
 );
 
@@ -119,7 +139,10 @@ const StatsCards: React.FC<{
       </View>
       <Text style={styles.statsLabel}>{t('label_revenus_home')}</Text>
       {loading ? (
-        <ActivityIndicator size="small" color="#16A34A" style={{ marginTop: 4 }} />
+        <View style={styles.statsSkeletonStack}>
+          <PremiumShimmer width="72%" height={18} borderRadius={9} />
+          <PremiumShimmer width="58%" height={10} borderRadius={5} />
+        </View>
       ) : (
         <>
           <Text style={styles.statsValue}>
@@ -141,7 +164,10 @@ const StatsCards: React.FC<{
       </View>
       <Text style={styles.statsLabel}>{t('label_depenses_home')}</Text>
       {loading ? (
-        <ActivityIndicator size="small" color="#F87171" style={{ marginTop: 4 }} />
+        <View style={styles.statsSkeletonStack}>
+          <PremiumShimmer width="72%" height={18} borderRadius={9} />
+          <PremiumShimmer width="58%" height={10} borderRadius={5} />
+        </View>
       ) : (
         <>
           <Text style={styles.statsValue}>
@@ -163,7 +189,10 @@ const StatsCards: React.FC<{
       </View>
       <Text style={styles.statsLabel}>{t('label_tva_home')}</Text>
       {loading ? (
-        <ActivityIndicator size="small" color="#1E5BAC" style={{ marginTop: 4 }} />
+        <View style={styles.statsSkeletonStack}>
+          <PremiumShimmer width="72%" height={18} borderRadius={9} />
+          <PremiumShimmer width="58%" height={10} borderRadius={5} />
+        </View>
       ) : (
         <>
           <Text style={styles.statsValue}>
@@ -227,13 +256,13 @@ const TasksSection: React.FC<{
           <View style={styles.taskBadgePriority}>
             <Text style={styles.taskBadgePriorityText}>{t('badge_priority')}</Text>
           </View>
-          <TouchableOpacity
+          <PremiumTouchable
             style={[styles.taskActionBtn, { backgroundColor: '#F0FDF4' }]}
             onPress={() => onNavigate('bank')}
-            activeOpacity={0.8}
+            haptic
           >
             <Send size={16} color="#16A34A" strokeWidth={2.5} />
-          </TouchableOpacity>
+          </PremiumTouchable>
         </View>
       </View>
       )}
@@ -256,13 +285,13 @@ const TasksSection: React.FC<{
           <View style={styles.taskBadgePriority}>
             <Text style={styles.taskBadgePriorityText}>{t('badge_priority')}</Text>
           </View>
-          <TouchableOpacity
+          <PremiumTouchable
             style={[styles.taskActionBtn, { backgroundColor: '#1E5BAC' }]}
             onPress={() => onNavigate('invoices')}
-            activeOpacity={0.8}
+            haptic
           >
             <Eye size={16} color="#FFFFFF" strokeWidth={2.5} />
-          </TouchableOpacity>
+          </PremiumTouchable>
         </View>
       </View>
       )}
@@ -283,13 +312,13 @@ const TasksSection: React.FC<{
           <View style={styles.taskBadgeNew}>
             <Text style={styles.taskBadgeNewText}>{t('badge_new')}</Text>
           </View>
-          <TouchableOpacity
+          <PremiumTouchable
             style={[styles.taskActionBtn, { backgroundColor: '#1E3A5F' }]}
             onPress={() => onNavigate('documentsList')}
-            activeOpacity={0.8}
+            haptic
           >
             <FolderOpen size={16} color="#FFFFFF" strokeWidth={2.5} />
-          </TouchableOpacity>
+          </PremiumTouchable>
         </View>
       </View>
       )}
@@ -312,13 +341,13 @@ const TasksSection: React.FC<{
           <View style={[styles.taskBadgePriority, { backgroundColor: '#FEF3C7' }]}>
             <Text style={[styles.taskBadgePriorityText, { color: '#D97706' }]}>{t('badge_expired')}</Text>
           </View>
-          <TouchableOpacity
+          <PremiumTouchable
             style={[styles.taskActionBtn, { backgroundColor: '#F59E0B' }]}
             onPress={() => onNavigate('invoices-expired')}
-            activeOpacity={0.8}
+            haptic
           >
             <Eye size={16} color="#FFFFFF" strokeWidth={2.5} />
-          </TouchableOpacity>
+          </PremiumTouchable>
         </View>
       </View>
       )}
@@ -330,6 +359,16 @@ const TasksSection: React.FC<{
 /** Progress section */
 const ProgressSection: React.FC<{ progressScore: number; t: any }> = ({ progressScore, t }) => {
   const progressPercentage = Math.min(100, Math.max(0, progressScore));
+  const animatedWidth = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(animatedWidth, {
+      toValue: progressPercentage,
+      duration: 320,
+      useNativeDriver: false,
+    }).start();
+  }, [animatedWidth, progressPercentage]);
+
   return (
   <View style={styles.progressSection}>
     <View style={styles.progressHeader}>
@@ -341,7 +380,17 @@ const ProgressSection: React.FC<{ progressScore: number; t: any }> = ({ progress
     </View>
     <View style={styles.progressCard}>
       <View style={styles.progressBarBg}>
-        <View style={[styles.progressBarFill, { width: `${progressPercentage}%` }]} />
+        <Animated.View
+          style={[
+            styles.progressBarFill,
+            {
+              width: animatedWidth.interpolate({
+                inputRange: [0, 100],
+                outputRange: ['0%', '100%'],
+              }),
+            },
+          ]}
+        />
       </View>
       <Text style={styles.progressText}>{t('progress_encouragement')}</Text>
     </View>
@@ -379,10 +428,10 @@ const ActivitiesSection: React.FC<{
 
     {/* Unpaid invoices - Conditional render */}
     {stats.unpaidInvoicesCount > 0 && (
-    <TouchableOpacity
+    <PremiumTouchable
       style={styles.activityCard}
       onPress={() => onNavigate('invoices')}
-      activeOpacity={0.8}
+      haptic
     >
       <View style={[styles.activityIcon, { backgroundColor: '#F0FDF4' }]}>
         <FileText size={20} color="#16A34A" />
@@ -404,14 +453,14 @@ const ActivitiesSection: React.FC<{
         </View>
       </View>
       <ChevronRight size={20} color="#9CA3AF" />
-    </TouchableOpacity>
+    </PremiumTouchable>
     )}
 
     {/* Devis en cours */}
-    <TouchableOpacity
+    <PremiumTouchable
       style={styles.activityCard}
       onPress={() => onNavigate('quotes')}
-      activeOpacity={0.8}
+      haptic
     >
       <View style={[styles.activityIcon, { backgroundColor: '#EFF6FF' }]}>
         <ClipboardList size={20} color="#1E5BAC" />
@@ -433,14 +482,14 @@ const ActivitiesSection: React.FC<{
         </View>
       </View>
       <ChevronRight size={20} color="#9CA3AF" />
-    </TouchableOpacity>
+    </PremiumTouchable>
 
     {/* Devis envoyés */}
     {stats.sentQuotesCount > 0 && (
-    <TouchableOpacity
+    <PremiumTouchable
       style={styles.activityCard}
       onPress={() => onNavigate('quotes-sent')}
-      activeOpacity={0.8}
+      haptic
     >
       <View style={[styles.activityIcon, { backgroundColor: '#FFFBEB' }]}>
         <Send size={20} color="#F59E0B" />
@@ -462,7 +511,7 @@ const ActivitiesSection: React.FC<{
         </View>
       </View>
       <ChevronRight size={20} color="#9CA3AF" />
-    </TouchableOpacity>
+    </PremiumTouchable>
     )}
   </View>
   );
@@ -702,47 +751,68 @@ const Home: React.FC = () => {
         }
       >
         {/* Status Badges */}
-        <StatusBadges stats={stats} t={t} />
+        <FadeInView delay={20}>
+          <StatusBadges stats={stats} t={t} />
+        </FadeInView>
 
         {/* Connected Accountant Card */}
-        <ConnectedAccountantCard onPress={() => handleNavigate('accounting')} companyName={stats.companyName} />
+        <FadeInView delay={60}>
+          <ConnectedAccountantCard onPress={() => handleNavigate('accounting')} companyName={stats.companyName} />
+        </FadeInView>
 
         {/* OCR Scanner CTA Card */}
-        <OCRScannerCard onScan={() => navigation.navigate('Expenses', { openCreateModal: true })} />
+        <FadeInView delay={100}>
+          <OCRScannerCard onScan={() => navigation.navigate('Expenses', { openCreateModal: true })} />
+        </FadeInView>
 
         {/* WhatsApp Bot Card */}
-        <WhatsAppBotCard
-          enabled={stats.whatsapp_bot_enabled}
-          onActivate={() => handleNavigate('whatsapp-bot')}
-        />
+        <FadeInView delay={140}>
+          <WhatsAppBotCard
+            enabled={stats.whatsapp_bot_enabled}
+            onActivate={() => handleNavigate('whatsapp-bot')}
+          />
+        </FadeInView>
 
         {/* Stats Cards */}
-        <StatsCards stats={stats} loading={statsLoading} previousMonthName={previousMonthName} t={t} />
+        {statsLoading && (
+          <FadeInView delay={160}>
+            <DashboardSkeleton />
+          </FadeInView>
+        )}
+        <FadeInView delay={180}>
+          <StatsCards stats={stats} loading={statsLoading} previousMonthName={previousMonthName} t={t} />
+        </FadeInView>
 
         {/* Tasks Section */}
-        <TasksSection stats={stats} onNavigate={handleNavigate} bankStatementMonth={bankStatementMonth} t={t} />
+        <FadeInView delay={220}>
+          <TasksSection stats={stats} onNavigate={handleNavigate} bankStatementMonth={bankStatementMonth} t={t} />
+        </FadeInView>
 
         {/* Progress Section */}
-        <ProgressSection progressScore={stats.total_progress_score} t={t} />
+        <FadeInView delay={260}>
+          <ProgressSection progressScore={stats.total_progress_score} t={t} />
+        </FadeInView>
 
         {/* Activities Section */}
-        <ActivitiesSection
-          stats={{
-            total_issued_count: stats.total_issued_count,
-            total_issued_sum: stats.total_issued_sum,
-            unpaidInvoicesCount: stats.unpaidInvoicesCount,
-            unpaidInvoiceSum: stats.unpaidInvoiceSum,
-            total_quote_count: stats.total_quote_count,
-            total_quote_sum: stats.total_quote_sum,
-            sentQuotesCount: stats.sentQuotesCount,
-            sentQuoteSum: stats.sentQuoteSum,
-            expiredInvoiceSum: stats.expiredInvoiceSum,
-            expiredInvoicesCount: stats.expiredInvoicesCount,
-          }}
-          loading={statsLoading}
-          onNavigate={handleNavigate}
-          t={t}
-        />
+        <FadeInView delay={300}>
+          <ActivitiesSection
+            stats={{
+              total_issued_count: stats.total_issued_count,
+              total_issued_sum: stats.total_issued_sum,
+              unpaidInvoicesCount: stats.unpaidInvoicesCount,
+              unpaidInvoiceSum: stats.unpaidInvoiceSum,
+              total_quote_count: stats.total_quote_count,
+              total_quote_sum: stats.total_quote_sum,
+              sentQuotesCount: stats.sentQuotesCount,
+              sentQuoteSum: stats.sentQuoteSum,
+              expiredInvoiceSum: stats.expiredInvoiceSum,
+              expiredInvoicesCount: stats.expiredInvoicesCount,
+            }}
+            loading={statsLoading}
+            onNavigate={handleNavigate}
+            t={t}
+          />
+        </FadeInView>
 
         <View style={styles.fabSpacer} />
       </ScrollView>
@@ -916,6 +986,35 @@ const styles = StyleSheet.create({
   statsTrendText: {
     fontSize: 9,
     fontWeight: '600',
+  },
+  statsSkeletonStack: {
+    marginTop: 4,
+    gap: 7,
+  },
+  dashboardSkeleton: {
+    gap: 10,
+    marginBottom: 12,
+  },
+  skeletonCardTall: {
+    gap: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#EEF2F7',
+  },
+  skeletonRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  skeletonMiniCard: {
+    flex: 1,
+    gap: 9,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#EEF2F7',
   },
 
   /* Tasks Section */

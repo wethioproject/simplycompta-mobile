@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Vibration } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +9,7 @@ import SignupStep2, { Step2Data } from '../../components/auth/SignupStep2';
 import SignupStep3, { Step3Data } from '../../components/auth/SignupStep3';
 import LanguageToggle from '../../components/auth/LanguageToggle';
 import { useAuth } from '../../hooks/useAuth';
+import { FadeInView } from '../../components/common/PremiumMotion';
 
 interface SignupProps {
   navigation: any;
@@ -36,6 +37,7 @@ const Signup: React.FC<SignupProps> = ({ navigation }) => {
   const handleStep1Next = async (data: Step1Data) => {
     const result = await checkEmail(data.email);
     if (!result.success) {
+      Vibration.vibrate(18);
       Toast.show({
         type: 'error',
         text1: t('signup_error_title'),
@@ -45,6 +47,7 @@ const Signup: React.FC<SignupProps> = ({ navigation }) => {
       return;
     }
     if (result.exists) {
+      Vibration.vibrate(18);
       Toast.show({
         type: 'error',
         text1: t('signup_error_title'),
@@ -54,6 +57,7 @@ const Signup: React.FC<SignupProps> = ({ navigation }) => {
       return;
     }
     setStep1Data(data);
+    Vibration.vibrate(10);
     setCurrentStep(1.5 as any);
   };
 
@@ -67,6 +71,7 @@ const Signup: React.FC<SignupProps> = ({ navigation }) => {
 
   const handleStep2Next = (data: Step2Data) => {
     setStep2Data(data);
+    Vibration.vibrate(10);
     setCurrentStep(3);
   };
 
@@ -96,8 +101,10 @@ const Signup: React.FC<SignupProps> = ({ navigation }) => {
   const handleStep3Complete = async (data: Step3Data) => {
     const result = await signup(buildPayload(data));
     if (result.success) {
+      Vibration.vibrate(12);
       navigation.replace('Home');
     } else {
+      Vibration.vibrate(18);
       Toast.show({
         type: 'error',
         text1: t('signup_error_title'),
@@ -110,8 +117,10 @@ const Signup: React.FC<SignupProps> = ({ navigation }) => {
   const handleStep3Skip = async () => {
     const result = await signup(buildPayload({}));
     if (result.success) {
+      Vibration.vibrate(12);
       navigation.replace('Home');
     } else {
+      Vibration.vibrate(18);
       Toast.show({
         type: 'error',
         text1: t('signup_error_title'),
@@ -134,33 +143,44 @@ const Signup: React.FC<SignupProps> = ({ navigation }) => {
       )}
 
       {currentStep === 1 && (
-        <SignupStep1
-          onNext={handleStep1Next}
-          onSignIn={() => navigation.replace('Login')}
-        />
+        <FadeInView>
+          <SignupStep1
+            onNext={handleStep1Next}
+            onSignIn={() => navigation.replace('Login')}
+          />
+        </FadeInView>
       )}
       {(currentStep as any) === 1.5 && (
-        <SignupOtpVerification
-          email={step1Data.email}
-          onVerified={() => setCurrentStep(2)}
-          onVerify={handleOtpVerify}
-          onResend={handleOtpResend}
-          onBack={() => setCurrentStep(1)}
-          isLoading={isLoading}
-        />
+        <FadeInView>
+          <SignupOtpVerification
+            email={step1Data.email}
+            onVerified={() => {
+              Vibration.vibrate(10);
+              setCurrentStep(2);
+            }}
+            onVerify={handleOtpVerify}
+            onResend={handleOtpResend}
+            onBack={() => setCurrentStep(1)}
+            isLoading={isLoading}
+          />
+        </FadeInView>
       )}
       {currentStep === 2 && (
-        <SignupStep2
-          onNext={handleStep2Next}
-          onBack={() => setCurrentStep(1.5 as any)}
-        />
+        <FadeInView>
+          <SignupStep2
+            onNext={handleStep2Next}
+            onBack={() => setCurrentStep(1.5 as any)}
+          />
+        </FadeInView>
       )}
       {currentStep === 3 && (
-        <SignupStep3
-          onComplete={handleStep3Complete}
-          onBack={() => setCurrentStep(2)}
-          onSkip={handleStep3Skip}
-        />
+        <FadeInView>
+          <SignupStep3
+            onComplete={handleStep3Complete}
+            onBack={() => setCurrentStep(2)}
+            onSkip={handleStep3Skip}
+          />
+        </FadeInView>
       )}
     </View>
   );

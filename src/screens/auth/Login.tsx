@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import Toast from 'react-native-toast-message';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image, ActivityIndicator, ScrollView } from 'react-native';
-import { User } from 'lucide-react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image, ActivityIndicator, ScrollView, Vibration } from 'react-native';
 import { appLogoIcon, eyeIcon } from '../../assets/icons';
 import { useAuth } from '../../hooks/useAuth';
 import { useTranslation } from 'react-i18next';
 import LanguageToggle from '../../components/auth/LanguageToggle';
+import { FadeInView, PremiumTouchable } from '../../components/common/PremiumMotion';
 
 
 interface LoginProps {
@@ -22,6 +22,7 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
 
   const handleLogin = async () => {
     if (!email || !password) {
+      Vibration.vibrate(18);
       Toast.show({
         type: 'error',
         text1: t('login_required_fields_title'),
@@ -32,6 +33,7 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
     }
     const result = await login({ email, password });
     if (result.success) {
+      Vibration.vibrate(12);
       navigation.replace('Home');
     }
   };
@@ -43,6 +45,7 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
 
   useEffect(() => {
     if (error) {
+      Vibration.vibrate(18);
       Toast.show({
         type: 'error',
         text1: t('login_failed_title'),
@@ -71,7 +74,7 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
         </View>
 
         {/* Login Form Card */}
-        <View style={styles.formCard}>
+        <FadeInView delay={80} style={styles.formCard}>
           <Text style={styles.formTitle}>{t('login_title')}</Text>
 
           {/* Email Input */}
@@ -117,18 +120,18 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
           </View>
 
           {/* Login Button */}
-          <TouchableOpacity
+          <PremiumTouchable
             style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
             onPress={handleLogin}
             disabled={isLoading}
-            activeOpacity={0.8}
+            haptic
           >
             {isLoading ? (
               <ActivityIndicator color="#FFFFFF" size="small" />
             ) : (
               <Text style={styles.loginButtonText}>{t('login_button')}</Text>
             )}
-          </TouchableOpacity>
+          </PremiumTouchable>
 
           {/* Links Section */}
           <View style={styles.linksContainer}>
@@ -156,7 +159,7 @@ const Login: React.FC<LoginProps> = ({ navigation }) => {
               <Text style={styles.signupLink}>{t('login_signup_link')}</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </FadeInView>
 
         {/* Footer */}
         <View style={styles.footer}>

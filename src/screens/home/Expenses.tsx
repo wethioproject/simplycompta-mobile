@@ -149,7 +149,7 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
       setDefaultSupplierId(route.params?.defaultSupplierId ?? undefined);
       setOcrSupplierData(route.params?.ocrSupplierData ?? undefined);
       setShowCreateModal(true);
-      navigation.setParams({ openCreateModal: undefined, defaultSupplierId: undefined } as any);
+      navigation.setParams({ openCreateModal: undefined, defaultSupplierId: undefined, ocrSupplierData: undefined } as any);
     }
   }, [loading, route.params?.openCreateModal]);
 
@@ -352,7 +352,11 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
         categories={categories}
         suppliers={suppliers}
         onSave={createExpense}
-        onClose={() => { setShowCreateModal(false); setDefaultSupplierId(undefined); }}
+        onClose={() => {
+          setShowCreateModal(false);
+          setDefaultSupplierId(undefined);
+          setOcrSupplierData(undefined);
+        }}
         onCreated={async () => {
           await fetchData();
           if (fromChecklistRef.current) {
@@ -361,12 +365,6 @@ const Expenses: React.FC = ({ navigation: navProp }: any) => {
             navigation.navigate('Home' as any);
           }
         }}
-        onClose={() => {
-          setShowCreateModal(false);
-          setDefaultSupplierId(undefined);
-          setOcrSupplierData(undefined);
-        }}
-        onCreated={fetchData}
         onSuppliersRefresh={refreshSuppliers}
         defaultSupplierId={defaultSupplierId}
         ocrSupplierData={ocrSupplierData}

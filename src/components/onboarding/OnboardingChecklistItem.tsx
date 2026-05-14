@@ -2,7 +2,6 @@ import React from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +15,7 @@ import {
   ChevronRight,
 } from 'lucide-react-native';
 import { ChecklistItem } from '../../types/onboarding.types';
+import { PremiumTouchable } from '../common/PremiumMotion';
 
 const ICON_MAP = {
   Building2,
@@ -38,10 +38,11 @@ const OnboardingChecklistItem: React.FC<OnboardingChecklistItemProps> = ({ item,
   const subtitle = t(item.subtitleKey);
 
   return (
-    <TouchableOpacity
+    <PremiumTouchable
       style={[styles.row, isCompleted && styles.rowCompleted]}
       onPress={() => !isCompleted && onPress(item)}
       activeOpacity={isCompleted ? 1 : 0.7}
+      haptic={!isCompleted}
     >
       {/* Icon container */}
       <View style={[styles.iconBox, isCompleted ? styles.iconBoxDone : styles.iconBoxPending]}>
@@ -72,7 +73,7 @@ const OnboardingChecklistItem: React.FC<OnboardingChecklistItemProps> = ({ item,
           <ChevronRight size={16} color="#1E5BAC" />
         </View>
       )}
-    </TouchableOpacity>
+    </PremiumTouchable>
   );
 };
 

@@ -10,6 +10,9 @@ export interface SupplierPayload {
   city: string;
   commercial_register?: string;
   ice?: string;
+  if_number?: string;
+  cnss?: string;
+  address?: string;
 }
 
 class SupplierService {
