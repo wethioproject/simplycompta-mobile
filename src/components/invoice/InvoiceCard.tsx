@@ -72,7 +72,7 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
             {item.client?.client_name ?? '—'}
           </Text>
           <Text style={styles.newInvoiceMeta}>
-            {t('label_invoice')} {item.invoice_number} • {formattedDate}
+            {t('label_invoice')} {item.invoice_number_formatted} • {formattedDate}
           </Text>
           <Text style={[styles.invoiceAmount, { fontSize: 17, color: amountColor }]}>
             + {item.total_ttc.toLocaleString('fr-FR')} MAD

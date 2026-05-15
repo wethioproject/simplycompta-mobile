@@ -497,7 +497,7 @@ console.log('Initiating document download for quote:102', src);
                 <FileText size={18} color="#9CA3AF" />
                 <Text style={styles.detailRowLabel}>{t('label_quote_number')}</Text>
               </View>
-              <Text style={styles.detailRowValue}>{src.quote_number ?? src.invoice_number}</Text>
+              <Text style={styles.detailRowValue}>{src.quote_number_formatted ?? src.invoice_number}</Text>
             </View>
             {/* Client */}
             <View style={styles.detailRow}>

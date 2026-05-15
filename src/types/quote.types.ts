@@ -35,6 +35,7 @@ export interface InvoiceItem {
   client_id: number;
   date: string;
   invoice_number?: string;
+  quote_number_formatted?: string;
   quote_number?: string;
   payment_method: string;
   status: string;
