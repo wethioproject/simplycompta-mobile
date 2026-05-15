@@ -58,8 +58,8 @@ export interface SupplierItem {
 
 // ─── Yup schema (Supplier) ─────────────────────────────────────────────────────
 const supplierSchema = yup.object({
-  companyName: yup.string().optional(),
-  supplierName: yup.string().trim().required('Supplier name is required'),
+  companyName: yup.string().trim().required('Company name is required'),
+  supplierName: yup.string().trim().optional(),
   email: yup.string().trim().optional().test('email-format', 'Invalid email address', v => !v || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)),
   telephone: yup.string().trim().optional(),
   postalCode: yup.string().optional(),
@@ -278,7 +278,7 @@ export const CreateSupplierModal: React.FC<{
               <View style={styles.fieldBlock}>
                 {/* <Text style={styles.fieldLabel}>{t('label_company_name')} <Text style={styles.required}>*</Text></Text>
                 <TextInput style={styles.fieldInput} value={companyName} onChangeText={setCompanyName} placeholder="Bureautique Maroc SARL" placeholderTextColor="#AAAAAA" /> */}
-                                <Text style={styles.fieldLabel}>{t('label_company_name')}</Text>
+                                <Text style={styles.fieldLabel}>{t('label_company_name')} <Text style={styles.required}>*</Text></Text>
                                 <Controller
                                     control={control}
                                     name="companyName"
@@ -294,7 +294,7 @@ export const CreateSupplierModal: React.FC<{
                                 {errors.companyName && <Text style={styles.fieldError}>{errors.companyName.message}</Text>}
               </View>
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>{t('label_supplier_name')} <Text style={styles.required}>*</Text></Text>
+                <Text style={styles.fieldLabel}>{t('label_supplier_name')}</Text>
                 <Controller
                   control={control}
                   name="supplierName"
