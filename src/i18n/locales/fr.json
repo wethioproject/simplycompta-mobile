@@ -741,7 +741,7 @@
   "analysis_good_month_detail": "(+ {{pct}}%)",
   "chart_title_expenses_vs_ca": "Dépenses vs Chiffre d'Affaires",
   "label_see_all": "Voir tout",
-  "label_cash_collected": "Recettes perçues (hors taxes)",
+  "label_cash_collected": "CA encaissé (HT)",
   "label_estimated_vat": "TVA estimée",
   "info_ca": "Montant total facturé durant la période sélectionnée, incluant les factures payées et impayées.",
   "info_cash_collected": "Montant total effectivement encaissé auprès de vos clients durant la période sélectionnée.",
