@@ -35,8 +35,8 @@ import {
   ScrollText,
 } from 'lucide-react-native';
 
-const TERMS_OF_USE_URL = 'https://simply-compta.com/';
-const GENERAL_TERMS_URL = 'https://simply-compta.com/';
+const TERMS_OF_USE_URL = 'https://simply-compta.com/privacy-policy.pdf';
+const GENERAL_TERMS_URL = 'https://simply-compta.com/terms-and-conditions.pdf';
 
 const MenuRow: React.FC<{
   Icon: React.ComponentType<any>;
