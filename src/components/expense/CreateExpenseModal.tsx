@@ -54,6 +54,8 @@ import { styles } from '../../styles/expenses.styles';
 import { CATEGORY_KEY_MAP, resolveCategoryKey } from '../../utils/expense.helpers';
 import { useUpgradeWebView } from '../../utils/upgradeWebView';
 import { showPremiumToast } from '../../utils/premiumToast';
+import PremiumSuccessCelebration from '../common/PremiumSuccessCelebration';
+import { SuccessMorphButton } from '../common/PremiumMotion';
 
 const OCR_API_URL = 'https://ocr.simply-compta.com/api/expenses/ocr';
 
@@ -170,6 +172,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   const [document, setDocument] = useState<any>(null);
   const [removedExistingDocument, setRemovedExistingDocument] = useState(false);
   const [fileSizeError, setFileSizeError] = useState(false);
+  const [showSuccessCelebration, setShowSuccessCelebration] = useState(false);
 
   const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
   const ACCEPTED_OCR_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'pdf'];
@@ -331,6 +334,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   const validateOcrFile = (file: any) => {
     const fileSize = file?.size ?? file?.fileSize;
     if (fileSize && fileSize > MAX_FILE_SIZE) {
+      triggerLightHaptic();
       setFileSizeError(true);
       Alert.alert(t('error_title'), t('error_file_too_large'));
       return false;
@@ -343,6 +347,10 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
       return false;
     }
     setFileSizeError(false);
+    if (String(file?.type || '').toLowerCase() === 'application/pdf' || String(file?.name || '').toLowerCase().endsWith('.pdf')) {
+      triggerLightHaptic();
+      showPremiumToast('info', t('ocr_pdf_accepted_title', { defaultValue: 'PDF accepted' }), t('ocr_pdf_accepted_message', { defaultValue: 'We will analyze it with OCR.' }));
+    }
     return true;
   };
 
@@ -730,6 +738,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
     setPendingSupplierName('');
     setRemovedExistingDocument(false);
     setFileSizeError(false);
+    setShowSuccessCelebration(false);
     setSupplierPrefillValues(undefined);
     appliedRouteOcrSupplierKey.current = null;
 
@@ -1063,9 +1072,8 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
         const result = await onSave(payload);
         if (result.success) {
           dispatch(loadSubscription() as any);
-          showPremiumToast('success', t('success_title'), t('success_expense_created'));
           onCreated();
-          onClose();
+          setShowSuccessCelebration(true);
         } else {
           Alert.alert(t('error_title'), result.error ?? t('error_generic'));
         }
@@ -1105,17 +1113,16 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
             <Text style={styles.modalTitle}>
               {editItem ? t('title_edit_expense') : t('title_create_expense')}
             </Text>
-            <TouchableOpacity
+            <SuccessMorphButton
               style={[styles.modalConfirmBtn, !isValid && styles.modalConfirmBtnDisabled]}
               onPress={handleSubmit(onSubmit as any)}
-              disabled={saving || ocrLoading}
-              activeOpacity={0.8}
-            >
-              {saving || ocrLoading
-                ? <ActivityIndicator size="small" color="#FFFFFF" />
-                : <Text style={styles.modalConfirmText}>{t('modal_confirm_text')}</Text>
-              }
-            </TouchableOpacity>
+              disabled={!isValid || saving || ocrLoading || showSuccessCelebration}
+              loading={saving || ocrLoading}
+              success={showSuccessCelebration}
+              label={t('modal_confirm_text')}
+              successLabel={t('success_title')}
+              textStyle={styles.modalConfirmText}
+            />
           </View>
 
           <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
@@ -1210,6 +1217,18 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                         <Text style={styles.ocrReviewPillValue}>{ocrSuggestion.amountTTC} MAD</Text>
                       </View>
                     )}
+                    {!!ocrSuggestion.amountTVA && (
+                      <View style={styles.ocrReviewPill}>
+                        <Text style={styles.ocrReviewPillLabel}>{t('label_amount_tva')}</Text>
+                        <Text style={styles.ocrReviewPillValue}>{ocrSuggestion.amountTVA} MAD</Text>
+                      </View>
+                    )}
+                    {!!ocrSuggestion.categoryName && (
+                      <View style={styles.ocrReviewPill}>
+                        <Text style={styles.ocrReviewPillLabel}>{t('label_category')}</Text>
+                        <Text style={styles.ocrReviewPillValue} numberOfLines={1}>{ocrSuggestion.categoryName}</Text>
+                      </View>
+                    )}
                     {!!ocrSuggestion.date && (
                       <View style={styles.ocrReviewPill}>
                         <Text style={styles.ocrReviewPillLabel}>{t('label_date')}</Text>
@@ -1222,6 +1241,17 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                     <Text style={styles.ocrReviewDangerText}>
                       {ocrSuggestion.duplicateWarning}
                     </Text>
+                  )}
+
+                  {!!ocrSuggestion.items?.length && (
+                    <View style={styles.ocrReviewWarnings}>
+                      <Text style={styles.ocrReviewPillLabel}>{t('ocr_detected_items', { defaultValue: 'Detected items' })}</Text>
+                      {ocrSuggestion.items.slice(0, 3).map((item, index) => (
+                        <Text key={`${item.name ?? 'item'}-${index}`} style={styles.ocrReviewWarningText} numberOfLines={1}>
+                          • {item.name ?? t('type_product')} {item.total ? `· ${item.total} MAD` : ''}
+                        </Text>
+                      ))}
+                    </View>
                   )}
 
                   {!!ocrSuggestion.warnings?.length && (
@@ -1477,17 +1507,16 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                 </View>
               </View>
 
-              <TouchableOpacity
+              <SuccessMorphButton
                 style={[styles.confirmBtn, !isValid && styles.confirmBtnDisabled]}
                 onPress={handleSubmit(onSubmit as any)}
-                disabled={saving || ocrLoading}
-                activeOpacity={0.85}
-              >
-                {saving || ocrLoading
-                  ? <ActivityIndicator size="small" color="#FFFFFF" />
-                  : <Text style={styles.confirmBtnText}>{t('modal_confirm_text')}</Text>
-                }
-              </TouchableOpacity>
+                disabled={!isValid || saving || ocrLoading || showSuccessCelebration}
+                loading={saving || ocrLoading}
+                success={showSuccessCelebration}
+                label={t('modal_confirm_text')}
+                successLabel={t('success_title')}
+                textStyle={styles.confirmBtnText}
+              />
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -1704,6 +1733,16 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
     closeSupplierPicker();
   }}
 />
+        <PremiumSuccessCelebration
+          visible={showSuccessCelebration}
+          title={t('success_expense_created', { defaultValue: 'Expense saved successfully' })}
+          subtitle={t('success_ready_review', { defaultValue: 'Everything is saved and ready to review.' })}
+          continueLabel={t('button_continue', { defaultValue: 'Continue' })}
+          onDone={() => {
+            setShowSuccessCelebration(false);
+            onClose();
+          }}
+        />
       </View>
           {upgradeWebViewElement}
     </Modal>

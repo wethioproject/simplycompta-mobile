@@ -46,7 +46,8 @@ import { invoiceStyles as styles } from '../../styles/invoice.styles';
 import type { Account, Client, InvoiceArticle, InvoiceItem, Article } from '../../types/quote.types';
 import { STATUT_OPTIONS, PAYMENT_METHODS, resolveStatus } from '../../types/quote.types';
 import { useUpgradeWebView } from '../../utils/upgradeWebView';
-import { showPremiumToast } from '../../utils/premiumToast';
+import PremiumSuccessCelebration from '../common/PremiumSuccessCelebration';
+import { SuccessMorphButton } from '../common/PremiumMotion';
 
 const quoteSchema = yup.object({
   quoteNumber: yup.string().trim().required('Quote number is required'),
@@ -146,6 +147,7 @@ const CreateQuoteModal: React.FC<{
   const [showCreateClientModal, setShowCreateClientModal] = useState(false);
   const [showImagePreview, setShowImagePreview] = useState(false);
   const [fileSizeError, setFileSizeError] = useState(false);
+  const [showSuccessCelebration, setShowSuccessCelebration] = useState(false);
 
   const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
@@ -200,6 +202,7 @@ const CreateQuoteModal: React.FC<{
     setSaving(false);
     setRemovedExistingDocument(false);
     setFileSizeError(false);
+    setShowSuccessCelebration(false);
 
     if (editItem) {
       const datePart = editItem.date.split('T')[0];
@@ -443,9 +446,8 @@ const CreateQuoteModal: React.FC<{
         const result = await onSave(payload);
         if (result.success) {
           dispatch(loadSubscription() as any);
-          showPremiumToast('success', t('success_title'), t('success_quote_created'));
           onCreated();
-          onClose();
+          setShowSuccessCelebration(true);
         } else {
           Alert.alert(t('error_title'), result.error ?? t('error_generic'));
         }
@@ -468,17 +470,16 @@ const CreateQuoteModal: React.FC<{
             <Text style={styles.modalTitle}>
               {editItem ? t('title_edit_quote') : t('title_create_quote')}
             </Text>
-            <TouchableOpacity
+            <SuccessMorphButton
               style={[styles.modalConfirmBtn, !isValid && styles.modalConfirmBtnDisabled]}
               onPress={handleSubmit(onSubmit as any)}
-              disabled={saving}
-              activeOpacity={0.8}
-            >
-              {saving
-                ? <ActivityIndicator size="small" color="#FFFFFF" />
-                : <Text style={styles.modalConfirmText}>{t('modal_confirm_text')}</Text>
-              }
-            </TouchableOpacity>
+              disabled={!isValid || saving || showSuccessCelebration}
+              loading={saving}
+              success={showSuccessCelebration}
+              label={t('modal_confirm_text')}
+              successLabel={t('success_title')}
+              textStyle={styles.modalConfirmText}
+            />
           </View>
 
           <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
@@ -978,6 +979,16 @@ const CreateQuoteModal: React.FC<{
               setShowClientPicker(true);
             }}
           />
+        <PremiumSuccessCelebration
+          visible={showSuccessCelebration}
+          title={t('success_quote_created', { defaultValue: 'Quote created successfully' })}
+          subtitle={t('success_ready_review', { defaultValue: 'Everything is saved and ready to review.' })}
+          continueLabel={t('button_continue', { defaultValue: 'Continue' })}
+          onDone={() => {
+            setShowSuccessCelebration(false);
+            onClose();
+          }}
+        />
 
       </View>
           {upgradeWebViewElement}

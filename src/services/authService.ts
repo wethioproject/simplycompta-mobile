@@ -6,10 +6,13 @@ export interface Customer {
   id: number;
   customer_id: number;
   name: string;
+  first_name?: string;
+  last_name?: string;
   email: string;
   tax_number: string | null;
   contact: string;
   avatar: string;
+  avatar_url?: string;
   created_by: number;
   is_active: number;
   is_enable_login: number;
@@ -252,6 +255,18 @@ class AuthService {
       return customerData ? JSON.parse(customerData) : null;
     } catch (error) {
       console.error('Error getting customer data:', error);
+      return null;
+    }
+  }
+
+  async updateStoredCustomer(partial: Partial<Customer>): Promise<Customer | null> {
+    try {
+      const current = await this.getCustomer();
+      const next = { ...(current ?? {}), ...partial } as Customer;
+      await AsyncStorage.setItem('@customer_data', JSON.stringify(next));
+      return next;
+    } catch (error) {
+      console.error('Error updating stored customer:', error);
       return null;
     }
   }

@@ -1,13 +1,26 @@
 import { useCallback } from 'react';
 import expenseService from '../services/expenseService';
 
+const normalizeExpenseList = (response: any) => {
+    const payload = response?.data ?? response;
+    const candidates = [
+        payload?.expenses,
+        payload?.data?.expenses,
+        payload?.data?.data,
+        payload?.data,
+        payload,
+    ];
+    return candidates.find(Array.isArray) ?? [];
+};
+
 export const useExpense = () => {
 
     const getExpenses = useCallback(async (params?: { month?: number; year?: number }) => {
         try {
             const response = await expenseService.getExpenses(params);
             return {
-                expenses: response.data,
+                expenses: normalizeExpenseList(response),
+                stats: response?.data?.stats ?? response?.stats ?? null,
                 success: true
             }
         } catch (error: any) {

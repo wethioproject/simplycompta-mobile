@@ -27,6 +27,9 @@ import {
   Plus,
   Search,
   X,
+  Send,
+  CheckCircle2,
+  Clock3,
 } from 'lucide-react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { useInvoice } from '../../hooks/useInvoice';
@@ -113,6 +116,9 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
   const pendingAmt   = stats?.total_sum_issued ?? 0;
   const overdueAmt   = stats?.total_sum_cancelled ?? 0;
   const overdueCount = invoices.filter(i => i.status === 'cancelled').length;
+  const issuedInvoices = invoices.filter(i => i.status === 'issued');
+  const paidRate = invoices.length > 0 ? Math.round((invoices.filter(i => i.status === 'paid').length / invoices.length) * 100) : 0;
+  const nextInvoiceToRelance = issuedInvoices[0] ?? invoices.find(i => i.status === 'cancelled');
 
   /* ─── Month button label ─── */
   const now = new Date();
@@ -238,8 +244,21 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
     }
   };
 
-  const handleRelancerAll = () => {
-    Alert.alert(t('invoice_relancer_tout'), t('error_generic'));
+  const buildRelanceMessage = (item?: InvoiceItem | null) => {
+    if (!item) return t('invoice_relance_message_all', { defaultValue: 'Bonjour, je vous contacte au sujet de vos factures en attente. Merci de me confirmer le règlement dès que possible.' });
+    return t('invoice_relance_message', {
+      number: item.invoice_number_formatted || item.invoice_number,
+      amount: Number(item.total_ttc ?? 0).toLocaleString('fr-FR'),
+      defaultValue: `Bonjour, je vous contacte au sujet de la facture ${item.invoice_number_formatted || item.invoice_number} d'un montant de ${Number(item.total_ttc ?? 0).toLocaleString('fr-FR')} MAD. Merci de me confirmer le règlement dès que possible.`,
+    });
+  };
+
+  const handleRelancerAll = async () => {
+    try {
+      await Share.share({ message: buildRelanceMessage(nextInvoiceToRelance) });
+    } catch {
+      Alert.alert(t('error_title'), t('error_generic'));
+    }
   };
 
   const fromChecklistRef = useRef(false);
@@ -258,6 +277,39 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
     const matchesTab = activeTab === 'Tous' || item.status.toLowerCase() === activeTab;
     return matchesSearch && matchesTab;
   });
+
+  const invoiceAssistantItems = [
+    issuedInvoices.length > 0 && {
+      key: 'relance',
+      icon: Send,
+      color: '#1E5BAC',
+      bg: '#EFF6FF',
+      title: t('invoice_assistant_relance_title', { count: issuedInvoices.length, defaultValue: `${issuedInvoices.length} factures à relancer` }),
+      desc: `${pendingAmt.toLocaleString('fr-FR')} MAD ${t('badge_pending', { defaultValue: 'en attente' })}`,
+      action: () => handleRelancerAll(),
+      cta: t('invoice_relancer_tout'),
+    },
+    overdueCount > 0 && {
+      key: 'late',
+      icon: AlertTriangle,
+      color: '#D97706',
+      bg: '#FFFBEB',
+      title: t('invoice_assistant_late_title', { count: overdueCount, defaultValue: `${overdueCount} factures à revoir` }),
+      desc: `${overdueAmt.toLocaleString('fr-FR')} MAD`,
+      action: () => setActiveTab('cancelled'),
+      cta: t('action_review', { defaultValue: 'Review' }),
+    },
+    invoices.length > 0 && {
+      key: 'paid-rate',
+      icon: CheckCircle2,
+      color: '#16A34A',
+      bg: '#ECFDF5',
+      title: t('invoice_assistant_paid_rate', { rate: paidRate, defaultValue: `${paidRate}% des factures payées` }),
+      desc: t('invoice_assistant_paid_rate_desc', { defaultValue: 'Vue rapide de ton encaissement.' }),
+      action: () => setActiveTab('paid'),
+      cta: t('status_paid'),
+    },
+  ].filter(Boolean).slice(0, 3) as Array<{ key: string; icon: any; color: string; bg: string; title: string; desc: string; action: () => void; cta: string }>;
 
   const renderItem = ({ item }: { item: InvoiceItem }) => (
     <InvoiceCard
@@ -444,6 +496,30 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
           }
           ListHeaderComponent={
             <View style={{ gap: 12, marginBottom: 4 }}>
+              {!!invoiceAssistantItems.length && (
+                <View style={styles.assistantCard}>
+                  <View style={styles.assistantHeader}>
+                    <Text style={styles.assistantTitle}>{t('invoice_assistant_title', { defaultValue: 'Assistant encaissement' })}</Text>
+                    <Clock3 size={16} color="#64748B" />
+                  </View>
+                  {invoiceAssistantItems.map(item => {
+                    const Icon = item.icon;
+                    return (
+                      <TouchableOpacity key={item.key} style={styles.assistantRow} activeOpacity={0.84} onPress={item.action}>
+                        <View style={[styles.assistantIcon, { backgroundColor: item.bg }]}>
+                          <Icon size={16} color={item.color} />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.assistantRowTitle}>{item.title}</Text>
+                          <Text style={styles.assistantRowDesc}>{item.desc}</Text>
+                        </View>
+                        <Text style={[styles.assistantCta, { color: item.color }]}>{item.cta}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+
               {/* Summary Card */}
               <View style={styles.summaryCard}>
                 <Text style={styles.summaryTitle}>
@@ -594,4 +670,3 @@ const Invoice: React.FC = ({ navigation: navProp }: any) => {
 };
 
 export default Invoice;
-

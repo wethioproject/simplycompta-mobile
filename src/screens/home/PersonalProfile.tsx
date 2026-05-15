@@ -14,11 +14,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useDispatch } from 'react-redux';
 import { Save, Camera, Trash2, ArrowLeft } from 'lucide-react-native';
 import { pick, types, isErrorWithCode, errorCodes } from '@react-native-documents/picker';
 import { appLogoIcon } from '../../assets/icons';
 import api from '../../api';
 import { Api_Endpoints } from '../../services/endpoints';
+import authService from '../../services/authService';
+import { updateCustomer } from '../../store/slices/userSlice';
 
 interface AvatarFile {
   uri: string;
@@ -28,6 +31,7 @@ interface AvatarFile {
 
 const PersonalProfile: React.FC = ({ navigation }: any) => {
   const { t } = useTranslation();
+  const dispatch = useDispatch();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -39,19 +43,41 @@ const PersonalProfile: React.FC = ({ navigation }: any) => {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const withCacheBuster = (url?: string | null) => {
+    if (!url) return '';
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}v=${Date.now()}`;
+  };
+
+  const applyProfileToState = async (profile: any, bustAvatarCache = false) => {
+    const fullName: string = profile.name ?? '';
+    const spaceIdx = fullName.indexOf(' ');
+    const nextAvatarUrl = profile.avatar_url ?? profile.avatar ?? '';
+    const displayAvatarUrl = bustAvatarCache ? withCacheBuster(nextAvatarUrl) : nextAvatarUrl;
+
+    setFirstName(spaceIdx >= 0 ? fullName.substring(0, spaceIdx) : fullName);
+    setLastName(spaceIdx >= 0 ? fullName.substring(spaceIdx + 1) : '');
+    setEmail(profile.email ?? '');
+    setPhone(profile.contact ?? '');
+    setBio(profile.bio ?? '');
+    setAvatarUrl(displayAvatarUrl);
+
+    const customerPatch = {
+      ...profile,
+      name: fullName,
+      avatar: displayAvatarUrl,
+      avatar_url: displayAvatarUrl,
+    };
+    dispatch(updateCustomer(customerPatch));
+    await authService.updateStoredCustomer(customerPatch);
+  };
+
   const fetchProfile = async () => {
     try {
       const res = await api.get(Api_Endpoints.customerProfile);
       const d = res.data?.data ?? {};
-      const fullName: string = d.name ?? '';
-      const spaceIdx = fullName.indexOf(' ');
       console.log('Profile data:', d);
-      setFirstName(spaceIdx >= 0 ? fullName.substring(0, spaceIdx) : fullName);
-      setLastName(spaceIdx >= 0 ? fullName.substring(spaceIdx + 1) : '');
-      setEmail(d.email ?? '');
-      setPhone(d.contact ?? '');   // GET response key is `contact`
-      setBio(d.bio ?? '');
-      setAvatarUrl(d.avatar_url ?? '');
+      await applyProfileToState(d);
     } catch (e: any) {
       Alert.alert(t('error_title'), e?.response?.data?.message ?? t('error_load_profile'));
     } finally {
@@ -113,9 +139,9 @@ const PersonalProfile: React.FC = ({ navigation }: any) => {
       const res = await api.post(Api_Endpoints.customerProfile, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      // Refresh avatar URL from response
-      const updated = res.data?.data;
-      if (updated?.avatar) setAvatarUrl(updated.avatar);
+      const refreshed = await api.get(Api_Endpoints.customerProfile).catch(() => null);
+      const updated = refreshed?.data?.data ?? res.data?.data ?? {};
+      await applyProfileToState(updated, !!avatarFile);
       setAvatarFile(null);
       Alert.alert(t('success_title'), t('success_profile_updated'));
     } catch (e: any) {

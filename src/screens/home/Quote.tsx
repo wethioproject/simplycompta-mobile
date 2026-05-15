@@ -26,6 +26,9 @@ import {
   Plus,
   Search,
   X,
+  Send,
+  CheckCircle2,
+  Clock3,
 } from 'lucide-react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { useQuote } from '../../hooks/useQuote';
@@ -131,6 +134,10 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
   const pendingAmt   = stats?.total_sum_sent ?? 0;
   const overdueAmt   = stats?.total_sum_overdue ?? 0;
   const overdueCount = quotes.filter((i: InvoiceItem) => i.status === 'expired').length;
+  const draftCount = quotes.filter((q: InvoiceItem) => q.status === 'draft').length;
+  const sentCount = quotes.filter((q: InvoiceItem) => getEffectiveStatus(q) === 'sent').length;
+  const acceptedCount = quotes.filter((q: InvoiceItem) => q.status === 'accepted').length;
+  const conversionRate = quotes.length > 0 ? Math.round((acceptedCount / quotes.length) * 100) : 0;
 
   /* ─── Month button label ─── */
   const now = new Date();
@@ -292,6 +299,46 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
     const matchesTab = activeTab === 'all' || effectiveStatus === activeTab;
     return matchesSearch && matchesTab;
   });
+
+  const quotePipeline = [
+    { key: 'draft', label: t('status_draft'), count: draftCount, color: '#64748B', tab: 'draft' as QuoteTabType },
+    { key: 'sent', label: t('status_sent'), count: sentCount, color: '#F59E0B', tab: 'sent' as QuoteTabType },
+    { key: 'accepted', label: t('status_accepted'), count: acceptedCount, color: '#16A34A', tab: 'accepted' as QuoteTabType },
+    { key: 'expired', label: t('status_expired'), count: overdueCount, color: '#EF4444', tab: 'expired' as QuoteTabType },
+  ];
+
+  const quoteAssistantItems = [
+    sentCount > 0 && {
+      key: 'follow',
+      icon: Send,
+      color: '#F59E0B',
+      bg: '#FFFBEB',
+      title: t('quote_assistant_follow_title', { count: sentCount, defaultValue: `${sentCount} devis à suivre` }),
+      desc: `${pendingAmt.toLocaleString('fr-FR')} MAD`,
+      action: () => setActiveTab('sent'),
+      cta: t('status_sent'),
+    },
+    acceptedCount > 0 && {
+      key: 'convert',
+      icon: CheckCircle2,
+      color: '#16A34A',
+      bg: '#ECFDF5',
+      title: t('quote_assistant_convert_title', { count: acceptedCount, defaultValue: `${acceptedCount} devis acceptés` }),
+      desc: t('quote_assistant_convert_desc', { defaultValue: 'À convertir en facture dès validation.' }),
+      action: () => setActiveTab('accepted'),
+      cta: t('button_convert_invoice'),
+    },
+    overdueCount > 0 && {
+      key: 'expired',
+      icon: AlertTriangle,
+      color: '#DC2626',
+      bg: '#FEF2F2',
+      title: t('quote_assistant_expired_title', { count: overdueCount, defaultValue: `${overdueCount} devis expirés` }),
+      desc: `${overdueAmt.toLocaleString('fr-FR')} MAD`,
+      action: () => setActiveTab('expired'),
+      cta: t('action_review', { defaultValue: 'Review' }),
+    },
+  ].filter(Boolean).slice(0, 3) as Array<{ key: string; icon: any; color: string; bg: string; title: string; desc: string; action: () => void; cta: string }>;
 
   function getEffectiveStatus(item: InvoiceItem): string {
     if (item.status === 'sent' && (item.due_date ?? item.valid_until)) {
@@ -492,6 +539,37 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
           }
           ListHeaderComponent={
             <View style={{ gap: 12, marginBottom: 4 }}>
+              <View style={styles.assistantCard}>
+                <View style={styles.assistantHeader}>
+                  <Text style={styles.assistantTitle}>{t('quote_pipeline_title', { defaultValue: 'Pipeline devis' })}</Text>
+                  <Text style={styles.assistantMeta}>{conversionRate}%</Text>
+                </View>
+                <View style={styles.pipelineRow}>
+                  {quotePipeline.map(step => (
+                    <TouchableOpacity key={step.key} style={styles.pipelineStep} activeOpacity={0.84} onPress={() => setActiveTab(step.tab)}>
+                      <Text style={[styles.pipelineCount, { color: step.color }]}>{step.count}</Text>
+                      <Text style={styles.pipelineLabel} numberOfLines={1}>{step.label}</Text>
+                      <View style={[styles.pipelineBar, { backgroundColor: step.color, opacity: activeTab === step.tab ? 1 : 0.28 }]} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                {!!quoteAssistantItems.length && quoteAssistantItems.map(item => {
+                  const Icon = item.icon;
+                  return (
+                    <TouchableOpacity key={item.key} style={styles.assistantRow} activeOpacity={0.84} onPress={item.action}>
+                      <View style={[styles.assistantIcon, { backgroundColor: item.bg }]}>
+                        <Icon size={16} color={item.color} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.assistantRowTitle}>{item.title}</Text>
+                        <Text style={styles.assistantRowDesc}>{item.desc}</Text>
+                      </View>
+                      <Text style={[styles.assistantCta, { color: item.color }]}>{item.cta}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
               {/* Summary Card */}
               <View style={styles.summaryCard}>
                 <Text style={styles.summaryTitle}>

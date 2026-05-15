@@ -8,7 +8,7 @@ import {
   RefreshControl,
   TouchableOpacity,
 } from 'react-native';
-import { Plus } from 'lucide-react-native';
+import { AlertTriangle, FileText, Plus, TrendingUp } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -67,6 +67,42 @@ const Clients: React.FC = ({ navigation: navProp }: any) => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  const totalRevenue = clients.reduce((sum, client) => sum + Number(client.total_revenue_ht ?? 0), 0);
+  const lateClients = clients.filter(client => Number(client.late_invoices_count ?? 0) > 0).length;
+  const missingIce = clients.filter(client => !client.ice).length;
+  const topClient = [...clients].sort((a, b) => Number(b.total_revenue_ht ?? 0) - Number(a.total_revenue_ht ?? 0))[0];
+
+  const renderClientAssistant = () => (
+    <View style={localStyles.assistantCard}>
+      <View style={localStyles.assistantHeader}>
+        <Text style={localStyles.assistantTitle}>{t('client_360_title', { defaultValue: 'Clients 360' })}</Text>
+        <Text style={localStyles.assistantMeta}>{clients.length}</Text>
+      </View>
+      <View style={localStyles.metricsRow}>
+        <View style={localStyles.metricTile}>
+          <TrendingUp size={15} color="#16A34A" />
+          <Text style={localStyles.metricValue}>{totalRevenue.toLocaleString('fr-FR')}</Text>
+          <Text style={localStyles.metricLabel}>MAD</Text>
+        </View>
+        <View style={localStyles.metricTile}>
+          <AlertTriangle size={15} color="#D97706" />
+          <Text style={localStyles.metricValue}>{lateClients}</Text>
+          <Text style={localStyles.metricLabel}>{t('badge_urgent', { defaultValue: 'urgent' })}</Text>
+        </View>
+        <View style={localStyles.metricTile}>
+          <FileText size={15} color="#1E5BAC" />
+          <Text style={localStyles.metricValue}>{missingIce}</Text>
+          <Text style={localStyles.metricLabel}>ICE</Text>
+        </View>
+      </View>
+      {!!topClient && (
+        <Text style={localStyles.assistantHint} numberOfLines={1}>
+          {t('client_360_top', { name: topClient.company_name, defaultValue: `Top client: ${topClient.company_name}` })}
+        </Text>
+      )}
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ClientHeader
@@ -104,6 +140,7 @@ const Clients: React.FC = ({ navigation: navProp }: any) => {
               tintColor="#1E5BAC"
             />
           }
+          ListHeaderComponent={clients.length > 0 ? renderClientAssistant : undefined}
           ListEmptyComponent={
             <View style={styles.emptyBox}>
               <Text style={styles.emptyText}>{t('text_no_clients_found')}</Text>
@@ -130,3 +167,23 @@ const Clients: React.FC = ({ navigation: navProp }: any) => {
 };
 
 export default Clients;
+
+const localStyles = {
+  assistantCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 14,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: '#E8EEF8',
+    marginBottom: 4,
+  },
+  assistantHeader: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, alignItems: 'center' as const },
+  assistantTitle: { fontSize: 15, fontWeight: '800' as const, color: '#111827' },
+  assistantMeta: { fontSize: 12, fontWeight: '800' as const, color: '#1E5BAC' },
+  metricsRow: { flexDirection: 'row' as const, gap: 8 },
+  metricTile: { flex: 1, borderRadius: 14, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#EDF2F7', padding: 10, gap: 4 },
+  metricValue: { fontSize: 14, fontWeight: '900' as const, color: '#111827' },
+  metricLabel: { fontSize: 10, fontWeight: '700' as const, color: '#64748B' },
+  assistantHint: { fontSize: 12, fontWeight: '700' as const, color: '#334155' },
+};

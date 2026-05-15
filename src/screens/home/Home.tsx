@@ -32,10 +32,12 @@ import {
   CheckCircle2,
   Send,
   Eye,
+  EyeOff,
   FolderOpen,
   ChevronRight,
   ClipboardList,
   AlertTriangle,
+  Sparkles,
 } from 'lucide-react-native';
 import notificationService from '../../services/notificationService';
 import dashboardService from '../../services/dashboardService';
@@ -43,6 +45,7 @@ import ConnectedAccountantCard from '../../components/home/ConnectedAccountantCa
 import OCRScannerCard from '../../components/home/OCRScannerCard';
 import WhatsAppBotCard from '../../components/home/WhatsAppBotCard';
 import { FadeInView, PremiumShimmer, PremiumTouchable } from '../../components/common/PremiumMotion';
+import { useSecurity } from '../../contexts/SecurityContext';
 
 type DrawerNavigation = DrawerNavigationProp<any>;
 
@@ -54,8 +57,10 @@ const HomeHeader: React.FC<{
   currentMonth: string;
   hasUnread: boolean;
   onNotifications: () => void;
+  onTogglePrivacy: () => void;
+  privateMode: boolean;
   t: any;
-}> = ({ userName, currentMonth, hasUnread, onNotifications, t }) => (
+}> = ({ userName, currentMonth, hasUnread, onNotifications, onTogglePrivacy, privateMode, t }) => (
   <View style={styles.header}>
     <View style={styles.headerContent}>
       <View style={styles.headerTextWrap}>
@@ -66,18 +71,23 @@ const HomeHeader: React.FC<{
           {t('home_subtitle', { month: currentMonth })}
         </Text>
       </View>
-      <PremiumTouchable
-        style={styles.notifBtn}
-        onPress={onNotifications}
-        haptic
-      >
-        <Bell size={24} color="#374151" />
-        {hasUnread && (
-          <View style={styles.notifBadge}>
-            <Text style={styles.notifBadgeText}>2</Text>
-          </View>
-        )}
-      </PremiumTouchable>
+      <View style={styles.headerActions}>
+        <PremiumTouchable style={styles.notifBtn} onPress={onTogglePrivacy} haptic>
+          {privateMode ? <EyeOff size={22} color="#1E5BAC" /> : <Eye size={22} color="#374151" />}
+        </PremiumTouchable>
+        <PremiumTouchable
+          style={styles.notifBtn}
+          onPress={onNotifications}
+          haptic
+        >
+          <Bell size={24} color="#374151" />
+          {hasUnread && (
+            <View style={styles.notifBadge}>
+              <Text style={styles.notifBadgeText}>2</Text>
+            </View>
+          )}
+        </PremiumTouchable>
+      </View>
     </View>
   </View>
 );
@@ -98,6 +108,139 @@ const StatusBadges: React.FC<{ stats: { total_pending_actions: number }; t: any 
   </View>
 );
 
+const TodayAssistant: React.FC<{
+  stats: {
+    unpaidInvoicesCount: number;
+    unpaidInvoiceSum: number;
+    expiredInvoicesCount: number;
+    expiredInvoiceSum: number;
+    sentQuotesCount: number;
+    sentQuoteSum: number;
+    unreadDocumentsCount: number;
+    total_expenses_sum: number;
+    total_vat_payable: number;
+    hasLastMonthStatement: boolean;
+  };
+  loading: boolean;
+  onNavigate: (page: string) => void;
+  maskAmount: (value: string | number | null | undefined, suffix?: string) => string;
+  t: any;
+}> = ({ stats, loading, onNavigate, maskAmount, t }) => {
+  const actions = [
+    !stats.hasLastMonthStatement && {
+      key: 'bank',
+      icon: Building2,
+      color: '#16A34A',
+      bg: '#ECFDF5',
+      title: t('today_action_bank', { defaultValue: 'Relevé bancaire à envoyer' }),
+      desc: t('today_action_bank_desc', { defaultValue: 'Prépare ton dossier comptable du mois.' }),
+      route: 'bank',
+    },
+    stats.expiredInvoicesCount > 0 && {
+      key: 'expired',
+      icon: AlertTriangle,
+      color: '#D97706',
+      bg: '#FFFBEB',
+      title: t('today_action_expired_invoices', { count: stats.expiredInvoicesCount, defaultValue: `${stats.expiredInvoicesCount} factures en retard` }),
+      desc: maskAmount(stats.expiredInvoiceSum),
+      route: 'invoices-expired',
+    },
+    stats.unpaidInvoicesCount > 0 && {
+      key: 'unpaid',
+      icon: FileText,
+      color: '#DC2626',
+      bg: '#FEF2F2',
+      title: t('today_action_unpaid_invoices', { count: stats.unpaidInvoicesCount, defaultValue: `${stats.unpaidInvoicesCount} factures à relancer` }),
+      desc: maskAmount(stats.unpaidInvoiceSum),
+      route: 'invoices',
+    },
+    stats.sentQuotesCount > 0 && {
+      key: 'quotes',
+      icon: ClipboardList,
+      color: '#1E5BAC',
+      bg: '#EFF6FF',
+      title: t('today_action_sent_quotes', { count: stats.sentQuotesCount, defaultValue: `${stats.sentQuotesCount} devis à suivre` }),
+      desc: maskAmount(stats.sentQuoteSum),
+      route: 'quotes-sent',
+    },
+    stats.unreadDocumentsCount > 0 && {
+      key: 'documents',
+      icon: FolderOpen,
+      color: '#7C3AED',
+      bg: '#F5F3FF',
+      title: t('today_action_documents', { count: stats.unreadDocumentsCount, defaultValue: `${stats.unreadDocumentsCount} documents à consulter` }),
+      desc: t('todo_from_accountant'),
+      route: 'documentsList',
+    },
+  ].filter(Boolean).slice(0, 3) as Array<{
+    key: string;
+    icon: any;
+    color: string;
+    bg: string;
+    title: string;
+    desc: string;
+    route: string;
+  }>;
+
+  const healthSignals = [
+    stats.total_vat_payable > 0 ? `${maskAmount(stats.total_vat_payable)} TVA` : null,
+    stats.total_expenses_sum > 0 ? `${maskAmount(stats.total_expenses_sum)} dépenses` : null,
+    stats.unpaidInvoicesCount === 0 ? t('today_signal_no_unpaid', { defaultValue: 'Aucune relance urgente' }) : null,
+  ].filter(Boolean).slice(0, 2);
+
+  return (
+    <View style={styles.todayCard}>
+      <View style={styles.todayHeader}>
+        <View>
+          <Text style={styles.todayEyebrow}>{t('today_assistant_eyebrow', { defaultValue: 'Aujourd’hui' })}</Text>
+          <Text style={styles.todayTitle}>{t('today_assistant_title', { defaultValue: 'Ta prochaine bonne action' })}</Text>
+        </View>
+        <View style={styles.todayPulse}>
+          <Sparkles size={18} color="#1E5BAC" />
+        </View>
+      </View>
+
+      {loading ? (
+        <View style={{ gap: 8 }}>
+          <PremiumShimmer width="72%" height={14} borderRadius={7} />
+          <PremiumShimmer width="92%" height={44} borderRadius={14} />
+        </View>
+      ) : actions.length ? (
+        <View style={styles.todayActions}>
+          {actions.map(action => {
+            const Icon = action.icon;
+            return (
+              <PremiumTouchable key={action.key} style={styles.todayActionRow} onPress={() => onNavigate(action.route)} haptic>
+                <View style={[styles.todayActionIcon, { backgroundColor: action.bg }]}>
+                  <Icon size={18} color={action.color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.todayActionTitle}>{action.title}</Text>
+                  <Text style={styles.todayActionDesc}>{action.desc}</Text>
+                </View>
+                <ChevronRight size={18} color="#94A3B8" />
+              </PremiumTouchable>
+            );
+          })}
+        </View>
+      ) : (
+        <View style={styles.todayAllGood}>
+          <CheckCircle2 size={18} color="#16A34A" />
+          <Text style={styles.todayAllGoodText}>{t('today_all_good', { defaultValue: 'Tout est calme. Continue à suivre tes ventes et dépenses.' })}</Text>
+        </View>
+      )}
+
+      {!!healthSignals.length && (
+        <View style={styles.todaySignals}>
+          {healthSignals.map(signal => (
+            <Text key={signal} style={styles.todaySignalText}>{signal}</Text>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+};
+
 const DashboardSkeleton: React.FC = () => (
   <View style={styles.dashboardSkeleton}>
     <View style={styles.skeletonCardTall}>
@@ -117,6 +260,31 @@ const DashboardSkeleton: React.FC = () => (
   </View>
 );
 
+const AnimatedAmount: React.FC<{ value: number; suffix?: string; privateMode?: boolean }> = ({ value, suffix = 'MAD', privateMode = false }) => {
+  const animated = useRef(new Animated.Value(0)).current;
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    const listener = animated.addListener(({ value: nextValue }) => {
+      setDisplayValue(Math.round(nextValue));
+    });
+    Animated.timing(animated, {
+      toValue: value,
+      duration: 760,
+      useNativeDriver: false,
+    }).start();
+
+    return () => animated.removeListener(listener);
+  }, [animated, value]);
+
+  return (
+    <Text style={styles.statsValue}>
+      {privateMode ? '••••' : displayValue.toLocaleString('fr-FR')}{' '}
+      <Text style={styles.statsUnit}>{suffix}</Text>
+    </Text>
+  );
+};
+
 /** Stats cards (3 columns) */
 const StatsCards: React.FC<{
   stats: {
@@ -129,8 +297,9 @@ const StatsCards: React.FC<{
   };
   loading: boolean;
   previousMonthName: string;
+  privateMode: boolean;
   t: any;
-}> = ({ stats, loading, previousMonthName, t }) => (
+}> = ({ stats, loading, previousMonthName, privateMode, t }) => (
   <View style={styles.statsRow}>
     {/* Revenus */}
     <View style={[styles.statsCard, { backgroundColor: '#F0FDF4' }]}>
@@ -145,10 +314,7 @@ const StatsCards: React.FC<{
         </View>
       ) : (
         <>
-          <Text style={styles.statsValue}>
-            {stats.total_paid_sum.toLocaleString('fr-FR')}{' '}
-            <Text style={styles.statsUnit}>MAD</Text>
-          </Text>
+          <AnimatedAmount value={stats.total_paid_sum} privateMode={privateMode} />
           <View style={styles.statsTrendRow}>
             <TrendingUp size={10} color="#16A34A" />
             <Text style={[styles.statsTrendText, { color: '#16A34A' }]}>{stats.total_paid_percentage_change > 0 ? '+' : ''}{stats.total_paid_percentage_change}% vs {previousMonthName}</Text>
@@ -170,10 +336,7 @@ const StatsCards: React.FC<{
         </View>
       ) : (
         <>
-          <Text style={styles.statsValue}>
-            {stats.total_expenses_sum.toLocaleString('fr-FR')}{' '}
-            <Text style={styles.statsUnit}>MAD</Text>
-          </Text>
+          <AnimatedAmount value={stats.total_expenses_sum} privateMode={privateMode} />
           <View style={styles.statsTrendRow}>
             <TrendingDown size={10} color="#EF4444" />
             <Text style={[styles.statsTrendText, { color: '#EF4444' }]}>{stats.total_expenses_percentage_change > 0 ? '+' : ''}{stats.total_expenses_percentage_change}% vs {previousMonthName}</Text>
@@ -195,10 +358,7 @@ const StatsCards: React.FC<{
         </View>
       ) : (
         <>
-          <Text style={styles.statsValue}>
-            {stats.total_vat_payable.toLocaleString('fr-FR')}{' '}
-            <Text style={styles.statsUnit}>MAD</Text>
-          </Text>
+          <AnimatedAmount value={stats.total_vat_payable} privateMode={privateMode} />
           <Text style={[styles.statsTrendText, { color: '#9CA3AF', marginTop: 2 }]}>{stats.total_vat_payable_percentage_change > 0 ? '+' : ''}{stats.total_vat_payable_percentage_change}% vs {previousMonthName}</Text>
         </>
       )}
@@ -221,8 +381,9 @@ const TasksSection: React.FC<{
   };
   onNavigate: (page: string) => void;
   bankStatementMonth: string;
+  maskAmount: (value: string | number | null | undefined, suffix?: string) => string;
   t: any;
-}> = ({ stats, onNavigate, bankStatementMonth, t }) => {
+}> = ({ stats, onNavigate, bankStatementMonth, maskAmount, t }) => {
   const showUnpaidTask = stats.unpaidInvoicesCount > 0;
   const showUnreadTask = stats.unreadDocumentsCount > 0;
   const showExpiredTask = stats.expiredInvoicesCount > 0;
@@ -278,7 +439,7 @@ const TasksSection: React.FC<{
         <View style={styles.taskInfo}>
           <Text style={styles.taskTitle}>{t('todo_unpaid_invoices', { count: stats.unpaidInvoicesCount || 2 })}</Text>
           <Text style={styles.taskDesc}>
-            {t('todo_amount_pending', { amount: stats.unpaidInvoiceSum.toLocaleString('fr-FR') })}
+            {t('todo_amount_pending', { amount: maskAmount(stats.unpaidInvoiceSum) })}
           </Text>
         </View>
         <View style={styles.taskActions}>
@@ -334,7 +495,7 @@ const TasksSection: React.FC<{
         <View style={styles.taskInfo}>
           <Text style={styles.taskTitle}>{t('todo_expired_invoices', { count: stats.expiredInvoicesCount })}</Text>
           <Text style={styles.taskDesc}>
-            {t('todo_amount_pending', { amount: stats.expiredInvoiceSum.toLocaleString('fr-FR') })}
+            {t('todo_amount_pending', { amount: maskAmount(stats.expiredInvoiceSum) })}
           </Text>
         </View>
         <View style={styles.taskActions}>
@@ -414,8 +575,9 @@ const ActivitiesSection: React.FC<{
   };
   loading: boolean;
   onNavigate: (page: string) => void;
+  maskAmount: (value: string | number | null | undefined, suffix?: string) => string;
   t: any;
-}> = ({ stats, loading, onNavigate, t }) => {
+}> = ({ stats, loading, onNavigate, maskAmount, t }) => {
   return (
   <View style={styles.activitiesSection}>
     <View style={styles.activitiesHeader}>
@@ -445,7 +607,7 @@ const ActivitiesSection: React.FC<{
           <ActivityIndicator size="small" color="#EF4444" />
         ) : (
           <Text style={[styles.activityAmount, { color: '#EF4444' }]}>
-            {stats.unpaidInvoiceSum.toLocaleString('fr-FR')} MAD
+            {maskAmount(stats.unpaidInvoiceSum)}
           </Text>
         )}
         <View style={styles.activityBadgeUrgent}>
@@ -474,7 +636,7 @@ const ActivitiesSection: React.FC<{
           <ActivityIndicator size="small" color="#111827" />
         ) : (
           <Text style={[styles.activityAmount, { color: '#111827' }]}>
-            {stats.total_quote_sum.toLocaleString('fr-FR')} MAD
+            {maskAmount(stats.total_quote_sum)}
           </Text>
         )}
         <View style={styles.activityBadgePending}>
@@ -503,7 +665,7 @@ const ActivitiesSection: React.FC<{
           <ActivityIndicator size="small" color="#F59E0B" />
         ) : (
           <Text style={[styles.activityAmount, { color: '#F59E0B' }]}>
-            {stats.sentQuoteSum.toLocaleString('fr-FR')} MAD
+            {maskAmount(stats.sentQuoteSum)}
           </Text>
         )}
         <View style={[styles.activityBadgePending, { backgroundColor: '#FFFBEB' }]}>
@@ -523,6 +685,7 @@ const Home: React.FC = () => {
   const navigation = useNavigation<DrawerNavigation>();
   const { t, i18n } = useTranslation();
   const customer = useSelector((state: any) => state.user.customer);
+  const { privateModeEnabled, togglePrivateMode, maskAmount } = useSecurity();
   const dispatch = useDispatch();
   const [hasUnread, setHasUnread] = useState(false);
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -690,6 +853,7 @@ const Home: React.FC = () => {
       documentsList: 'Documents List',
       invoices: 'Invoice',
       quotes: 'Quote',
+      expenses: 'Expenses',
       'contact-comptable': 'Contact',
     };
     if (page === 'quotes-sent') {
@@ -734,6 +898,8 @@ const Home: React.FC = () => {
         currentMonth={currentMonth}
         hasUnread={hasUnread}
         onNotifications={() => handleNavigate('notifications')}
+        onTogglePrivacy={togglePrivateMode}
+        privateMode={privateModeEnabled}
         t={t}
       />
 
@@ -755,18 +921,39 @@ const Home: React.FC = () => {
           <StatusBadges stats={stats} t={t} />
         </FadeInView>
 
+        <FadeInView delay={40}>
+          <TodayAssistant
+            stats={{
+              unpaidInvoicesCount: stats.unpaidInvoicesCount,
+              unpaidInvoiceSum: stats.unpaidInvoiceSum,
+              expiredInvoicesCount: stats.expiredInvoicesCount,
+              expiredInvoiceSum: stats.expiredInvoiceSum,
+              sentQuotesCount: stats.sentQuotesCount,
+              sentQuoteSum: stats.sentQuoteSum,
+              unreadDocumentsCount: stats.unreadDocumentsCount,
+              total_expenses_sum: stats.total_expenses_sum,
+              total_vat_payable: stats.total_vat_payable,
+              hasLastMonthStatement: stats.hasLastMonthStatement,
+            }}
+            loading={statsLoading}
+            onNavigate={handleNavigate}
+            maskAmount={maskAmount}
+            t={t}
+          />
+        </FadeInView>
+
         {/* Connected Accountant Card */}
-        <FadeInView delay={60}>
+        <FadeInView delay={80}>
           <ConnectedAccountantCard onPress={() => handleNavigate('accounting')} companyName={stats.companyName} />
         </FadeInView>
 
         {/* OCR Scanner CTA Card */}
-        <FadeInView delay={100}>
+        <FadeInView delay={120}>
           <OCRScannerCard onScan={() => navigation.navigate('Expenses', { openCreateModal: true })} />
         </FadeInView>
 
         {/* WhatsApp Bot Card */}
-        <FadeInView delay={140}>
+        <FadeInView delay={160}>
           <WhatsAppBotCard
             enabled={stats.whatsapp_bot_enabled}
             onActivate={() => handleNavigate('whatsapp-bot')}
@@ -780,12 +967,12 @@ const Home: React.FC = () => {
           </FadeInView>
         )}
         <FadeInView delay={180}>
-          <StatsCards stats={stats} loading={statsLoading} previousMonthName={previousMonthName} t={t} />
+          <StatsCards stats={stats} loading={statsLoading} previousMonthName={previousMonthName} privateMode={privateModeEnabled} t={t} />
         </FadeInView>
 
         {/* Tasks Section */}
         <FadeInView delay={220}>
-          <TasksSection stats={stats} onNavigate={handleNavigate} bankStatementMonth={bankStatementMonth} t={t} />
+          <TasksSection stats={stats} onNavigate={handleNavigate} bankStatementMonth={bankStatementMonth} maskAmount={maskAmount} t={t} />
         </FadeInView>
 
         {/* Progress Section */}
@@ -810,6 +997,7 @@ const Home: React.FC = () => {
             }}
             loading={statsLoading}
             onNavigate={handleNavigate}
+            maskAmount={maskAmount}
             t={t}
           />
         </FadeInView>
@@ -867,6 +1055,11 @@ const styles = StyleSheet.create({
   headerTextWrap: {
     flex: 1,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   greetingText: {
     fontSize: 26,
     fontWeight: '700',
@@ -911,6 +1104,85 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginBottom: 20,
+  },
+  todayCard: {
+    marginBottom: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: '#E8EEF8',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  todayHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  todayEyebrow: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#64748B',
+    textTransform: 'uppercase',
+  },
+  todayTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginTop: 2,
+  },
+  todayPulse: {
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  todayActions: { gap: 8 },
+  todayActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 10,
+    borderRadius: 14,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#EDF2F7',
+  },
+  todayActionIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  todayActionTitle: { fontSize: 13, fontWeight: '800', color: '#111827' },
+  todayActionDesc: { fontSize: 11, fontWeight: '600', color: '#64748B', marginTop: 2 },
+  todayAllGood: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: '#ECFDF5',
+  },
+  todayAllGoodText: { flex: 1, fontSize: 12, fontWeight: '700', color: '#166534', lineHeight: 17 },
+  todaySignals: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  todaySignalText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#1E5BAC',
+    backgroundColor: '#EFF6FF',
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 6,
   },
   badgeGreen: {
     flexDirection: 'row',

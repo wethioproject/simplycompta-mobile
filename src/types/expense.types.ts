@@ -13,6 +13,8 @@ export interface Supplier {
   name: string;
   company_name?: string;
   supplier_name?: string;
+  ice?: string | null;
+  ice_number?: string | null;
 }
 
 export interface ExpenseItem {
@@ -31,7 +33,13 @@ export interface ExpenseItem {
   notes: string | null;
   reference?: string | null;
   category: { id: number; name: string };
-  supplier?: { id: number; supplier_name: string | null };
+  supplier?: { id: number; supplier_name?: string | null; name?: string | null; company_name?: string | null; ice?: string | null; ice_number?: string | null };
+  is_ocr?: boolean | number;
+  ocr_raw?: any;
+  ocr_confidence_score?: number | string | null;
+  ocr_items?: any[];
+  ocr_warnings?: string[] | null;
+  warnings?: string[] | null;
 }
 
 export type ExpenseFormValues = {

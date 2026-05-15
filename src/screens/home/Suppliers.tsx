@@ -8,7 +8,6 @@ import {
   Modal,
   StyleSheet,
   Image,
-  ActivityIndicator,
   Alert,
   Platform,
   KeyboardAvoidingView,
@@ -17,7 +16,7 @@ import {
   RefreshControl,
   Vibration,
 } from 'react-native';
-import { ArrowLeft, Plus, Search, X, ChevronRight } from 'lucide-react-native';
+import { AlertTriangle, ArrowLeft, FileText, Plus, Search, TrendingDown, X, ChevronRight } from 'lucide-react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -34,7 +33,8 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useUpgradeWebView } from '../../utils/upgradeWebView';
 import ContactsSkeleton from '../../components/clients/ContactsSkeleton';
-import { showPremiumToast } from '../../utils/premiumToast';
+import PremiumSuccessCelebration from '../../components/common/PremiumSuccessCelebration';
+import { SuccessMorphButton } from '../../components/common/PremiumMotion';
 
 type StackNavigation = StackNavigationProp<any>;
 
@@ -49,6 +49,7 @@ export interface SupplierItem {
   city: string;
   commercial_register: string;
   ice: string;
+  ice_number?: string;
   total_ttc?: number;
   expenses_count?: number;
   created_at?: string;
@@ -109,6 +110,8 @@ export const CreateSupplierModal: React.FC<{
 //   const [commercialRegister, setCommercialRegister] = useState('');
 //   const [ice, setIce] = useState('');
   const [saving, setSaving] = useState(false);
+  const [showSuccessCelebration, setShowSuccessCelebration] = useState(false);
+  const createdSupplierRef = useRef<any>(null);
 
   const today = new Date().toLocaleDateString('fr-FR');
 
@@ -144,6 +147,8 @@ export const CreateSupplierModal: React.FC<{
 //   useEffect(() => { if (!visible) resetForm(); }, [visible]);
   useEffect(() => {
     if (visible) {
+      setShowSuccessCelebration(false);
+      createdSupplierRef.current = null;
       reset({
         companyName: initialValues?.companyName ?? '',
         supplierName: initialValues?.supplierName ?? '',
@@ -159,6 +164,8 @@ export const CreateSupplierModal: React.FC<{
       });
       return;
     }
+    setShowSuccessCelebration(false);
+    createdSupplierRef.current = null;
     reset();
   }, [visible, initialValues, reset]);
 
@@ -236,9 +243,8 @@ export const CreateSupplierModal: React.FC<{
     }
       dispatch(loadSubscription() as any);
       Vibration.vibrate(12);
-      showPremiumToast('success', t('success_title'), t('success_supplier_created'));
-      onCreated(result?.supplier ?? payload);
-      onClose();
+      createdSupplierRef.current = result?.supplier ?? payload;
+      setShowSuccessCelebration(true);
     } catch (e: any) {
       const msg = e?.response?.data?.message ?? t('error_create_supplier');
       Alert.alert(t('error_title'), msg);
@@ -256,18 +262,18 @@ export const CreateSupplierModal: React.FC<{
             <ArrowLeft size={22} color="#1E5BAC" />
           </TouchableOpacity>
           <Text style={styles.modalTitle}>{t('title_create_supplier')}</Text>
-          <TouchableOpacity
+          <SuccessMorphButton
             // style={[styles.modalConfirmBtn, saving && { opacity: 0.7 }]}
             // onPress={handleSave}
             style={[styles.modalConfirmBtn, !isValid && styles.modalConfirmBtnDisabled]}
             onPress={handleSubmit(onSubmit as any)}
-            disabled={saving}
-            activeOpacity={0.85}
-          >
-            {saving
-              ? <ActivityIndicator size="small" color="#FFFFFF" />
-              : <Text style={styles.modalConfirmText}>{t('modal_confirm_text')}</Text>}
-          </TouchableOpacity>
+            disabled={!isValid || saving || showSuccessCelebration}
+            loading={saving}
+            success={showSuccessCelebration}
+            label={t('modal_confirm_text')}
+            successLabel={t('success_title')}
+            textStyle={styles.modalConfirmText}
+          />
         </View>
 
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
@@ -478,20 +484,33 @@ export const CreateSupplierModal: React.FC<{
               </View>
             </View>
 
-            <TouchableOpacity
+            <SuccessMorphButton
             //   style={[styles.confirmBtn, saving && { opacity: 0.7 }]}
             //   onPress={handleSave}
               style={[styles.confirmBtn, !isValid && styles.confirmBtnDisabled]}
               onPress={handleSubmit(onSubmit as any)}
-              disabled={saving}
-              activeOpacity={0.85}
-            >
-              {saving
-                ? <ActivityIndicator color="#FFFFFF" />
-                : <Text style={styles.confirmBtnText}>{t('modal_confirm_text')}</Text>}
-            </TouchableOpacity>
+              disabled={!isValid || saving || showSuccessCelebration}
+              loading={saving}
+              success={showSuccessCelebration}
+              label={t('modal_confirm_text')}
+              successLabel={t('success_title')}
+              textStyle={styles.confirmBtnText}
+            />
           </ScrollView>
         </KeyboardAvoidingView>
+        <PremiumSuccessCelebration
+          visible={showSuccessCelebration}
+          title={t('success_supplier_created', { defaultValue: 'Supplier added successfully' })}
+          subtitle={t('success_ready_review', { defaultValue: 'Everything is saved and ready to review.' })}
+          continueLabel={t('button_continue', { defaultValue: 'Continue' })}
+          onDone={() => {
+            const createdSupplier = createdSupplierRef.current;
+            setShowSuccessCelebration(false);
+            createdSupplierRef.current = null;
+            onCreated(createdSupplier);
+            onClose();
+          }}
+        />
       </View>
           {upgradeWebViewElement}
     </Modal>
@@ -554,6 +573,42 @@ const Suppliers: React.FC = ({ navigation: navProp }: any) => {
     </TouchableOpacity>
   );
 
+  const totalSpend = suppliers.reduce((sum, supplier) => sum + Number(supplier.total_ttc ?? 0), 0);
+  const activeSuppliers = suppliers.filter(supplier => Number(supplier.expenses_count ?? 0) > 0).length;
+  const missingIce = suppliers.filter(supplier => !(supplier.ice || supplier.ice_number)).length;
+  const topSupplier = [...suppliers].sort((a, b) => Number(b.total_ttc ?? 0) - Number(a.total_ttc ?? 0))[0];
+
+  const renderSupplierAssistant = () => (
+    <View style={styles.assistantCard}>
+      <View style={styles.assistantHeader}>
+        <Text style={styles.assistantTitle}>{t('supplier_360_title', { defaultValue: 'Fournisseurs 360' })}</Text>
+        <Text style={styles.assistantMeta}>{suppliers.length}</Text>
+      </View>
+      <View style={styles.metricsRow}>
+        <View style={styles.metricTile}>
+          <TrendingDown size={15} color="#DC2626" />
+          <Text style={styles.metricValue}>{totalSpend.toLocaleString('fr-FR')}</Text>
+          <Text style={styles.metricLabel}>MAD</Text>
+        </View>
+        <View style={styles.metricTile}>
+          <FileText size={15} color="#1E5BAC" />
+          <Text style={styles.metricValue}>{activeSuppliers}</Text>
+          <Text style={styles.metricLabel}>{t('label_supplier', { defaultValue: 'suppliers' })}</Text>
+        </View>
+        <View style={styles.metricTile}>
+          <AlertTriangle size={15} color="#D97706" />
+          <Text style={styles.metricValue}>{missingIce}</Text>
+          <Text style={styles.metricLabel}>ICE</Text>
+        </View>
+      </View>
+      {!!topSupplier && (
+        <Text style={styles.assistantHint} numberOfLines={1}>
+          {t('supplier_360_top', { name: topSupplier.company_name, defaultValue: `Top supplier: ${topSupplier.company_name}` })}
+        </Text>
+      )}
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
@@ -606,6 +661,7 @@ const Suppliers: React.FC = ({ navigation: navProp }: any) => {
               tintColor="#1E5BAC"
             />
           }
+          ListHeaderComponent={suppliers.length > 0 ? renderSupplierAssistant : undefined}
           ListEmptyComponent={
             <View style={styles.emptyBox}>
               <View style={styles.emptyIconContainer}>
@@ -713,6 +769,31 @@ const styles = StyleSheet.create({
   supplierInitial: { fontSize: 20, color: '#FFFFFF', fontWeight: '600' },
   supplierName: { fontSize: 15, fontWeight: '600', color: '#1F2937', marginBottom: 2 },
   supplierMeta: { fontSize: 12, color: '#6B7280' },
+  assistantCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 14,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: '#E8EEF8',
+    marginBottom: 4,
+  },
+  assistantHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  assistantTitle: { fontSize: 15, fontWeight: '800', color: '#111827' },
+  assistantMeta: { fontSize: 12, fontWeight: '800', color: '#1E5BAC' },
+  metricsRow: { flexDirection: 'row', gap: 8 },
+  metricTile: {
+    flex: 1,
+    borderRadius: 14,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#EDF2F7',
+    padding: 10,
+    gap: 4,
+  },
+  metricValue: { fontSize: 14, fontWeight: '900', color: '#111827' },
+  metricLabel: { fontSize: 10, fontWeight: '700', color: '#64748B' },
+  assistantHint: { fontSize: 12, fontWeight: '700', color: '#334155' },
 
   // FAB
   fab: {

@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { useRoute } from '@react-navigation/native';
 import { fetchChecklist } from '../../store/slices/onboardingSlice';
+import { updateCustomer } from '../../store/slices/userSlice';
 import { Save, Building2, Upload, ChevronDown, X, ImageIcon, PenLine, Camera, ArrowLeft, Palette, Check, Copy } from 'lucide-react-native';
 import { appLogoIcon } from '../../assets/icons';
 import api from '../../api';
@@ -25,6 +26,7 @@ import { Api_Endpoints } from '../../services/endpoints';
 import { pick, types, isErrorWithCode, errorCodes } from '@react-native-documents/picker';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import Clipboard from '@react-native-clipboard/clipboard';
+import authService from '../../services/authService';
 
 const COMPANY_TYPES = [
   'Auto-entrepreneur',
@@ -75,6 +77,24 @@ const CompanyProfile: React.FC = ({ navigation }: any) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const withCacheBuster = (url?: string | null) => {
+    if (!url) return '';
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}v=${Date.now()}`;
+  };
+
+  const syncCustomerProfile = async (profile: any, bustLogoCache = false) => {
+    const avatarUrl = profile.avatar_url ?? profile.avatar ?? '';
+    const displayAvatarUrl = bustLogoCache ? withCacheBuster(avatarUrl) : avatarUrl;
+    const patch = {
+      ...profile,
+      avatar: displayAvatarUrl,
+      avatar_url: displayAvatarUrl,
+    };
+    dispatch(updateCustomer(patch));
+    await authService.updateStoredCustomer(patch);
+  };
+
   const handleCopyToClipboard = (text: string, label: string) => {
     if (!text.trim()) {
       Alert.alert(t('info_title'), `${label} ${t('field_is_empty') || 'is empty'}`);
@@ -89,6 +109,7 @@ const CompanyProfile: React.FC = ({ navigation }: any) => {
       const res = await api.get(Api_Endpoints.customerProfile);
       const d = res.data?.data ?? {};
       console.log('plkllkl', d)
+      await syncCustomerProfile(d);
       setBillingName(d.billing_name ?? '');
       setSiret(d.billing_phone ?? '');
       setVatNumber(d.vat_number ?? '');
@@ -189,9 +210,11 @@ const CompanyProfile: React.FC = ({ navigation }: any) => {
         } as any);
       }
 
-      await api.post(Api_Endpoints.customerProfile, formData, {
+      const saved = await api.post(Api_Endpoints.customerProfile, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+      const refreshed = await api.get(Api_Endpoints.customerProfile).catch(() => null);
+      await syncCustomerProfile(refreshed?.data?.data ?? saved.data?.data ?? {}, !!logo);
       Alert.alert(t('success_title'), t('success_company_updated'), [
         {
           text: 'OK',

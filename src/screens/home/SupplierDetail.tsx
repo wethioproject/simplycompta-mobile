@@ -84,7 +84,7 @@ const EditSupplierModal: React.FC<{
       setPostalCode(supplierData.postal_code ?? '');
       setCity(supplierData.city ?? '');
       setCommercialRegister(supplierData.commercial_register ?? '');
-      setIce(supplierData.ice ?? '');
+      setIce(supplierData.ice ?? supplierData.ice_number ?? '');
     }
   }, [visible, supplierData]);
 
@@ -103,7 +103,7 @@ const EditSupplierModal: React.FC<{
       postal_code: postalCode.trim(),
       city: city.trim(),
       commercial_register: commercialRegister.trim(),
-      ice: ice.trim(),
+      ice_number: ice.trim(),
     };
     const result = await updateSupplier(supplierData.id, payload);
     setSaving(false);
@@ -260,7 +260,7 @@ const SupplierDetail: React.FC = ({ navigation, route }: any) => {
   const phone = supplierData?.telephone ?? '—';
   const postalCity = `${supplierData?.postal_code ?? ''} ${supplierData?.city ?? ''}`.trim() || '—';
   const registreCommerce = supplierData?.commercial_register ?? '—';
-  const ice = supplierData?.ice ?? '—';
+  const ice = supplierData?.ice ?? supplierData?.ice_number ?? '—';
   const totalExpenses = expenses.reduce((sum, e) => sum + (parseFloat(e.total_ttc ?? e.ttc ?? '0') || 0), 0);
 
   const copyToClipboard = (text: string) =>

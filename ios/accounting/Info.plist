@@ -8,6 +8,8 @@
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
 	<string>SimplyCompta</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>SimplyCompta utilise Face ID pour proteger vos donnees comptables et confirmer les actions sensibles.</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>

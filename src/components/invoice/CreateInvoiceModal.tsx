@@ -49,6 +49,8 @@ import type { Account, Client, InvoiceArticle, InvoiceItem, Article } from '../.
 import { STATUT_OPTIONS, STATUT_OPTIONS_DETAIL_MODAL, PAYMENT_METHODS } from '../../types/invoice.types';
 import { useUpgradeWebView } from '../../utils/upgradeWebView';
 import { showPremiumToast } from '../../utils/premiumToast';
+import PremiumSuccessCelebration from '../common/PremiumSuccessCelebration';
+import { SuccessMorphButton } from '../common/PremiumMotion';
 
 const invoiceSchema = yup.object({
   invoiceNumber: yup.string().trim().required('Invoice number is required'),
@@ -135,6 +137,7 @@ const CreateInvoiceModal: React.FC<{
   const [showImagePreview, setShowImagePreview] = useState(false);
   const [removedExistingDocument, setRemovedExistingDocument] = useState(false);
   const [fileSizeError, setFileSizeError] = useState(false);
+  const [showSuccessCelebration, setShowSuccessCelebration] = useState(false);
 
   const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
   const storageExhausted = (subscription?.usage?.storage?.remaining_mb ?? 1) <= 0;
@@ -194,6 +197,7 @@ const CreateInvoiceModal: React.FC<{
     setSaving(false);
     setRemovedExistingDocument(false);
     setFileSizeError(false);
+    setShowSuccessCelebration(false);
 
     if (editItem) {
       const datePart = editItem.date.split('T')[0];
@@ -463,10 +467,9 @@ const CreateInvoiceModal: React.FC<{
         const result = await onSave(payload);
         if (result.success) {
           Vibration.vibrate(12);
-          showPremiumToast('success', t('success_title'), t('success_invoice_created'));
           dispatch(loadSubscription() as any);
           onCreated();
-          onClose();
+          setShowSuccessCelebration(true);
         } else {
           Alert.alert(t('error_title'), result.error ?? t('error_generic'));
         }
@@ -486,17 +489,16 @@ const CreateInvoiceModal: React.FC<{
               <Text style={styles.modalCancelText}>{t('modal_cancel_text')}</Text>
             </TouchableOpacity>
             <Text style={styles.modalTitle}>{editItem ? t('title_edit_invoice') : t('title_create_invoice')}</Text>
-            <TouchableOpacity
+            <SuccessMorphButton
               style={[styles.modalConfirmBtn, !isValid && styles.modalConfirmBtnDisabled]}
               onPress={handleSubmit(onSubmit as any)}
-              disabled={saving}
-              activeOpacity={0.8}
-            >
-              {saving
-                ? <ActivityIndicator size="small" color="#FFFFFF" />
-                : <Text style={styles.modalConfirmText}>{t('modal_confirm_text')}</Text>
-              }
-            </TouchableOpacity>
+              disabled={!isValid || saving || showSuccessCelebration}
+              loading={saving}
+              success={showSuccessCelebration}
+              label={t('modal_confirm_text')}
+              successLabel={t('success_title')}
+              textStyle={styles.modalConfirmText}
+            />
           </View>
 
           <ScrollView contentContainerStyle={styles.modalContent} keyboardShouldPersistTaps="handled">
@@ -1022,6 +1024,16 @@ const CreateInvoiceModal: React.FC<{
             if (newClients) setLocalClients(newClients);
             setShowCreateClientModal(false);
             setShowClientPicker(true);
+          }}
+        />
+        <PremiumSuccessCelebration
+          visible={showSuccessCelebration}
+          title={t('success_invoice_created', { defaultValue: 'Invoice created successfully' })}
+          subtitle={t('success_ready_review', { defaultValue: 'Everything is saved and ready to review.' })}
+          continueLabel={t('button_continue', { defaultValue: 'Continue' })}
+          onDone={() => {
+            setShowSuccessCelebration(false);
+            onClose();
           }}
         />
       </View>

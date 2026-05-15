@@ -13,10 +13,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { Lock, ShieldCheck, Monitor, ArrowLeft } from 'lucide-react-native';
+import { Lock, ShieldCheck, Monitor, ArrowLeft, EyeOff, Timer, Fingerprint, History } from 'lucide-react-native';
 import { appLogoIcon } from '../../assets/icons';
 import api from '../../api';
 import { Api_Endpoints } from '../../services/endpoints';
+import { useSecurity } from '../../contexts/SecurityContext';
 
 const AccountSecurity: React.FC = ({ navigation }: any) => {
   const { t } = useTranslation();
@@ -24,6 +25,20 @@ const AccountSecurity: React.FC = ({ navigation }: any) => {
   const [lastPasswordUpdate, setLastPasswordUpdate] = useState<string>('');
   const [loadingPassword, setLoadingPassword] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const {
+    biometricEnabled,
+    privateModeEnabled,
+    autoLockEnabled,
+    autoLockMinutes,
+    biometricLabel,
+    securityEvents,
+    setBiometricEnabled,
+    setPrivateModeEnabled,
+    setAutoLockEnabled,
+    setAutoLockMinutes,
+    requestSensitiveAuth,
+    recordSecurityEvent,
+  } = useSecurity();
 
   const calculateTimeAgo = (dateString: string): string => {
     try {
@@ -81,7 +96,10 @@ const AccountSecurity: React.FC = ({ navigation }: any) => {
           onPress: async () => {
             setDeleting(true);
             try {
+              const allowed = await requestSensitiveAuth('Confirmer la suppression du compte');
+              if (!allowed) return;
               await api.delete(Api_Endpoints.customerProfile);
+              await recordSecurityEvent('Suppression du compte confirmée');
               navigation.reset({ index: 0, routes: [{ name: 'Splash' }] });
             } catch (e: any) {
               const msg = e?.response?.data?.message ?? t('error_delete_account');
@@ -137,41 +155,95 @@ const AccountSecurity: React.FC = ({ navigation }: any) => {
             </TouchableOpacity>
           </View>
 
-          {/* <View style={styles.divider} /> */}
+          <View style={styles.divider} />
 
-          {/* 2FA row */}
-          {/* <View style={styles.row}>
+          <View style={styles.row}>
             <View style={styles.rowIconBox}>
-              <ShieldCheck size={20} color="#9CA3AF" />
+              <Fingerprint size={20} color="#9CA3AF" />
             </View>
             <View style={styles.rowBody}>
-              <Text style={styles.rowTitle}>Authentification à deux facteurs</Text>
-              <Text style={styles.rowSub}>Ajoutez une couche de sécurité supplémentaire</Text>
+              <Text style={styles.rowTitle}>{biometricLabel}</Text>
+              <Text style={styles.rowSub}>Déverrouillage au lancement et confirmation des actions sensibles</Text>
             </View>
             <Switch
-              value={twoFactor}
-              onValueChange={setTwoFactor}
+              value={biometricEnabled}
+              onValueChange={(value) => { setBiometricEnabled(value); }}
               trackColor={{ false: '#E5E7EB', true: '#3B6FD4' }}
               thumbColor="#FFFFFF"
               ios_backgroundColor="#E5E7EB"
             />
-          </View> */}
+          </View>
 
-          {/* <View style={styles.divider} /> */}
+          <View style={styles.divider} />
 
-          {/* Active sessions row */}
-          {/* <View style={styles.row}>
+          <View style={styles.row}>
             <View style={styles.rowIconBox}>
-              <Monitor size={20} color="#9CA3AF" />
+              <EyeOff size={20} color="#9CA3AF" />
             </View>
             <View style={styles.rowBody}>
-              <Text style={styles.rowTitle}>Sessions actives</Text>
-              <Text style={styles.rowSub}>2 appareils connectés</Text>
+              <Text style={styles.rowTitle}>Mode privé</Text>
+              <Text style={styles.rowSub}>Masque les montants exacts sur les écrans clés</Text>
             </View>
-            <TouchableOpacity activeOpacity={0.7}>
-              <Text style={styles.actionLink}>Gérer</Text>
-            </TouchableOpacity>
-          </View> */}
+            <Switch
+              value={privateModeEnabled}
+              onValueChange={setPrivateModeEnabled}
+              trackColor={{ false: '#E5E7EB', true: '#3B6FD4' }}
+              thumbColor="#FFFFFF"
+              ios_backgroundColor="#E5E7EB"
+            />
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.row}>
+            <View style={styles.rowIconBox}>
+              <Timer size={20} color="#9CA3AF" />
+            </View>
+            <View style={styles.rowBody}>
+              <Text style={styles.rowTitle}>Auto-verrouillage</Text>
+              <Text style={styles.rowSub}>{autoLockEnabled ? `Après ${autoLockMinutes} minutes en arrière-plan` : 'Désactivé'}</Text>
+              <View style={styles.lockOptions}>
+                {[1, 3, 5].map(minutes => (
+                  <TouchableOpacity
+                    key={minutes}
+                    style={[styles.lockChip, autoLockMinutes === minutes && styles.lockChipActive]}
+                    onPress={() => setAutoLockMinutes(minutes)}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[styles.lockChipText, autoLockMinutes === minutes && styles.lockChipTextActive]}>{minutes} min</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            <Switch
+              value={autoLockEnabled}
+              onValueChange={setAutoLockEnabled}
+              trackColor={{ false: '#E5E7EB', true: '#3B6FD4' }}
+              thumbColor="#FFFFFF"
+              ios_backgroundColor="#E5E7EB"
+            />
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.cardTitleRow}>
+            <History size={19} color="#1E5BAC" />
+            <Text style={[styles.cardTitle, { marginBottom: 0 }]}>Journal sécurité</Text>
+          </View>
+          <View style={styles.eventRow}>
+            <Monitor size={17} color="#6B7280" />
+            <Text style={styles.eventText}>Appareil actuel : {Platform.OS === 'ios' ? 'iPhone' : 'Android'}</Text>
+          </View>
+          <View style={styles.eventRow}>
+            <ShieldCheck size={17} color="#6B7280" />
+            <Text style={styles.eventText}>{biometricLabel} {biometricEnabled ? 'activé' : 'désactivé'}</Text>
+          </View>
+          {securityEvents.slice(0, 4).map(event => (
+            <View key={event.id} style={styles.eventRow}>
+              <ShieldCheck size={17} color="#16A34A" />
+              <Text style={styles.eventText}>{event.label}</Text>
+            </View>
+          ))}
         </View>
 
         {/* Danger zone card */}
@@ -273,6 +345,19 @@ const styles = StyleSheet.create({
     color: '#3B6FD4',
     flexShrink: 0,
   },
+  cardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 18 },
+  lockOptions: { flexDirection: 'row', gap: 8, marginTop: 10 },
+  lockChip: {
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+  },
+  lockChipActive: { backgroundColor: '#EAF2FF' },
+  lockChipText: { fontSize: 12, fontWeight: '700', color: '#6B7280' },
+  lockChipTextActive: { color: '#1E5BAC' },
+  eventRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
+  eventText: { flex: 1, fontSize: 13, color: '#4B5563', lineHeight: 18 },
 
   divider: {
     height: 1,

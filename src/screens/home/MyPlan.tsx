@@ -42,6 +42,14 @@ const MyPlan: React.FC = ({ navigation }: any) => {
   const sub = subscription?.subscription;
   const upgradeUrl = subscription?.upgrade_url;
 
+  const resolveUsageItem = (key: typeof USAGE_ITEMS[number]['key']) => {
+    const data = usage?.[key as keyof typeof usage] as any;
+    if (data) return data;
+    return key === 'storage'
+      ? { used_mb: 0, limit_mb: null, remaining_mb: -1 }
+      : { used: 0, limit: null, remaining: -1 };
+  };
+
   const formatDate = (dateStr?: string | null) => {
     if (!dateStr) return '—';
     return new Date(dateStr).toLocaleDateString(i18n.language, {
@@ -124,42 +132,39 @@ const MyPlan: React.FC = ({ navigation }: any) => {
         </View>
 
         {/* Usage Section */}
-        {usage && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Zap size={16} color="#1E5BAC" />
-              <Text style={styles.sectionTitle}>{t('section_usage_overview')}</Text>
-            </View>
-
-            <View style={styles.usageGrid}>
-              {(() => {
-                const rows: Array<typeof USAGE_ITEMS[number][]> = [];
-                for (let i = 0; i < USAGE_ITEMS.length; i += 2) {
-                  rows.push(USAGE_ITEMS.slice(i, i + 2) as any);
-                }
-                return rows.map((row, ri) => (
-                  <View key={ri} style={styles.usageRow}>
-                    {row.map(item => {
-                      const data = usage[item.key as keyof typeof usage] as any;
-                      if (!data) return null;
-                      const used   = item.isStorage ? (data.used_mb  ?? data.used  ?? 0) : (data.used  ?? 0);
-                      const limit  = item.isStorage ? (data.limit_mb ?? data.limit ?? 0) : (data.limit ?? 0);
-                      return (
-                        <UsageCard
-                          key={item.key}
-                          label={t(item.labelKey)}
-                          used={used}
-                          limit={limit}
-                          isStorage={item.isStorage}
-                        />
-                      );
-                    })}
-                  </View>
-                ));
-              })()}
-            </View>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Zap size={16} color="#1E5BAC" />
+            <Text style={styles.sectionTitle}>{t('section_usage_overview')}</Text>
           </View>
-        )}
+
+          <View style={styles.usageGrid}>
+            {(() => {
+              const rows: Array<typeof USAGE_ITEMS[number][]> = [];
+              for (let i = 0; i < USAGE_ITEMS.length; i += 2) {
+                rows.push(USAGE_ITEMS.slice(i, i + 2) as any);
+              }
+              return rows.map((row, ri) => (
+                <View key={ri} style={styles.usageRow}>
+                  {row.map(item => {
+                    const data = resolveUsageItem(item.key);
+                    const used = item.isStorage ? (data.used_mb ?? data.used ?? 0) : (data.used ?? 0);
+                    const limit = item.isStorage ? (data.limit_mb ?? data.limit ?? null) : (data.limit ?? null);
+                    return (
+                      <UsageCard
+                        key={item.key}
+                        label={t(item.labelKey)}
+                        used={Number(used) || 0}
+                        limit={typeof limit === 'number' ? limit : null}
+                        isStorage={item.isStorage}
+                      />
+                    );
+                  })}
+                </View>
+              ));
+            })()}
+          </View>
+        </View>
 
         {/* Upgrade Button */}
         {upgradeUrl && (

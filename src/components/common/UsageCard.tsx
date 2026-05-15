@@ -5,14 +5,15 @@ import { useTranslation } from 'react-i18next';
 interface UsageCardProps {
   label: string;
   used: number;
-  limit: number;
+  limit: number | null;
   isStorage?: boolean;
 }
 
 const UsageCard: React.FC<UsageCardProps> = ({ label, used, limit, isStorage = false }) => {
   const { t } = useTranslation();
 
-  const percentage = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
+  const hasFiniteLimit = typeof limit === 'number' && limit > 0;
+  const percentage = hasFiniteLimit ? Math.min(100, (used / limit) * 100) : 0;
 
   const barColor =
     percentage > 90 ? '#EF4444' :
@@ -22,7 +23,9 @@ const UsageCard: React.FC<UsageCardProps> = ({ label, used, limit, isStorage = f
   const showWarning = percentage >= 80;
 
   const usedLabel = isStorage ? `${used}MB` : String(used);
-  const limitLabel = isStorage ? `${limit}MB` : String(limit);
+  const limitLabel = hasFiniteLimit
+    ? (isStorage ? `${limit}MB` : String(limit))
+    : t('usage_unlimited', { defaultValue: 'Illimité' });
 
   return (
     <View style={styles.card}>

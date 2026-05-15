@@ -1,12 +1,17 @@
 import React, { useEffect, useRef } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   StyleProp,
+  Text,
+  TextStyle,
   TouchableOpacity,
   TouchableOpacityProps,
   Vibration,
+  View,
   ViewStyle,
 } from 'react-native';
+import { Check } from 'lucide-react-native';
 import { premiumTheme } from '../../theme/premiumTheme';
 
 type FadeInViewProps = {
@@ -142,5 +147,106 @@ export const PremiumShimmer: React.FC<ShimmerProps> = ({
         style,
       ]}
     />
+  );
+};
+
+type SuccessMorphButtonProps = TouchableOpacityProps & {
+  label: string;
+  loading?: boolean;
+  success?: boolean;
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
+  successLabel?: string;
+};
+
+export const SuccessMorphButton: React.FC<SuccessMorphButtonProps> = ({
+  label,
+  loading = false,
+  success = false,
+  style,
+  textStyle,
+  successLabel,
+  disabled,
+  ...props
+}) => {
+  const scale = useRef(new Animated.Value(1)).current;
+  const successScale = useRef(new Animated.Value(0.8)).current;
+  const successOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!success) {
+      successScale.setValue(0.8);
+      successOpacity.setValue(0);
+      return;
+    }
+
+    Vibration.vibrate(14);
+    Animated.parallel([
+      Animated.spring(successScale, {
+        toValue: 1,
+        friction: 5,
+        tension: 120,
+        useNativeDriver: true,
+      }),
+      Animated.timing(successOpacity, {
+        toValue: 1,
+        duration: 160,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [success, successOpacity, successScale]);
+
+  const animatePress = (toValue: number) => {
+    Animated.timing(scale, {
+      toValue,
+      duration: 120,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <TouchableOpacity
+        {...props}
+        disabled={disabled || loading || success}
+        activeOpacity={0.88}
+        onPressIn={event => {
+          animatePress(0.98);
+          props.onPressIn?.(event);
+        }}
+        onPressOut={event => {
+          animatePress(1);
+          props.onPressOut?.(event);
+        }}
+        style={[
+          style,
+          success && {
+            backgroundColor: premiumTheme.colors.success,
+            borderColor: premiumTheme.colors.success,
+          },
+        ]}
+      >
+        {loading ? (
+          <ActivityIndicator size="small" color="#FFFFFF" />
+        ) : success ? (
+          <Animated.View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              opacity: successOpacity,
+              transform: [{ scale: successScale }],
+            }}
+          >
+            <Check size={17} color="#FFFFFF" strokeWidth={3} />
+            {!!successLabel && <Text style={textStyle}>{successLabel}</Text>}
+          </Animated.View>
+        ) : (
+          <View>
+            <Text style={textStyle}>{label}</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    </Animated.View>
   );
 };

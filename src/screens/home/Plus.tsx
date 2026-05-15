@@ -33,6 +33,8 @@ import {
   CreditCard,
   FileText,
   ScrollText,
+  FileSpreadsheet,
+  Sparkles,
 } from 'lucide-react-native';
 
 const TERMS_OF_USE_URL = 'https://simply-compta.com/privacy-policy.pdf';
@@ -86,6 +88,8 @@ const Plus: React.FC = ({ navigation }: any) => {
     else if (action === 'language')    navigation.navigate('Language Settings');
     else if (action === 'whatsapp')    navigation.navigate('WhatsApp Bot');
     else if (action === 'documents')   navigation.navigate('Documents List');
+    else if (action === 'dgi_export')  navigation.navigate('Export DGI Compatible');
+    else if (action === 'business_assistant') navigation.navigate('Assistant Comptable');
     else if (action === 'support')     navigation.navigate('Contact');
     else if (action === 'plan')        navigation.navigate('My Plan');
     else if (action === 'terms')        Linking.openURL(TERMS_OF_USE_URL).catch(() => Alert.alert(t('error_title'), t('error_opening_link')));
@@ -114,6 +118,7 @@ const Plus: React.FC = ({ navigation }: any) => {
   };
   const displayName    = user?.name  || 'Mon Compte';
   const companyName    = user?.billing_name   || 'Mon Entreprise';
+  const avatarUri = user?.avatar_url || user?.avatar || '';
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -126,8 +131,11 @@ const Plus: React.FC = ({ navigation }: any) => {
         <View style={styles.profileHeader}>
           {/* Avatar */}
           <View style={styles.avatarCircle}>
-            {/* <Text style={styles.avatarText}>{getInitials(displayName)}</Text> */}
-            <Image source={{ uri: user?.avatar_url }} style={{width: 72, height: 72, borderRadius: 36}} />
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={{width: 72, height: 72, borderRadius: 36}} />
+            ) : (
+              <Text style={styles.avatarText}>{getInitials(displayName)}</Text>
+            )}
           </View>
 
           {/* Name + company */}
@@ -174,6 +182,8 @@ const Plus: React.FC = ({ navigation }: any) => {
           <View style={styles.card}>
             <MenuRow Icon={FolderOpen}     iconColor="#1E5BAC" label={t('menu_documents')} onPress={() => handleMenuPress('documents')} />
             <MenuRow Icon={Package}         iconColor="#1E5BAC" label={t('menu_products')}  onPress={() => handleMenuPress('products')}  />
+            <MenuRow Icon={Sparkles}        iconColor="#1E5BAC" label={t('menu_business_assistant', { defaultValue: 'Assistant comptable' })} onPress={() => handleMenuPress('business_assistant')} />
+            <MenuRow Icon={FileSpreadsheet} iconColor="#1E5BAC" label={t('menu_dgi_export', { defaultValue: 'Export DGI Compatible' })} onPress={() => handleMenuPress('dgi_export')} />
             <MenuRow Icon={Languages}       iconColor="#1E5BAC" label={t('menu_language')}  onPress={() => handleMenuPress('language')}  />
             <MenuRow Icon={MessageCircle}   iconColor="#25D366" label={t('menu_whatsapp')}  onPress={() => handleMenuPress('whatsapp')}  />
             <MenuRow Icon={CreditCard}       iconColor="#1E5BAC" label={t('menu_my_plan')}   onPress={() => handleMenuPress('plan')}      isLast />

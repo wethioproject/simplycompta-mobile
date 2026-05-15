@@ -70,6 +70,8 @@ import DocumentsList from '../screens/home/DocumentsList';
 import WhatsAppBot from '../screens/home/WhatsAppBot';
 import WhatsAppBotOtp from '../screens/home/WhatsAppBotOtp';
 import MyPlan from '../screens/home/MyPlan';
+import DgiExport from '../screens/home/DgiExport';
+import BusinessAssistant from '../screens/home/BusinessAssistant';
 
 const Stack = createStackNavigator();
 
@@ -146,6 +148,8 @@ const AppNavigator = () => {
         <Stack.Screen name="WhatsApp Bot" component={WhatsAppBot} options={{ headerShown: false }} />
         <Stack.Screen name="WhatsApp Bot OTP" component={WhatsAppBotOtp} options={{ headerShown: false }} />
         <Stack.Screen name="My Plan" component={MyPlan} options={{ headerShown: false }} />
+        <Stack.Screen name="Export DGI Compatible" component={DgiExport} options={{ headerShown: false }} />
+        <Stack.Screen name="Assistant Comptable" component={BusinessAssistant} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
     <Toast />

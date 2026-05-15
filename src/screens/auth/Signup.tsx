@@ -10,6 +10,7 @@ import SignupStep3, { Step3Data } from '../../components/auth/SignupStep3';
 import LanguageToggle from '../../components/auth/LanguageToggle';
 import { useAuth } from '../../hooks/useAuth';
 import { FadeInView } from '../../components/common/PremiumMotion';
+import PremiumSuccessCelebration from '../../components/common/PremiumSuccessCelebration';
 
 interface SignupProps {
   navigation: any;
@@ -33,6 +34,12 @@ const Signup: React.FC<SignupProps> = ({ navigation }) => {
     companyType: '',
     city: '',
   });
+  const [showSuccessCelebration, setShowSuccessCelebration] = useState(false);
+
+  const finishSignup = () => {
+    setShowSuccessCelebration(false);
+    navigation.replace('Home');
+  };
 
   const handleStep1Next = async (data: Step1Data) => {
     const result = await checkEmail(data.email);
@@ -102,7 +109,7 @@ const Signup: React.FC<SignupProps> = ({ navigation }) => {
     const result = await signup(buildPayload(data));
     if (result.success) {
       Vibration.vibrate(12);
-      navigation.replace('Home');
+      setShowSuccessCelebration(true);
     } else {
       Vibration.vibrate(18);
       Toast.show({
@@ -118,7 +125,7 @@ const Signup: React.FC<SignupProps> = ({ navigation }) => {
     const result = await signup(buildPayload({}));
     if (result.success) {
       Vibration.vibrate(12);
-      navigation.replace('Home');
+      setShowSuccessCelebration(true);
     } else {
       Vibration.vibrate(18);
       Toast.show({
@@ -182,6 +189,13 @@ const Signup: React.FC<SignupProps> = ({ navigation }) => {
           />
         </FadeInView>
       )}
+      <PremiumSuccessCelebration
+        visible={showSuccessCelebration}
+        title={t('success_account_created_title', { defaultValue: 'Welcome to SimplyCompta' })}
+        subtitle={t('success_account_created_subtitle', { defaultValue: 'Your workspace is ready.' })}
+        continueLabel={t('button_continue', { defaultValue: 'Continue' })}
+        onDone={finishSignup}
+      />
     </View>
   );
 };
