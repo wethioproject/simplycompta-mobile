@@ -960,6 +960,7 @@ const CreateInvoiceModal: React.FC<{
                   value={tempDate}
                   mode="date"
                   display="inline"
+                  locale={i18n.language}
                   onChange={handleDateChange}
                   themeVariant="light"
                 />
