@@ -1630,7 +1630,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                 </TouchableOpacity>
               </View>
               <View style={{ alignItems: 'center', paddingBottom: 8 }}>
-                <DateTimePicker value={tempDate} mode="date" display="inline" onChange={handleDateChange} themeVariant="light" />
+                <DateTimePicker value={tempDate} mode="date" locale={i18n.language} display="inline" onChange={handleDateChange} themeVariant="light" />
               </View>
             </View>
           </View>
@@ -1640,6 +1640,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
           <DateTimePicker
             value={tempDate}
             mode="date"
+            locale={i18n.language}
             display="default"
             onChange={(event, selected) => {
               setShowDatePicker(false);

@@ -866,6 +866,7 @@ const CreateQuoteModal: React.FC<{
                 <DateTimePicker
                   value={tempDueDate}
                   mode="date"
+                  locale={i18n.language}
                   display="inline"
                   onChange={(_, selected) => { if (selected) setTempDueDate(selected); }}
                   themeVariant="light"
@@ -880,6 +881,7 @@ const CreateQuoteModal: React.FC<{
           <DateTimePicker
             value={tempDueDate}
             mode="date"
+            locale={i18n.language}
             display="default"
             onChange={(event, selected) => {
               setShowDueDatePicker(false);
@@ -910,6 +912,7 @@ const CreateQuoteModal: React.FC<{
                 <DateTimePicker
                   value={tempDate}
                   mode="date"
+                  locale={i18n.language}
                   display="inline"
                   onChange={handleDateChange}
                   themeVariant="light"
@@ -924,6 +927,7 @@ const CreateQuoteModal: React.FC<{
           <DateTimePicker
             value={tempDate}
             mode="date"
+            locale={i18n.language}
             display="default"
             onChange={(event, selected) => {
               setShowDatePicker(false);

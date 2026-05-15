@@ -11,12 +11,14 @@ import {
   Platform,
   Modal,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { downArrowIcon, fileIcon } from '../../assets/icons';
 import { Dropdown } from 'react-native-element-dropdown';
 
 const EditExpense: React.FC = ({ navigation, route }: any) => {
+  const { i18n } = useTranslation();
   const { expense } = route.params || {};
 
   const [reference, setReference] = useState(expense?.number || 'DEP-202601-0001');
@@ -302,6 +304,7 @@ const EditExpense: React.FC = ({ navigation, route }: any) => {
                 <DateTimePicker
                   value={tempOperationDate}
                   mode="date"
+                  locale={i18n.language}
                   display="spinner"
                   onChange={(event, selectedDate) => {
                     if (selectedDate) {
@@ -339,6 +342,7 @@ const EditExpense: React.FC = ({ navigation, route }: any) => {
                 <DateTimePicker
                   value={tempValueDate}
                   mode="date"
+                  locale={i18n.language}
                   display="spinner"
                   onChange={(event, selectedDate) => {
                     if (selectedDate) {
@@ -358,6 +362,7 @@ const EditExpense: React.FC = ({ navigation, route }: any) => {
             <DateTimePicker
               value={operationDate}
               mode="date"
+              locale={i18n.language}
               display="default"
               onChange={(event, selectedDate) => {
                 setShowOperationDatePicker(false);
@@ -372,6 +377,7 @@ const EditExpense: React.FC = ({ navigation, route }: any) => {
             <DateTimePicker
               value={valueDate}
               mode="date"
+              locale={i18n.language}
               display="default"
               onChange={(event, selectedDate) => {
                 setShowValueDatePicker(false);

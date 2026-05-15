@@ -58,7 +58,7 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
   onSave,
   editItem,
 }) => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch<AppDispatch>();
   const { openUpgradeWebView, upgradeWebViewElement } = useUpgradeWebView(onClose);
@@ -463,7 +463,7 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
                 </TouchableOpacity>
               </View>
               <View style={{ alignItems: 'center', paddingBottom: 8 }}>
-                <DateTimePicker value={tempDate} mode="date" display="inline" onChange={handleDateChange} themeVariant="light" />
+                <DateTimePicker value={tempDate} mode="date" locale={i18n.language} display="inline" onChange={handleDateChange} themeVariant="light" />
               </View>
             </View>
           </View>
@@ -474,6 +474,7 @@ const CreateReceiptModal: React.FC<CreateReceiptModalProps> = ({
           <DateTimePicker
             value={tempDate}
             mode="date"
+            locale={i18n.language}
             display="default"
             onChange={(event, selected) => {
               setShowDatePicker(false);

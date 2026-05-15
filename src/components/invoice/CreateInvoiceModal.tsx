@@ -915,6 +915,7 @@ const CreateInvoiceModal: React.FC<{
                 <DateTimePicker
                   value={tempDueDate}
                   mode="date"
+                  locale={i18n.language}
                   display="inline"
                   onChange={(_, selected) => { if (selected) setTempDueDate(selected); }}
                   themeVariant="light"
@@ -929,6 +930,7 @@ const CreateInvoiceModal: React.FC<{
           <DateTimePicker
             value={tempDueDate}
             mode="date"
+            locale={i18n.language}
             display="default"
             onChange={(event, selected) => {
               setShowDueDatePicker(false);
@@ -976,6 +978,7 @@ const CreateInvoiceModal: React.FC<{
             value={tempDate}
             mode="date"
             display="default"
+            locale={i18n.language}
             onChange={(event, selected) => {
               setShowDatePicker(false);
               if (event.type === 'set' && selected) {
