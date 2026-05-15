@@ -143,7 +143,7 @@ const Signup: React.FC<SignupProps> = ({ navigation }) => {
       )}
 
       {currentStep === 1 && (
-        <FadeInView>
+        <FadeInView style={{ flex: 1 }}>
           <SignupStep1
             onNext={handleStep1Next}
             onSignIn={() => navigation.replace('Login')}
@@ -151,7 +151,7 @@ const Signup: React.FC<SignupProps> = ({ navigation }) => {
         </FadeInView>
       )}
       {(currentStep as any) === 1.5 && (
-        <FadeInView>
+        <FadeInView style={{ flex: 1 }}>
           <SignupOtpVerification
             email={step1Data.email}
             onVerified={() => {
@@ -166,7 +166,7 @@ const Signup: React.FC<SignupProps> = ({ navigation }) => {
         </FadeInView>
       )}
       {currentStep === 2 && (
-        <FadeInView>
+        <FadeInView style={{ flex: 1 }}>
           <SignupStep2
             onNext={handleStep2Next}
             onBack={() => setCurrentStep(1.5 as any)}
@@ -174,7 +174,7 @@ const Signup: React.FC<SignupProps> = ({ navigation }) => {
         </FadeInView>
       )}
       {currentStep === 3 && (
-        <FadeInView>
+        <FadeInView style={{ flex: 1 }}>
           <SignupStep3
             onComplete={handleStep3Complete}
             onBack={() => setCurrentStep(2)}
