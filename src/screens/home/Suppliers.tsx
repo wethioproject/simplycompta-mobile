@@ -224,10 +224,10 @@ export const CreateSupplierModal: React.FC<{
       postal_code: data.postalCode,
       city: data.city,
       commercial_register: data.commercialRegister ?? '',
-      ice: data.ice ?? '',
+      ice_number: data.ice ?? '',
       if_number: data.ifNumber ?? '',
-      cnss: data.cnss ?? '',
-      address: data.address ?? '',
+      cnss_number: data.cnss ?? '',
+      billing_address: data.address ?? '',
     };
     const result = await createSupplier(payload);
     if (!result?.success) {
