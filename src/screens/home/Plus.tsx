@@ -7,10 +7,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Share,
   Image,
   Linking,
 } from 'react-native';
+import RNShare from 'react-native-share';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
@@ -95,8 +95,16 @@ const Plus: React.FC = ({ navigation }: any) => {
 
   const handleShare = async () => {
     try {
-      await Share.share({ message: t('share_message') });
-    } catch { }
+      await RNShare.open({
+        message: `${t('share_message')}\n\nhttps://simply-compta.com/`,
+        title: t('menu_rate'),
+        failOnCancel: false,
+      });
+    } catch (e: any) {
+      if (e?.message && !e.message.includes('cancel') && !e.message.includes('dismiss')) {
+        Alert.alert(t('error_title'), t('error_unable_to_share'));
+      }
+    }
   };
 
   const getInitials = (name: string) => {
