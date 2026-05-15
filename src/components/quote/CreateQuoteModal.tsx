@@ -46,6 +46,7 @@ import { invoiceStyles as styles } from '../../styles/invoice.styles';
 import type { Account, Client, InvoiceArticle, InvoiceItem, Article } from '../../types/quote.types';
 import { STATUT_OPTIONS, PAYMENT_METHODS, resolveStatus } from '../../types/quote.types';
 import { useUpgradeWebView } from '../../utils/upgradeWebView';
+import { showPremiumToast } from '../../utils/premiumToast';
 
 const quoteSchema = yup.object({
   quoteNumber: yup.string().trim().required('Quote number is required'),
@@ -442,7 +443,7 @@ const CreateQuoteModal: React.FC<{
         const result = await onSave(payload);
         if (result.success) {
           dispatch(loadSubscription() as any);
-          Alert.alert(t('success_title'), t('success_quote_created'));
+          showPremiumToast('success', t('success_title'), t('success_quote_created'));
           onCreated();
           onClose();
         } else {

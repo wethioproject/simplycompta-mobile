@@ -19,6 +19,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { clientSchema, ClientFormValues } from '../../types/client.types';
 import { createClient } from '../../services/client.service';
+import { showPremiumToast } from '../../utils/premiumToast';
 import { useSelector, useDispatch } from 'react-redux';
 import { Linking } from 'react-native';
 import { canUseFeature } from '../../utils/subscriptionHelpers';
@@ -90,7 +91,7 @@ export const CreateClientModal: React.FC<CreateClientModalProps> = ({
     try {
       await createClient(data);
       dispatch(loadSubscription() as any);
-      Alert.alert(t('success_title'), t('success_client_created'));
+      showPremiumToast('success', t('success_title'), t('success_client_created'));
       await onCreated();
       onClose();
     } catch (e: any) {
