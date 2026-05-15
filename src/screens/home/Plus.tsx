@@ -9,6 +9,7 @@ import {
   Alert,
   Share,
   Image,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSelector } from 'react-redux';
@@ -30,7 +31,12 @@ import {
   FolderOpen,
   MessageCircle,
   CreditCard,
+  FileText,
+  ScrollText,
 } from 'lucide-react-native';
+
+const TERMS_OF_USE_URL = 'https://simply-compta.com/';
+const GENERAL_TERMS_URL = 'https://simply-compta.com/';
 
 const MenuRow: React.FC<{
   Icon: React.ComponentType<any>;
@@ -82,6 +88,8 @@ const Plus: React.FC = ({ navigation }: any) => {
     else if (action === 'documents')   navigation.navigate('Documents List');
     else if (action === 'support')     navigation.navigate('Contact');
     else if (action === 'plan')        navigation.navigate('My Plan');
+    else if (action === 'terms')        Linking.openURL(TERMS_OF_USE_URL).catch(() => Alert.alert(t('error_title'), t('error_opening_link')));
+    else if (action === 'general_terms') Linking.openURL(GENERAL_TERMS_URL).catch(() => Alert.alert(t('error_title'), t('error_opening_link')));
     else if (action === 'logout')      handleLogout();
   };
 
@@ -169,6 +177,15 @@ const Plus: React.FC = ({ navigation }: any) => {
           <Text style={styles.sectionLabel}>{t('section_support')}</Text>
           <View style={styles.card}>
             <MenuRow Icon={Headphones} iconColor="#1E5BAC" label={t('menu_help')} onPress={() => handleMenuPress('support')} isLast />
+          </View>
+        </View>
+
+        {/* Legal */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>{t('section_legal')}</Text>
+          <View style={styles.card}>
+            <MenuRow Icon={FileText}   iconColor="#1E5BAC" label={t('menu_terms_of_use')}  onPress={() => handleMenuPress('terms')}         />
+            <MenuRow Icon={ScrollText} iconColor="#1E5BAC" label={t('menu_general_terms')} onPress={() => handleMenuPress('general_terms')} isLast />
           </View>
         </View>
 
