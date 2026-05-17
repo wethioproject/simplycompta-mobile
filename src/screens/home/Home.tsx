@@ -41,6 +41,7 @@ import {
 } from 'lucide-react-native';
 import notificationService from '../../services/notificationService';
 import dashboardService from '../../services/dashboardService';
+import premiumInsightsService, { PremiumInsightsData } from '../../services/premiumInsightsService';
 import ConnectedAccountantCard from '../../components/home/ConnectedAccountantCard';
 import OCRScannerCard from '../../components/home/OCRScannerCard';
 import WhatsAppBotCard from '../../components/home/WhatsAppBotCard';
@@ -311,6 +312,43 @@ const AccountantReviewCard: React.FC<{
         ))}
       </View>
     </PremiumTouchable>
+  );
+};
+
+const PremiumInsightsCard: React.FC<{
+  insights: PremiumInsightsData | null;
+  loading: boolean;
+  t: any;
+}> = ({ insights, loading, t }) => {
+  if (loading) {
+    return (
+      <View style={styles.insightsCard}>
+        <PremiumShimmer width="48%" height={14} borderRadius={7} />
+        <PremiumShimmer width="82%" height={42} borderRadius={14} />
+      </View>
+    );
+  }
+
+  if (!insights) return null;
+
+  return (
+    <View style={styles.insightsCard}>
+      <View style={styles.insightsHeader}>
+        <View>
+          <Text style={styles.insightsEyebrow}>{t('premium_insights_eyebrow')}</Text>
+          <Text style={styles.insightsTitle}>{t('premium_insights_title')}</Text>
+        </View>
+        <View style={styles.scoreBadge}>
+          <Text style={styles.scoreValue}>{insights.financial_health_score}</Text>
+        </View>
+      </View>
+      {(insights.attention_today.length ? insights.attention_today : [{ type: 'ok', title: insights.vat_assistant.message }]).slice(0, 3).map((item, index) => (
+        <View key={`${item.type}-${index}`} style={styles.insightRow}>
+          <Sparkles size={15} color="#1E5BAC" />
+          <Text style={styles.insightText}>{item.title}</Text>
+        </View>
+      ))}
+    </View>
   );
 };
 
@@ -764,6 +802,8 @@ const Home: React.FC = () => {
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [statsLoading, setStatsLoading] = useState(true);
+  const [insightsLoading, setInsightsLoading] = useState(true);
+  const [premiumInsights, setPremiumInsights] = useState<PremiumInsightsData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState({
     total_paid_sum: 0,
@@ -884,14 +924,29 @@ const Home: React.FC = () => {
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
+  const fetchPremiumInsights = useCallback(async () => {
+    setInsightsLoading(true);
+    try {
+      const res = await premiumInsightsService.getInsights();
+      setPremiumInsights(res.success ? res.data : null);
+    } catch {
+      setPremiumInsights(null);
+    } finally {
+      setInsightsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchPremiumInsights(); }, [fetchPremiumInsights]);
+
   useEffect(() => { dispatch(loadSubscription() as any); }, []);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await new Promise<void>(resolve => setTimeout(resolve, 300));
     await fetchStats();
+    await fetchPremiumInsights();
     setRefreshing(false);
-  }, [fetchStats]);
+  }, [fetchStats, fetchPremiumInsights]);
 
   const checkUnread = useCallback(() => {
     notificationService.hasUnreadNotifications().then(setHasUnread).catch(() => {});
@@ -1026,6 +1081,10 @@ const Home: React.FC = () => {
             onNavigate={handleNavigate}
             t={t}
           />
+        </FadeInView>
+
+        <FadeInView delay={70}>
+          <PremiumInsightsCard insights={premiumInsights} loading={insightsLoading} t={t} />
         </FadeInView>
 
         {/* Connected Accountant Card */}
@@ -1330,6 +1389,61 @@ const styles = StyleSheet.create({
     color: '#B45309',
   },
   reviewChipTextReady: { color: '#166534' },
+  insightsCard: {
+    marginBottom: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E8EEF8',
+    gap: 10,
+  },
+  insightsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+  },
+  insightsEyebrow: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#1E5BAC',
+    textTransform: 'uppercase',
+  },
+  insightsTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#111827',
+    marginTop: 2,
+  },
+  scoreBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 16,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scoreValue: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#1E5BAC',
+  },
+  insightRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 10,
+  },
+  insightText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+    lineHeight: 17,
+  },
   badgeGreen: {
     flexDirection: 'row',
     alignItems: 'center',

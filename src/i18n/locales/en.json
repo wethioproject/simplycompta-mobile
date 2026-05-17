@@ -1181,6 +1181,8 @@
   "usage_insight_healthy_title": "Usage looks healthy",
   "usage_insight_healthy_subtitle": "{{feature}} is at {{percent}}% of your plan.",
   "usage_insight_unlimited_subtitle": "Your active plan has flexible usage.",
+  "premium_insights_eyebrow": "Premium insights",
+  "premium_insights_title": "Financial health",
 
   "menu_pme_network": "PME Network",
   "pme_title": "PME Network",

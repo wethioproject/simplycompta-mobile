@@ -1181,6 +1181,8 @@
   "usage_insight_healthy_title": "Usage maîtrisé",
   "usage_insight_healthy_subtitle": "{{feature}} est à {{percent}}% de votre plan.",
   "usage_insight_unlimited_subtitle": "Votre plan actif garde un usage flexible.",
+  "premium_insights_eyebrow": "Insights premium",
+  "premium_insights_title": "Santé financière",
 
   "menu_pme_network": "Annuaire PME",
   "pme_title": "Annuaire PME",

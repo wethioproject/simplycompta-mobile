@@ -1181,6 +1181,8 @@
   "usage_insight_healthy_title": "الاستخدام جيد",
   "usage_insight_healthy_subtitle": "{{feature}} عند {{percent}}% من خطتك.",
   "usage_insight_unlimited_subtitle": "خطتك الحالية تمنحك استخداماً مرناً.",
+  "premium_insights_eyebrow": "رؤى متقدمة",
+  "premium_insights_title": "الصحة المالية",
 
   "menu_pme_network": "دليل المقاولات",
   "pme_title": "دليل المقاولات",
