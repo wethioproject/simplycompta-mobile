@@ -1,5 +1,6 @@
 export const Api_Endpoints = {
   dashboard: 'customer/dashboard-data',
+  mobileActivity: 'mobile/activity',
   customerQuickAnalysis: 'customer/analyse-rapide',
   customerClients: 'customer/customer-clients',
   customerClientsSearch: 'customer/customer-clients',
