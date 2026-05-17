@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useNotification } from '../../hooks/useNotification';
 import { Notification } from '../../services/notificationService';
+import { STORAGE_BASE_URL } from '../../config';
 
 const NotificationDetail: React.FC = ({ navigation, route }: any) => {
   const { t } = useTranslation();
@@ -43,7 +44,7 @@ const NotificationDetail: React.FC = ({ navigation, route }: any) => {
 
   const openDocument = () => {
     if (notification?.document) {
-      const documentUrl = `https://simply-compta.com/storage/${notification.document}`;
+      const documentUrl = `${STORAGE_BASE_URL}${notification.document}`;
       Linking.openURL(documentUrl);
     }
   };

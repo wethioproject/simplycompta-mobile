@@ -36,9 +36,10 @@ import {
   FileSpreadsheet,
   Sparkles,
 } from 'lucide-react-native';
+import { PUBLIC_BASE_URL } from '../../config';
 
-const TERMS_OF_USE_URL = 'https://simply-compta.com/privacy-policy.pdf';
-const GENERAL_TERMS_URL = 'https://simply-compta.com/terms-and-conditions.pdf';
+const TERMS_OF_USE_URL = `${PUBLIC_BASE_URL}/privacy-policy.pdf`;
+const GENERAL_TERMS_URL = `${PUBLIC_BASE_URL}/terms-and-conditions.pdf`;
 
 const MenuRow: React.FC<{
   Icon: React.ComponentType<any>;
@@ -100,7 +101,7 @@ const Plus: React.FC = ({ navigation }: any) => {
   const handleShare = async () => {
     try {
       await RNShare.open({
-        message: `${t('share_message')}\n\nhttps://simply-compta.com/`,
+        message: `${t('share_message')}\n\n${PUBLIC_BASE_URL}/`,
         title: t('menu_rate'),
         failOnCancel: false,
       });

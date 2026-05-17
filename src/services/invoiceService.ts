@@ -1,5 +1,6 @@
 import api from '../api';
 import { Api_Endpoints } from './endpoints';
+import { API_BASE_URL } from '../config';
 
 class InvoiceService {
 
@@ -218,7 +219,7 @@ class InvoiceService {
     }
 
     getPdfDownloadUrl(id: number): string {
-        const base = (api.defaults.baseURL ?? 'https://simply-compta.com/api/').replace(/\/$/, '');
+        const base = (api.defaults.baseURL ?? API_BASE_URL).replace(/\/$/, '');
         return `${base}/${Api_Endpoints.customerInvoicePdf}/${id}`;
     }
 

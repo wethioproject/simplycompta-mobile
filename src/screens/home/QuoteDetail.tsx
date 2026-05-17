@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { fileIcon } from '../../assets/icons';
 import { useBankStatement } from '../../hooks/useBankStatement';
+import { STORAGE_BASE_URL } from '../../config';
 
 const QuoteDetail: React.FC = ({ navigation, route }: any) => {
   const quote = route?.params?.quote;
@@ -63,7 +64,7 @@ const QuoteDetail: React.FC = ({ navigation, route }: any) => {
 
   const handleOpenPDF = () => {
     if (bankStatement?.file_path) {
-      const url = `https://simply-compta.com/storage/${bankStatement.file_path}`;
+      const url = `${STORAGE_BASE_URL}${bankStatement.file_path}`;
       Linking.openURL(url).catch(err => {
         console.error('Failed to open PDF:', err);
       });

@@ -41,6 +41,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { appLogoIcon } from '../../assets/icons';
 import api from '../../api';
 import { Api_Endpoints } from '../../services/endpoints';
+import { STORAGE_BASE_URL } from '../../config';
 
 type StackNavigation = StackNavigationProp<any>;
 
@@ -57,7 +58,7 @@ type ApiDocument = {
   updated_at: string;
 };
 
-const BASE_DOCUMENT_URL = 'https://simply-compta.com/storage/';
+const BASE_DOCUMENT_URL = STORAGE_BASE_URL;
 
 // const formatDate = (iso: string) => {
 //   try {
