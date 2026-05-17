@@ -1,5 +1,9 @@
 export const Api_Endpoints = {
   dashboard: 'customer/dashboard-data',
+  mobileActivity: 'mobile/activity',
+  pmeNetwork: 'mobile/pme-network',
+  pmeNetworkSettings: 'mobile/pme-network/settings',
+  premiumInsights: 'customer/premium-insights',
   customerQuickAnalysis: 'customer/analyse-rapide',
   customerClients: 'customer/customer-clients',
   customerClientsSearch: 'customer/customer-clients',

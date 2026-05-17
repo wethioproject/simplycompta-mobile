@@ -56,8 +56,9 @@ import { useUpgradeWebView } from '../../utils/upgradeWebView';
 import { showPremiumToast } from '../../utils/premiumToast';
 import PremiumSuccessCelebration from '../common/PremiumSuccessCelebration';
 import { SuccessMorphButton } from '../common/PremiumMotion';
+import { OCR_EXPENSE_ENDPOINT } from '../../config';
 
-const OCR_API_URL = 'https://ocr.simply-compta.com/api/expenses/ocr';
+const OCR_API_URL = OCR_EXPENSE_ENDPOINT;
 
 const expenseSchema = yup.object({
   date: yup.string().required('Date is required'),

@@ -35,10 +35,12 @@ import {
   ScrollText,
   FileSpreadsheet,
   Sparkles,
+  Network,
 } from 'lucide-react-native';
+import { PUBLIC_BASE_URL } from '../../config';
 
-const TERMS_OF_USE_URL = 'https://simply-compta.com/privacy-policy.pdf';
-const GENERAL_TERMS_URL = 'https://simply-compta.com/terms-and-conditions.pdf';
+const TERMS_OF_USE_URL = `${PUBLIC_BASE_URL}/privacy-policy.pdf`;
+const GENERAL_TERMS_URL = `${PUBLIC_BASE_URL}/terms-and-conditions.pdf`;
 
 const MenuRow: React.FC<{
   Icon: React.ComponentType<any>;
@@ -90,6 +92,7 @@ const Plus: React.FC = ({ navigation }: any) => {
     else if (action === 'documents')   navigation.navigate('Documents List');
     else if (action === 'dgi_export')  navigation.navigate('Export DGI Compatible');
     else if (action === 'business_assistant') navigation.navigate('Assistant Comptable');
+    else if (action === 'pme_network') navigation.navigate('PME Network');
     else if (action === 'support')     navigation.navigate('Contact');
     else if (action === 'plan')        navigation.navigate('My Plan');
     else if (action === 'terms')        Linking.openURL(TERMS_OF_USE_URL).catch(() => Alert.alert(t('error_title'), t('error_opening_link')));
@@ -100,7 +103,7 @@ const Plus: React.FC = ({ navigation }: any) => {
   const handleShare = async () => {
     try {
       await RNShare.open({
-        message: `${t('share_message')}\n\nhttps://simply-compta.com/`,
+        message: `${t('share_message')}\n\n${PUBLIC_BASE_URL}/`,
         title: t('menu_rate'),
         failOnCancel: false,
       });
@@ -183,6 +186,7 @@ const Plus: React.FC = ({ navigation }: any) => {
             <MenuRow Icon={FolderOpen}     iconColor="#1E5BAC" label={t('menu_documents')} onPress={() => handleMenuPress('documents')} />
             <MenuRow Icon={Package}         iconColor="#1E5BAC" label={t('menu_products')}  onPress={() => handleMenuPress('products')}  />
             <MenuRow Icon={Sparkles}        iconColor="#1E5BAC" label={t('menu_business_assistant', { defaultValue: 'Assistant comptable' })} onPress={() => handleMenuPress('business_assistant')} />
+            <MenuRow Icon={Network}         iconColor="#1E5BAC" label={t('menu_pme_network')} onPress={() => handleMenuPress('pme_network')} />
             <MenuRow Icon={FileSpreadsheet} iconColor="#1E5BAC" label={t('menu_dgi_export', { defaultValue: 'Export DGI Compatible' })} onPress={() => handleMenuPress('dgi_export')} />
             <MenuRow Icon={Languages}       iconColor="#1E5BAC" label={t('menu_language')}  onPress={() => handleMenuPress('language')}  />
             <MenuRow Icon={MessageCircle}   iconColor="#25D366" label={t('menu_whatsapp')}  onPress={() => handleMenuPress('whatsapp')}  />

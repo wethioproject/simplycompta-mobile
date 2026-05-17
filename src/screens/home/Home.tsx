@@ -41,6 +41,7 @@ import {
 } from 'lucide-react-native';
 import notificationService from '../../services/notificationService';
 import dashboardService from '../../services/dashboardService';
+import premiumInsightsService, { PremiumInsightsData } from '../../services/premiumInsightsService';
 import ConnectedAccountantCard from '../../components/home/ConnectedAccountantCard';
 import OCRScannerCard from '../../components/home/OCRScannerCard';
 import WhatsAppBotCard from '../../components/home/WhatsAppBotCard';
@@ -237,6 +238,116 @@ const TodayAssistant: React.FC<{
           ))}
         </View>
       )}
+    </View>
+  );
+};
+
+const AccountantReviewCard: React.FC<{
+  stats: {
+    hasLastMonthStatement: boolean;
+    unreadDocumentsCount: number;
+    unpaidInvoicesCount: number;
+    expiredInvoicesCount: number;
+  };
+  onNavigate: (page: string) => void;
+  t: any;
+}> = ({ stats, onNavigate, t }) => {
+  const blockers = [
+    !stats.hasLastMonthStatement && {
+      key: 'bank',
+      label: t('review_missing_statement'),
+      route: 'bank',
+    },
+    stats.expiredInvoicesCount > 0 && {
+      key: 'expired',
+      label: t('review_overdue_invoices', { count: stats.expiredInvoicesCount }),
+      route: 'invoices-expired',
+    },
+    stats.unpaidInvoicesCount > 0 && {
+      key: 'unpaid',
+      label: t('review_unpaid_invoices', { count: stats.unpaidInvoicesCount }),
+      route: 'invoices',
+    },
+    stats.unreadDocumentsCount > 0 && {
+      key: 'documents',
+      label: t('review_unread_documents', { count: stats.unreadDocumentsCount }),
+      route: 'documentsList',
+    },
+  ].filter(Boolean) as Array<{ key: string; label: string; route: string }>;
+
+  const isReady = blockers.length === 0;
+  const primaryAction = blockers[0]?.route ?? 'activity';
+
+  return (
+    <PremiumTouchable
+      style={[styles.reviewCard, isReady ? styles.reviewCardReady : styles.reviewCardWaiting]}
+      onPress={() => onNavigate(primaryAction)}
+      haptic
+    >
+      <View style={styles.reviewTopRow}>
+        <View style={[styles.reviewIconBox, isReady ? styles.reviewIconReady : styles.reviewIconWaiting]}>
+          {isReady ? <CheckCircle2 size={18} color="#16A34A" /> : <AlertTriangle size={18} color="#D97706" />}
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.reviewTitle}>
+            {isReady ? t('review_ready_title') : t('review_waiting_title')}
+          </Text>
+          <Text style={styles.reviewSubtitle}>
+            {isReady ? t('review_ready_subtitle') : t('review_waiting_subtitle')}
+          </Text>
+        </View>
+        <ChevronRight size={18} color="#94A3B8" />
+      </View>
+
+      <View style={styles.reviewChecklist}>
+        {(isReady ? [
+          { key: 'ready-bank', label: t('review_statement_ok') },
+          { key: 'ready-docs', label: t('review_documents_ok') },
+        ] : blockers.slice(0, 3)).map(item => (
+          <View key={item.key} style={[styles.reviewChip, isReady && styles.reviewChipReady]}>
+            <Text style={[styles.reviewChipText, isReady && styles.reviewChipTextReady]} numberOfLines={1}>
+              {item.label}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </PremiumTouchable>
+  );
+};
+
+const PremiumInsightsCard: React.FC<{
+  insights: PremiumInsightsData | null;
+  loading: boolean;
+  t: any;
+}> = ({ insights, loading, t }) => {
+  if (loading) {
+    return (
+      <View style={styles.insightsCard}>
+        <PremiumShimmer width="48%" height={14} borderRadius={7} />
+        <PremiumShimmer width="82%" height={42} borderRadius={14} />
+      </View>
+    );
+  }
+
+  if (!insights) return null;
+
+  return (
+    <View style={styles.insightsCard}>
+      <View style={styles.insightsHeader}>
+        <View>
+          <Text style={styles.insightsEyebrow}>{t('premium_insights_eyebrow')}</Text>
+          <Text style={styles.insightsTitle}>{t('premium_insights_title')}</Text>
+        </View>
+        <View style={styles.scoreBadge}>
+          <Text style={styles.scoreValue}>{insights.financial_health_score}</Text>
+        </View>
+      </View>
+      {(insights.attention_today.length ? insights.attention_today : [{ type: 'ok', title: insights.vat_assistant.message }]).slice(0, 3).map((item, index) => (
+        <View key={`${item.type}-${index}`} style={styles.insightRow}>
+          <Sparkles size={15} color="#1E5BAC" />
+          <Text style={styles.insightText}>{item.title}</Text>
+        </View>
+      ))}
     </View>
   );
 };
@@ -691,6 +802,8 @@ const Home: React.FC = () => {
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [statsLoading, setStatsLoading] = useState(true);
+  const [insightsLoading, setInsightsLoading] = useState(true);
+  const [premiumInsights, setPremiumInsights] = useState<PremiumInsightsData | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState({
     total_paid_sum: 0,
@@ -811,14 +924,29 @@ const Home: React.FC = () => {
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
+  const fetchPremiumInsights = useCallback(async () => {
+    setInsightsLoading(true);
+    try {
+      const res = await premiumInsightsService.getInsights();
+      setPremiumInsights(res.success ? res.data : null);
+    } catch {
+      setPremiumInsights(null);
+    } finally {
+      setInsightsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchPremiumInsights(); }, [fetchPremiumInsights]);
+
   useEffect(() => { dispatch(loadSubscription() as any); }, []);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await new Promise<void>(resolve => setTimeout(resolve, 300));
     await fetchStats();
+    await fetchPremiumInsights();
     setRefreshing(false);
-  }, [fetchStats]);
+  }, [fetchStats, fetchPremiumInsights]);
 
   const checkUnread = useCallback(() => {
     notificationService.hasUnreadNotifications().then(setHasUnread).catch(() => {});
@@ -940,6 +1068,23 @@ const Home: React.FC = () => {
             maskAmount={maskAmount}
             t={t}
           />
+        </FadeInView>
+
+        <FadeInView delay={60}>
+          <AccountantReviewCard
+            stats={{
+              hasLastMonthStatement: stats.hasLastMonthStatement,
+              unreadDocumentsCount: stats.unreadDocumentsCount,
+              unpaidInvoicesCount: stats.unpaidInvoicesCount,
+              expiredInvoicesCount: stats.expiredInvoicesCount,
+            }}
+            onNavigate={handleNavigate}
+            t={t}
+          />
+        </FadeInView>
+
+        <FadeInView delay={70}>
+          <PremiumInsightsCard insights={premiumInsights} loading={insightsLoading} t={t} />
         </FadeInView>
 
         {/* Connected Accountant Card */}
@@ -1183,6 +1328,121 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 9,
     paddingVertical: 6,
+  },
+  reviewCard: {
+    marginBottom: 12,
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+  },
+  reviewCardReady: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#BBF7D0',
+  },
+  reviewCardWaiting: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FDE68A',
+  },
+  reviewTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  reviewIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewIconReady: { backgroundColor: '#DCFCE7' },
+  reviewIconWaiting: { backgroundColor: '#FEF3C7' },
+  reviewTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  reviewSubtitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+    marginTop: 2,
+    lineHeight: 17,
+  },
+  reviewChecklist: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+  },
+  reviewChip: {
+    maxWidth: '100%',
+    borderRadius: 999,
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  reviewChipReady: { backgroundColor: '#DCFCE7' },
+  reviewChipText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#B45309',
+  },
+  reviewChipTextReady: { color: '#166534' },
+  insightsCard: {
+    marginBottom: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E8EEF8',
+    gap: 10,
+  },
+  insightsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+  },
+  insightsEyebrow: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#1E5BAC',
+    textTransform: 'uppercase',
+  },
+  insightsTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#111827',
+    marginTop: 2,
+  },
+  scoreBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 16,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scoreValue: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#1E5BAC',
+  },
+  insightRow: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 10,
+  },
+  insightText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+    lineHeight: 17,
   },
   badgeGreen: {
     flexDirection: 'row',

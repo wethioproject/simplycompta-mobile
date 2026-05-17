@@ -32,6 +32,9 @@ const USAGE_ITEMS = [
   { key: 'storage',  labelKey: 'usage_label_storage',  isStorage: true  },
 ] as const;
 
+const usagePercent = (used: number, limit: number | null) =>
+  typeof limit === 'number' && limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+
 const MyPlan: React.FC = ({ navigation }: any) => {
   const { t, i18n } = useTranslation();
   const subscription = useSelector((state: any) => state.subscription.data);
@@ -61,6 +64,22 @@ const MyPlan: React.FC = ({ navigation }: any) => {
 
   const statusColor = sub?.status === 'active' ? '#16A34A' : '#EA580C';
   const statusBg    = sub?.status === 'active' ? '#F0FDF4' : '#FFF7ED';
+  const usageOverview = USAGE_ITEMS.map(item => {
+    const data = resolveUsageItem(item.key);
+    const used = item.isStorage ? Number(data.used_mb ?? data.used ?? 0) : Number(data.used ?? 0);
+    const rawLimit = item.isStorage ? (data.limit_mb ?? data.limit ?? null) : (data.limit ?? null);
+    const limit = typeof rawLimit === 'number' ? rawLimit : null;
+    return {
+      key: item.key,
+      label: t(item.labelKey),
+      percentage: usagePercent(used, limit),
+      hasLimit: typeof limit === 'number' && limit > 0,
+    };
+  });
+  const nearLimitItems = usageOverview.filter(item => item.hasLimit && item.percentage >= 80);
+  const highestUsage = usageOverview
+    .filter(item => item.hasLimit)
+    .sort((a, b) => b.percentage - a.percentage)[0];
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -136,6 +155,34 @@ const MyPlan: React.FC = ({ navigation }: any) => {
           <View style={styles.sectionHeader}>
             <Zap size={16} color="#1E5BAC" />
             <Text style={styles.sectionTitle}>{t('section_usage_overview')}</Text>
+          </View>
+
+          <View style={[
+            styles.usageInsightCard,
+            nearLimitItems.length ? styles.usageInsightWarning : styles.usageInsightHealthy,
+          ]}>
+            <View style={styles.usageInsightTop}>
+              <View style={[
+                styles.usageInsightIcon,
+                nearLimitItems.length ? styles.usageInsightIconWarning : styles.usageInsightIconHealthy,
+              ]}>
+                <Zap size={16} color={nearLimitItems.length ? '#D97706' : '#16A34A'} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.usageInsightTitle}>
+                  {nearLimitItems.length
+                    ? t('usage_insight_attention_title')
+                    : t('usage_insight_healthy_title')}
+                </Text>
+                <Text style={styles.usageInsightSubtitle}>
+                  {nearLimitItems.length
+                    ? t('usage_insight_attention_subtitle', { count: nearLimitItems.length })
+                    : highestUsage
+                      ? t('usage_insight_healthy_subtitle', { feature: highestUsage.label, percent: highestUsage.percentage })
+                      : t('usage_insight_unlimited_subtitle')}
+                </Text>
+              </View>
+            </View>
           </View>
 
           <View style={styles.usageGrid}>
@@ -297,6 +344,46 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#111827' },
+  usageInsightCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+    marginBottom: 14,
+  },
+  usageInsightHealthy: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#BBF7D0',
+  },
+  usageInsightWarning: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FDE68A',
+  },
+  usageInsightTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  usageInsightIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  usageInsightIconHealthy: { backgroundColor: '#DCFCE7' },
+  usageInsightIconWarning: { backgroundColor: '#FEF3C7' },
+  usageInsightTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  usageInsightSubtitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+    marginTop: 3,
+    lineHeight: 17,
+  },
   usageGrid: { gap: 10 },
   usageRow: { flexDirection: 'row', gap: 10 },
 

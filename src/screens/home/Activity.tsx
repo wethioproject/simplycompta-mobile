@@ -9,11 +9,13 @@ import {
   Modal,
   ActivityIndicator,
   RefreshControl,
+  TextInput,
+  Vibration,
+  I18nManager,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
 import { useSelector } from 'react-redux';
 import { RootState } from '../../store';
 import {
@@ -31,13 +33,26 @@ import {
   Wallet,
   Receipt,
   Info,
+  Search,
+  Clock3,
+  FolderUp,
+  MessageSquare,
+  Landmark,
+  CheckCircle2,
+  AlertCircle,
+  Building2,
 } from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { LineChart, PieChart } from 'react-native-gifted-charts';
 import dashboardService from '../../services/dashboardService';
 import type { QuickAnalysisData } from '../../services/dashboardService';
-
-type StackNavigation = StackNavigationProp<any>;
+import activityService from '../../services/activityService';
+import type {
+  ActivityFilter,
+  MobileActivityData,
+  MobileActivityEvent,
+  MobileActivitySuggestion,
+} from '../../types/activity.types';
 
 /* ─── Helpers ─── */
 const fmt = (d: Date) => {
@@ -316,6 +331,250 @@ const QuickAnalysis: React.FC<{
   );
 };
 
+const BADGE_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  new: { bg: '#EFF6FF', text: '#1E5BAC', border: '#BFDBFE' },
+  urgent: { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA' },
+  waiting: { bg: '#FFFBEB', text: '#B45309', border: '#FDE68A' },
+  completed: { bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0' },
+  ai_detected: { bg: '#F5F3FF', text: '#6D28D9', border: '#DDD6FE' },
+  insight: { bg: '#ECFEFF', text: '#0E7490', border: '#A5F3FC' },
+};
+
+const eventIcon = (icon: string, color: string) => {
+  const props = { size: 18, color, strokeWidth: 2.2 };
+  switch (icon) {
+    case 'file-text':
+      return <FileText {...props} />;
+    case 'check-circle':
+      return <CheckCircle2 {...props} />;
+    case 'alert-circle':
+      return <AlertCircle {...props} />;
+    case 'sparkles':
+      return <Sparkles {...props} />;
+    case 'receipt':
+      return <Receipt {...props} />;
+    case 'folder-up':
+      return <FolderUp {...props} />;
+    case 'message-square':
+      return <MessageSquare {...props} />;
+    case 'landmark':
+      return <Landmark {...props} />;
+    case 'credit-card':
+      return <Wallet {...props} />;
+    case 'building-2':
+      return <Building2 {...props} />;
+    default:
+      return <Clock3 {...props} />;
+  }
+};
+
+const formatEventDate = (iso: string, locale: string) =>
+  new Date(iso).toLocaleString(locale, {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+const ActivitySkeleton = () => (
+  <View style={styles.timelineSkeletonWrap}>
+    {[0, 1, 2].map(index => (
+      <View key={index} style={styles.timelineSkeletonRow}>
+        <View style={styles.timelineSkeletonIcon} />
+        <View style={styles.timelineSkeletonBody}>
+          <View style={[styles.timelineSkeletonLine, { width: index === 1 ? '58%' : '76%' }]} />
+          <View style={[styles.timelineSkeletonLineSmall, { width: index === 2 ? '46%' : '62%' }]} />
+        </View>
+      </View>
+    ))}
+  </View>
+);
+
+const SuggestionsStrip: React.FC<{
+  suggestions: MobileActivitySuggestion[];
+  onPress: (suggestion: MobileActivitySuggestion) => void;
+}> = ({ suggestions, onPress }) => {
+  if (!suggestions.length) {
+    return null;
+  }
+
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.suggestionsContent}
+    >
+      {suggestions.map(suggestion => {
+        const colors = BADGE_COLORS[suggestion.type] ?? BADGE_COLORS.insight;
+        return (
+          <TouchableOpacity
+            key={suggestion.id}
+            style={[styles.suggestionCard, { borderColor: colors.border, backgroundColor: colors.bg }]}
+            onPress={() => onPress(suggestion)}
+            activeOpacity={0.78}
+          >
+            <Sparkles size={16} color={colors.text} />
+            <Text style={[styles.suggestionText, { color: colors.text }]} numberOfLines={2}>
+              {suggestion.title}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
+  );
+};
+
+const SmartTimeline: React.FC<{
+  data: MobileActivityData | null;
+  loading: boolean;
+  filter: ActivityFilter;
+  search: string;
+  onFilterChange: (filter: ActivityFilter) => void;
+  onSearchChange: (search: string) => void;
+  onEventPress: (event: MobileActivityEvent) => void;
+  onSuggestionPress: (suggestion: MobileActivitySuggestion) => void;
+  t: any;
+  locale: string;
+}> = ({
+  data,
+  loading,
+  filter,
+  search,
+  onFilterChange,
+  onSearchChange,
+  onEventPress,
+  onSuggestionPress,
+  t,
+  locale,
+}) => {
+  const groups = data?.groups ?? [];
+  const filters = data?.filters?.length
+    ? data.filters
+    : [
+        { key: 'all' as ActivityFilter, label: t('activity_filter_all') },
+        { key: 'invoices' as ActivityFilter, label: t('activity_filter_invoices') },
+        { key: 'expenses' as ActivityFilter, label: t('activity_filter_expenses') },
+        { key: 'ocr' as ActivityFilter, label: t('activity_filter_ocr') },
+        { key: 'documents' as ActivityFilter, label: t('activity_filter_documents') },
+        { key: 'payments' as ActivityFilter, label: t('activity_filter_payments') },
+        { key: 'accountant' as ActivityFilter, label: t('activity_filter_accountant') },
+      ];
+
+  return (
+    <View style={styles.timelineSection}>
+      <View style={[styles.timelineHeader, I18nManager.isRTL && styles.rowReverse]}>
+        <View>
+          <Text style={styles.timelineEyebrow}>{t('activity_premium_eyebrow')}</Text>
+          <Text style={styles.timelineTitle}>{t('activity_timeline_title')}</Text>
+        </View>
+        <View style={styles.timelineLiveBadge}>
+          <Sparkles size={13} color="#1E5BAC" />
+          <Text style={styles.timelineLiveBadgeText}>{t('activity_smart_badge')}</Text>
+        </View>
+      </View>
+
+      <View style={[styles.timelineSearch, I18nManager.isRTL && styles.rowReverse]}>
+        <Search size={18} color="#9CA3AF" />
+        <TextInput
+          value={search}
+          onChangeText={onSearchChange}
+          placeholder={t('activity_search_placeholder')}
+          placeholderTextColor="#9CA3AF"
+          style={[styles.timelineSearchInput, I18nManager.isRTL && styles.textRight]}
+          returnKeyType="search"
+        />
+      </View>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.timelineFilterContent}
+      >
+        {filters.map(item => {
+          const isActive = item.key === filter;
+          return (
+            <TouchableOpacity
+              key={item.key}
+              style={[styles.timelineFilterChip, isActive && styles.timelineFilterChipActive]}
+              onPress={() => onFilterChange(item.key)}
+              activeOpacity={0.75}
+            >
+              <Text style={[styles.timelineFilterText, isActive && styles.timelineFilterTextActive]}>
+                {item.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      <SuggestionsStrip suggestions={data?.suggestions ?? []} onPress={onSuggestionPress} />
+
+      {loading ? (
+        <ActivitySkeleton />
+      ) : groups.length === 0 ? (
+        <View style={styles.timelineEmpty}>
+          <View style={styles.timelineEmptyIcon}>
+            <Clock3 size={24} color="#1E5BAC" />
+          </View>
+          <Text style={styles.timelineEmptyTitle}>{t('activity_empty_title')}</Text>
+          <Text style={styles.timelineEmptySubtitle}>{t('activity_empty_subtitle')}</Text>
+        </View>
+      ) : (
+        <View style={styles.timelineCard}>
+          {groups.map(group => (
+            <View key={group.key} style={styles.timelineGroup}>
+              <Text style={styles.timelineGroupTitle}>{group.label}</Text>
+              {group.events.map((event, index) => {
+                const colors = BADGE_COLORS[event.badge] ?? BADGE_COLORS.new;
+                return (
+                  <TouchableOpacity
+                    key={event.id}
+                    style={[
+                      styles.timelineEventRow,
+                      index === group.events.length - 1 && styles.timelineEventRowLast,
+                    ]}
+                    onPress={() => onEventPress(event)}
+                    activeOpacity={0.78}
+                  >
+                    <View style={[styles.timelineEventIcon, { backgroundColor: colors.bg }]}>
+                      {eventIcon(event.icon, colors.text)}
+                    </View>
+                    <View style={styles.timelineEventContent}>
+                      <View style={[styles.timelineEventTop, I18nManager.isRTL && styles.rowReverse]}>
+                        <Text style={[styles.timelineEventTitle, I18nManager.isRTL && styles.textRight]} numberOfLines={1}>
+                          {event.title}
+                        </Text>
+                        <View style={[styles.timelineBadge, { backgroundColor: colors.bg, borderColor: colors.border }]}>
+                          <Text style={[styles.timelineBadgeText, { color: colors.text }]} numberOfLines={1}>
+                            {event.badge_label}
+                          </Text>
+                        </View>
+                      </View>
+                      {!!event.description && (
+                        <Text style={[styles.timelineEventDescription, I18nManager.isRTL && styles.textRight]} numberOfLines={2}>
+                          {event.description}
+                        </Text>
+                      )}
+                      <View style={[styles.timelineEventMeta, I18nManager.isRTL && styles.rowReverse]}>
+                        <Text style={styles.timelineEventDate}>{formatEventDate(event.occurred_at, locale)}</Text>
+                        {event.amount !== null && event.amount !== undefined && (
+                          <Text style={styles.timelineEventAmount}>
+                            {Number(event.amount).toLocaleString(locale)} {event.currency ?? t('currency_mad')}
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+};
+
 /** Chart section: line chart + donut side by side */
 const ChartSection: React.FC<{
   chartData: { ca: any[]; expenses: any[] };
@@ -545,11 +804,15 @@ const ChartSection: React.FC<{
 
 /* ─── Main Component ─── */
 const Activity: React.FC = () => {
-  const { t } = useTranslation();
-  const navigation = useNavigation<StackNavigation>();
+  const { t, i18n } = useTranslation();
+  const navigation = useNavigation<any>();
   const customer = useSelector((state: RootState) => state.user.customer);
 
   const [isFabOpen, setIsFabOpen] = useState(false);
+  const [activityFilter, setActivityFilter] = useState<ActivityFilter>('all');
+  const [activitySearch, setActivitySearch] = useState('');
+  const [activityLoading, setActivityLoading] = useState(true);
+  const [activityData, setActivityData] = useState<MobileActivityData | null>(null);
   const [showPeriodPicker, setShowPeriodPicker] = useState(false);
   const [selectedPeriodIndex, setSelectedPeriodIndex] = useState(new Date().getMonth());
   const [statsLoading, setStatsLoading] = useState(true);
@@ -642,16 +905,86 @@ const Activity: React.FC = () => {
 
   useEffect(() => { fetchQuickAnalysis(); }, []);
 
+  const fetchMobileActivity = async (silent = false) => {
+    if (!silent) setActivityLoading(true);
+    try {
+      const res = await activityService.getMobileActivity({
+        filter: activityFilter,
+        search: activitySearch || undefined,
+        per_page: 24,
+      });
+      if (res.success && res.data) {
+        setActivityData(res.data);
+      }
+    } catch (e) {
+      console.error('Mobile activity timeline error:', e);
+      setActivityData(null);
+    } finally {
+      setActivityLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchMobileActivity();
+    }, activitySearch ? 280 : 0);
+
+    return () => clearTimeout(timer);
+  }, [activityFilter, activitySearch]);
+
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     await new Promise<void>(resolve => setTimeout(resolve, 300));
     await Promise.all([
+      fetchMobileActivity(true),
       fetchStats(selectedPeriodIndex, true),
       fetchChartData(selectedChartYear, true),
       fetchQuickAnalysis(true),
     ]);
     setRefreshing(false);
-  }, [selectedPeriodIndex, selectedChartYear]);
+  }, [selectedPeriodIndex, selectedChartYear, activityFilter, activitySearch]);
+
+  const navigateFromActivityAction = (action?: MobileActivityEvent['action']) => {
+    if (!action) {
+      return;
+    }
+
+    if (action.filter) {
+      Vibration.vibrate(12);
+      setActivityFilter(action.filter);
+      return;
+    }
+
+    const routeMap: Record<string, string> = {
+      invoice_detail: 'Invoice Detail',
+      expense_detail: 'Expenses',
+      notification_detail: 'Notification Detail',
+      bank_statement_detail: 'Bank Statements',
+      transaction_detail: 'Payments',
+      client_detail: 'Client Detail',
+      supplier_detail: 'Supplier Detail',
+      bank_statements: 'Bank Statements',
+      tax_summary: 'Activity',
+    };
+
+    const routeName = action.screen ? routeMap[action.screen] : undefined;
+    if (routeName) {
+      Vibration.vibrate(12);
+      if (action.id) {
+        navigation.navigate(routeName as never, { id: action.id } as never);
+      } else {
+        navigation.navigate(routeName as never);
+      }
+    }
+  };
+
+  const handleActivityEventPress = (event: MobileActivityEvent) => {
+    navigateFromActivityAction(event.action);
+  };
+
+  const handleSuggestionPress = (suggestion: MobileActivitySuggestion) => {
+    navigateFromActivityAction(suggestion.action);
+  };
 
   /* ─── FAB animations ─── */
   const fabRotation = useState(new Animated.Value(0))[0];
@@ -743,6 +1076,22 @@ const Activity: React.FC = () => {
           onInvoice={() => navigation.navigate('Invoice', { openCreateModal: true })}
           onExpense={() => navigation.navigate('Expenses', { openCreateModal: true })}
           t={t}
+        />
+
+        <SmartTimeline
+          data={activityData}
+          loading={activityLoading}
+          filter={activityFilter}
+          search={activitySearch}
+          onFilterChange={(nextFilter) => {
+            Vibration.vibrate(8);
+            setActivityFilter(nextFilter);
+          }}
+          onSearchChange={setActivitySearch}
+          onEventPress={handleActivityEventPress}
+          onSuggestionPress={handleSuggestionPress}
+          t={t}
+          locale={i18n.language}
         />
 
         {/* Quick Analysis */}
@@ -1073,6 +1422,269 @@ const styles = StyleSheet.create({
   analysisAlertNormal: {
     fontSize: 14,
     color: '#6B7280',
+  },
+
+  /* Smart timeline */
+  timelineSection: {
+    marginBottom: 24,
+  },
+  timelineHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    gap: 12,
+  },
+  timelineEyebrow: {
+    fontSize: 11,
+    color: '#1E5BAC',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  timelineTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
+    marginTop: 2,
+  },
+  timelineLiveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  timelineLiveBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1E5BAC',
+  },
+  timelineSearch: {
+    minHeight: 46,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 14,
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+  },
+  timelineSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#111827',
+    paddingVertical: 0,
+  },
+  timelineFilterContent: {
+    gap: 8,
+    paddingRight: 16,
+    paddingBottom: 12,
+  },
+  timelineFilterChip: {
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  timelineFilterChipActive: {
+    backgroundColor: '#1E5BAC',
+    borderColor: '#1E5BAC',
+  },
+  timelineFilterText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  timelineFilterTextActive: {
+    color: '#FFFFFF',
+  },
+  suggestionsContent: {
+    gap: 10,
+    paddingRight: 16,
+    paddingBottom: 12,
+  },
+  suggestionCard: {
+    width: 220,
+    minHeight: 72,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  suggestionText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 18,
+  },
+  timelineCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    borderWidth: 1,
+    borderColor: '#EEF2F7',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  timelineGroup: {
+    marginBottom: 14,
+  },
+  timelineGroupTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#6B7280',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+  },
+  timelineEventRow: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  timelineEventRowLast: {
+    borderBottomWidth: 0,
+  },
+  timelineEventIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timelineEventContent: {
+    flex: 1,
+    minWidth: 0,
+  },
+  timelineEventTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  timelineEventTitle: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  timelineBadge: {
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    maxWidth: 104,
+  },
+  timelineBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  timelineEventDescription: {
+    fontSize: 12,
+    color: '#6B7280',
+    lineHeight: 17,
+    marginTop: 4,
+  },
+  timelineEventMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginTop: 7,
+  },
+  timelineEventDate: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    fontWeight: '600',
+  },
+  timelineEventAmount: {
+    fontSize: 11,
+    color: '#111827',
+    fontWeight: '800',
+  },
+  timelineEmpty: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#EEF2F7',
+    paddingVertical: 28,
+    paddingHorizontal: 18,
+  },
+  timelineEmptyIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  timelineEmptyTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  timelineEmptySubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 19,
+  },
+  timelineSkeletonWrap: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#EEF2F7',
+    padding: 14,
+  },
+  timelineSkeletonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+  },
+  timelineSkeletonIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#E5EAF2',
+  },
+  timelineSkeletonBody: {
+    flex: 1,
+    gap: 8,
+  },
+  timelineSkeletonLine: {
+    height: 12,
+    borderRadius: 999,
+    backgroundColor: '#E5EAF2',
+  },
+  timelineSkeletonLineSmall: {
+    height: 9,
+    borderRadius: 999,
+    backgroundColor: '#F1F5F9',
+  },
+  rowReverse: {
+    flexDirection: 'row-reverse',
+  },
+  textRight: {
+    textAlign: 'right',
   },
 
   /* Year Selector */

@@ -21,6 +21,7 @@ const UsageCard: React.FC<UsageCardProps> = ({ label, used, limit, isStorage = f
     '#16A34A';
 
   const showWarning = percentage >= 80;
+  const remaining = hasFiniteLimit ? Math.max(0, limit - used) : null;
 
   const usedLabel = isStorage ? `${used}MB` : String(used);
   const limitLabel = hasFiniteLimit
@@ -48,10 +49,18 @@ const UsageCard: React.FC<UsageCardProps> = ({ label, used, limit, isStorage = f
       </View>
 
       {/* Warning */}
-      {showWarning && (
+      {showWarning ? (
         <Text style={[styles.warning, { color: barColor }]}>
           {t('usage_near_limit')}
         </Text>
+      ) : hasFiniteLimit ? (
+        <Text style={styles.remaining}>
+          {t('usage_remaining', {
+            value: isStorage ? `${remaining}MB` : remaining,
+          })}
+        </Text>
+      ) : (
+        <Text style={styles.remaining}>{t('usage_unlimited_hint')}</Text>
       )}
     </View>
   );
@@ -110,6 +119,12 @@ const styles = StyleSheet.create({
   warning: {
     fontSize: 10,
     fontWeight: '500',
+    marginTop: 2,
+  },
+  remaining: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#64748B',
     marginTop: 2,
   },
 });

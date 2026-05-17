@@ -1,8 +1,9 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from '../config';
 
 
-const BASE_URL = 'https://simply-compta.com/api/';
+const BASE_URL = API_BASE_URL;
 const TIMEOUT = 30000; // 30 seconds
 const TOKEN_KEY = '@auth_token';
 
