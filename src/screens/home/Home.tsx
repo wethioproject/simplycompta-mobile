@@ -241,6 +241,79 @@ const TodayAssistant: React.FC<{
   );
 };
 
+const AccountantReviewCard: React.FC<{
+  stats: {
+    hasLastMonthStatement: boolean;
+    unreadDocumentsCount: number;
+    unpaidInvoicesCount: number;
+    expiredInvoicesCount: number;
+  };
+  onNavigate: (page: string) => void;
+  t: any;
+}> = ({ stats, onNavigate, t }) => {
+  const blockers = [
+    !stats.hasLastMonthStatement && {
+      key: 'bank',
+      label: t('review_missing_statement'),
+      route: 'bank',
+    },
+    stats.expiredInvoicesCount > 0 && {
+      key: 'expired',
+      label: t('review_overdue_invoices', { count: stats.expiredInvoicesCount }),
+      route: 'invoices-expired',
+    },
+    stats.unpaidInvoicesCount > 0 && {
+      key: 'unpaid',
+      label: t('review_unpaid_invoices', { count: stats.unpaidInvoicesCount }),
+      route: 'invoices',
+    },
+    stats.unreadDocumentsCount > 0 && {
+      key: 'documents',
+      label: t('review_unread_documents', { count: stats.unreadDocumentsCount }),
+      route: 'documentsList',
+    },
+  ].filter(Boolean) as Array<{ key: string; label: string; route: string }>;
+
+  const isReady = blockers.length === 0;
+  const primaryAction = blockers[0]?.route ?? 'activity';
+
+  return (
+    <PremiumTouchable
+      style={[styles.reviewCard, isReady ? styles.reviewCardReady : styles.reviewCardWaiting]}
+      onPress={() => onNavigate(primaryAction)}
+      haptic
+    >
+      <View style={styles.reviewTopRow}>
+        <View style={[styles.reviewIconBox, isReady ? styles.reviewIconReady : styles.reviewIconWaiting]}>
+          {isReady ? <CheckCircle2 size={18} color="#16A34A" /> : <AlertTriangle size={18} color="#D97706" />}
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.reviewTitle}>
+            {isReady ? t('review_ready_title') : t('review_waiting_title')}
+          </Text>
+          <Text style={styles.reviewSubtitle}>
+            {isReady ? t('review_ready_subtitle') : t('review_waiting_subtitle')}
+          </Text>
+        </View>
+        <ChevronRight size={18} color="#94A3B8" />
+      </View>
+
+      <View style={styles.reviewChecklist}>
+        {(isReady ? [
+          { key: 'ready-bank', label: t('review_statement_ok') },
+          { key: 'ready-docs', label: t('review_documents_ok') },
+        ] : blockers.slice(0, 3)).map(item => (
+          <View key={item.key} style={[styles.reviewChip, isReady && styles.reviewChipReady]}>
+            <Text style={[styles.reviewChipText, isReady && styles.reviewChipTextReady]} numberOfLines={1}>
+              {item.label}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </PremiumTouchable>
+  );
+};
+
 const DashboardSkeleton: React.FC = () => (
   <View style={styles.dashboardSkeleton}>
     <View style={styles.skeletonCardTall}>
@@ -942,6 +1015,19 @@ const Home: React.FC = () => {
           />
         </FadeInView>
 
+        <FadeInView delay={60}>
+          <AccountantReviewCard
+            stats={{
+              hasLastMonthStatement: stats.hasLastMonthStatement,
+              unreadDocumentsCount: stats.unreadDocumentsCount,
+              unpaidInvoicesCount: stats.unpaidInvoicesCount,
+              expiredInvoicesCount: stats.expiredInvoicesCount,
+            }}
+            onNavigate={handleNavigate}
+            t={t}
+          />
+        </FadeInView>
+
         {/* Connected Accountant Card */}
         <FadeInView delay={80}>
           <ConnectedAccountantCard onPress={() => handleNavigate('accounting')} companyName={stats.companyName} />
@@ -1184,6 +1270,66 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 6,
   },
+  reviewCard: {
+    marginBottom: 12,
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+  },
+  reviewCardReady: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#BBF7D0',
+  },
+  reviewCardWaiting: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FDE68A',
+  },
+  reviewTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  reviewIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewIconReady: { backgroundColor: '#DCFCE7' },
+  reviewIconWaiting: { backgroundColor: '#FEF3C7' },
+  reviewTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  reviewSubtitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+    marginTop: 2,
+    lineHeight: 17,
+  },
+  reviewChecklist: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+  },
+  reviewChip: {
+    maxWidth: '100%',
+    borderRadius: 999,
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  reviewChipReady: { backgroundColor: '#DCFCE7' },
+  reviewChipText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#B45309',
+  },
+  reviewChipTextReady: { color: '#166534' },
   badgeGreen: {
     flexDirection: 'row',
     alignItems: 'center',

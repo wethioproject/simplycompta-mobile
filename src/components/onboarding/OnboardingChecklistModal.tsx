@@ -35,6 +35,7 @@ const OnboardingChecklistModal: React.FC = () => {
 
   const completedCount = items.filter(i => i.status === 'completed').length;
   const pendingCount = items.length - completedCount;
+  const nextPending = items.find(i => i.status === 'pending');
 
   // Slide up when visible, slide down on hide
   useEffect(() => {
@@ -146,6 +147,23 @@ const OnboardingChecklistModal: React.FC = () => {
         <View style={styles.progressSection}>
           <OnboardingProgressBar completed={completedCount} total={items.length} />
         </View>
+
+        {nextPending && (
+          <TouchableOpacity
+            style={styles.nextStepCard}
+            onPress={() => handleItemPress(nextPending)}
+            activeOpacity={0.82}
+          >
+            <View style={styles.nextStepIcon}>
+              <Sparkles size={15} color="#1E5BAC" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.nextStepLabel}>{t('checklist_next_step_label')}</Text>
+              <Text style={styles.nextStepTitle} numberOfLines={1}>{t(nextPending.titleKey)}</Text>
+            </View>
+            <ArrowRight size={16} color="#1E5BAC" />
+          </TouchableOpacity>
+        )}
 
         {/* Checklist */}
         <ScrollView
@@ -270,6 +288,38 @@ const styles = StyleSheet.create({
   progressSection: {
     paddingHorizontal: 20,
     paddingBottom: 16,
+  },
+  nextStepCard: {
+    marginHorizontal: 20,
+    marginBottom: 14,
+    borderRadius: 16,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  nextStepIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nextStepLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#1E5BAC',
+    textTransform: 'uppercase',
+  },
+  nextStepTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#111827',
+    marginTop: 2,
   },
   list: {
     paddingHorizontal: 12,
