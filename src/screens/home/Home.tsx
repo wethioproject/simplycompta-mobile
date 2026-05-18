@@ -133,8 +133,8 @@ const TodayAssistant: React.FC<{
       icon: Building2,
       color: '#16A34A',
       bg: '#ECFDF5',
-      title: t('today_action_bank', { defaultValue: 'Relevé bancaire à envoyer' }),
-      desc: t('today_action_bank_desc', { defaultValue: 'Prépare ton dossier comptable du mois.' }),
+      title: t('today_action_bank'),
+      desc: t('today_action_bank_desc'),
       route: 'bank',
     },
     stats.expiredInvoicesCount > 0 && {
@@ -142,7 +142,7 @@ const TodayAssistant: React.FC<{
       icon: AlertTriangle,
       color: '#D97706',
       bg: '#FFFBEB',
-      title: t('today_action_expired_invoices', { count: stats.expiredInvoicesCount, defaultValue: `${stats.expiredInvoicesCount} factures en retard` }),
+      title: t('today_action_expired_invoices', { count: stats.expiredInvoicesCount }),
       desc: maskAmount(stats.expiredInvoiceSum),
       route: 'invoices-expired',
     },
@@ -151,7 +151,7 @@ const TodayAssistant: React.FC<{
       icon: FileText,
       color: '#DC2626',
       bg: '#FEF2F2',
-      title: t('today_action_unpaid_invoices', { count: stats.unpaidInvoicesCount, defaultValue: `${stats.unpaidInvoicesCount} factures à relancer` }),
+      title: t('today_action_unpaid_invoices', { count: stats.unpaidInvoicesCount }),
       desc: maskAmount(stats.unpaidInvoiceSum),
       route: 'invoices',
     },
@@ -160,7 +160,7 @@ const TodayAssistant: React.FC<{
       icon: ClipboardList,
       color: '#1E5BAC',
       bg: '#EFF6FF',
-      title: t('today_action_sent_quotes', { count: stats.sentQuotesCount, defaultValue: `${stats.sentQuotesCount} devis à suivre` }),
+      title: t('today_action_sent_quotes', { count: stats.sentQuotesCount }),
       desc: maskAmount(stats.sentQuoteSum),
       route: 'quotes-sent',
     },
@@ -169,7 +169,7 @@ const TodayAssistant: React.FC<{
       icon: FolderOpen,
       color: '#7C3AED',
       bg: '#F5F3FF',
-      title: t('today_action_documents', { count: stats.unreadDocumentsCount, defaultValue: `${stats.unreadDocumentsCount} documents à consulter` }),
+      title: t('today_action_documents', { count: stats.unreadDocumentsCount }),
       desc: t('todo_from_accountant'),
       route: 'documentsList',
     },
@@ -184,17 +184,17 @@ const TodayAssistant: React.FC<{
   }>;
 
   const healthSignals = [
-    stats.total_vat_payable > 0 ? `${maskAmount(stats.total_vat_payable)} TVA` : null,
-    stats.total_expenses_sum > 0 ? `${maskAmount(stats.total_expenses_sum)} dépenses` : null,
-    stats.unpaidInvoicesCount === 0 ? t('today_signal_no_unpaid', { defaultValue: 'Aucune relance urgente' }) : null,
+    stats.total_vat_payable > 0 ? t('today_signal_vat', { amount: maskAmount(stats.total_vat_payable) }) : null,
+    stats.total_expenses_sum > 0 ? t('today_signal_expenses', { amount: maskAmount(stats.total_expenses_sum) }) : null,
+    stats.unpaidInvoicesCount === 0 ? t('today_signal_no_unpaid') : null,
   ].filter(Boolean).slice(0, 2);
 
   return (
     <View style={styles.todayCard}>
       <View style={styles.todayHeader}>
         <View>
-          <Text style={styles.todayEyebrow}>{t('today_assistant_eyebrow', { defaultValue: 'Aujourd’hui' })}</Text>
-          <Text style={styles.todayTitle}>{t('today_assistant_title', { defaultValue: 'Ta prochaine bonne action' })}</Text>
+          <Text style={styles.todayEyebrow}>{t('today_assistant_eyebrow')}</Text>
+          <Text style={styles.todayTitle}>{t('today_assistant_title')}</Text>
         </View>
         <View style={styles.todayPulse}>
           <Sparkles size={18} color="#1E5BAC" />
@@ -227,7 +227,7 @@ const TodayAssistant: React.FC<{
       ) : (
         <View style={styles.todayAllGood}>
           <CheckCircle2 size={18} color="#16A34A" />
-          <Text style={styles.todayAllGoodText}>{t('today_all_good', { defaultValue: 'Tout est calme. Continue à suivre tes ventes et dépenses.' })}</Text>
+          <Text style={styles.todayAllGoodText}>{t('today_all_good')}</Text>
         </View>
       )}
 
