@@ -4,6 +4,21 @@ import type { SubscriptionData, SubscriptionUsageItem } from '../types/subscript
 export type UsageFeature = 'invoices' | 'quotes' | 'expenses' | 'receipts' | 'ocr' | 'clients' | 'suppliers';
 export type BooleanFeature = 'export_enabled' | 'whatsapp_bot_enabled';
 export type AnyFeature = UsageFeature | BooleanFeature;
+export type PlanTier = 'free' | 'pro' | 'business';
+export type BusinessModule = 'accounting_assistant' | 'pme_directory' | 'dgi_export';
+
+const PLAN_RANK: Record<PlanTier, number> = {
+  free: 0,
+  pro: 1,
+  business: 2,
+};
+
+const normalizePlanSlug = (value?: string | null): PlanTier => {
+  const plan = String(value ?? '').toLowerCase();
+  if (plan.includes('business') || plan.includes('entreprise')) return 'business';
+  if (plan.includes('pro')) return 'pro';
+  return 'free';
+};
 
 
 export const canUseFeature = (
@@ -54,3 +69,26 @@ export const getPlanName = (
 ): string | null => {
   return subscriptionData?.plan?.name ?? null;
 };
+
+export const getPlanTier = (
+  subscriptionData: SubscriptionData | null | undefined,
+): PlanTier => {
+  return normalizePlanSlug(subscriptionData?.plan?.slug ?? subscriptionData?.plan?.name);
+};
+
+export const isPlanAtLeast = (
+  subscriptionData: SubscriptionData | null | undefined,
+  minimumTier: PlanTier,
+): boolean => {
+  const tier = getPlanTier(subscriptionData);
+  return PLAN_RANK[tier] >= PLAN_RANK[minimumTier];
+};
+
+export const canUseBusinessModule = (
+  subscriptionData: SubscriptionData | null | undefined,
+  _module: BusinessModule,
+): boolean => isPlanAtLeast(subscriptionData, 'business');
+
+export const canUseIntelligentFeature = (
+  subscriptionData: SubscriptionData | null | undefined,
+): boolean => isPlanAtLeast(subscriptionData, 'pro');

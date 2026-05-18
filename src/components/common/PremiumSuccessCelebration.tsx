@@ -21,6 +21,11 @@ type PremiumSuccessCelebrationProps = {
   subtitle?: string;
   continueLabel?: string;
   autoDismissMs?: number;
+  actions?: Array<{
+    label: string;
+    onPress: () => void;
+    primary?: boolean;
+  }>;
   onDone: () => void;
 };
 
@@ -56,7 +61,8 @@ const PremiumSuccessCelebration: React.FC<PremiumSuccessCelebrationProps> = ({
   title,
   subtitle,
   continueLabel = 'Continue',
-  autoDismissMs = 2200,
+  autoDismissMs = 3800,
+  actions = [],
   onDone,
 }) => {
   const card = useRef(new Animated.Value(0)).current;
@@ -209,9 +215,28 @@ const PremiumSuccessCelebration: React.FC<PremiumSuccessCelebrationProps> = ({
           </Animated.View>
           <Text style={styles.title}>{title}</Text>
           {!!subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
-          <TouchableOpacity style={styles.button} activeOpacity={0.88} onPress={finish}>
-            <Text style={styles.buttonText}>{continueLabel}</Text>
-          </TouchableOpacity>
+          {actions.length > 0 ? (
+            <View style={styles.actions}>
+              {actions.map(action => (
+                <TouchableOpacity
+                  key={action.label}
+                  style={[styles.actionButton, action.primary && styles.actionButtonPrimary]}
+                  activeOpacity={0.88}
+                  onPress={() => {
+                    if (doneRef.current) return;
+                    doneRef.current = true;
+                    action.onPress();
+                  }}
+                >
+                  <Text style={[styles.actionButtonText, action.primary && styles.actionButtonTextPrimary]}>{action.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : (
+            <TouchableOpacity style={styles.button} activeOpacity={0.88} onPress={finish}>
+              <Text style={styles.buttonText}>{continueLabel}</Text>
+            </TouchableOpacity>
+          )}
         </Animated.View>
       </Pressable>
     </Modal>
@@ -283,6 +308,29 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 14,
     fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  actions: {
+    width: '100%',
+    gap: 10,
+  },
+  actionButton: {
+    minHeight: 44,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 16,
+  },
+  actionButtonPrimary: {
+    backgroundColor: premiumTheme.colors.primary,
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: premiumTheme.colors.text,
+  },
+  actionButtonTextPrimary: {
     color: '#FFFFFF',
   },
 });

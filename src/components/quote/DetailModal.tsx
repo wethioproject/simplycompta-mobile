@@ -48,6 +48,7 @@ interface DetailModalProps {
   onDelete: (id: number) => Promise<void>;
   onEdit: () => void;
   onUpdate: (id: number, payload: any) => Promise<{ success: boolean; error?: string }>;
+  onUpdated?: () => void;
 }
 
 const DetailModal: React.FC<DetailModalProps> = ({
@@ -56,6 +57,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
   onDelete,
   onEdit,
   onUpdate,
+  onUpdated,
 }) => {
   console.log('Rendering DetailModal for quote:', item);
   const { t, i18n } = useTranslation();
@@ -206,6 +208,8 @@ const DetailModal: React.FC<DetailModalProps> = ({
       const result = await onUpdate(item.id, payload);
       if (result.success) {
         setCurrentStatus(newStatus);
+        setDetail((prev: any) => prev ? { ...prev, status: newStatus } : prev);
+        onUpdated?.();
       } else {
         Alert.alert(t('error_title'), result.error ?? t('error_update_status'));
       }

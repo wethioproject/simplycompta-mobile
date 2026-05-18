@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useSelector } from 'react-redux';
 import {
   ArrowLeft,
   Banknote,
@@ -32,6 +33,9 @@ import { useSupplier } from '../../hooks/useSupplier';
 import { getClients } from '../../services/client.service';
 import { FadeInView } from '../../components/common/PremiumMotion';
 import { useSecurity } from '../../contexts/SecurityContext';
+import FeatureLockCard from '../../components/common/FeatureLockCard';
+import { canUseBusinessModule } from '../../utils/subscriptionHelpers';
+import { useUpgradeWebView } from '../../utils/upgradeWebView';
 
 const amount = (value: any) => Number(value?.total_ttc ?? value?.ttc ?? value?.total ?? value ?? 0) || 0;
 const vat = (value: any) => Number(value?.total_tva ?? value?.tva ?? value?.vat ?? 0) || 0;
@@ -55,6 +59,9 @@ const BusinessAssistant: React.FC = ({ navigation }: any) => {
   const { getQuotes } = useQuote();
   const { getSuppliers } = useSupplier();
   const { maskAmount, privateModeEnabled } = useSecurity();
+  const subscription = useSelector((state: any) => state.subscription.data);
+  const { openUpgradeWebView, upgradeWebViewElement } = useUpgradeWebView();
+  const canUseAssistant = canUseBusinessModule(subscription, 'accounting_assistant');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [query, setQuery] = useState('');
@@ -81,6 +88,29 @@ const BusinessAssistant: React.FC = ({ navigation }: any) => {
   }, [getExpenses, getInvoices, getQuotes, getSuppliers]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  if (!canUseAssistant) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+            <ArrowLeft size={22} color="#111827" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{t('assistant_title')}</Text>
+          <View style={{ width: 42 }} />
+        </View>
+        <View style={styles.lockContent}>
+          <FeatureLockCard
+            requiredPlan="Business"
+            title={t('assistant_locked_title', { defaultValue: 'Accounting Assistant is a Business feature' })}
+            subtitle={t('assistant_locked_subtitle', { defaultValue: 'Preview month-end checks, VAT assistant and accountant-ready insights, then unlock the full workspace.' })}
+            onUpgrade={() => openUpgradeWebView(subscription?.upgrade_url)}
+          />
+        </View>
+        {upgradeWebViewElement}
+      </SafeAreaView>
+    );
+  }
 
   const currentExpenses = useMemo(() => expenses.filter(item => dateValue(item) >= startOfMonth()), [expenses]);
   const currentInvoices = useMemo(() => invoices.filter(item => dateValue(item) >= startOfMonth()), [invoices]);
@@ -319,6 +349,7 @@ const styles = StyleSheet.create({
   },
   backBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: 21, fontWeight: '800', color: '#111827' },
+  lockContent: { flex: 1, padding: 18, justifyContent: 'center' },
   content: { padding: 18, paddingBottom: 34, gap: 14 },
   loadingCard: { backgroundColor: '#FFFFFF', borderRadius: 18, padding: 24, alignItems: 'center', gap: 10 },
   scoreCard: {

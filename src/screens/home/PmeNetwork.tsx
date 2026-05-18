@@ -16,9 +16,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useSelector } from 'react-redux';
 import {
   ArrowLeft,
   Building2,
+  ChevronDown,
   CheckCircle2,
   Heart,
   Mail,
@@ -30,7 +32,10 @@ import {
   X,
 } from 'lucide-react-native';
 import pmeNetworkService from '../../services/pmeNetworkService';
-import type { PmeCompany, PmeNetworkSettings } from '../../types/pmeNetwork.types';
+import type { PmeCompany, PmeNetworkFilters, PmeNetworkSettings } from '../../types/pmeNetwork.types';
+import FeatureLockCard from '../../components/common/FeatureLockCard';
+import { canUseBusinessModule } from '../../utils/subscriptionHelpers';
+import { useUpgradeWebView } from '../../utils/upgradeWebView';
 
 const EMPTY_SETTINGS: PmeNetworkSettings = {
   directory_visible: false,
@@ -47,11 +52,20 @@ const EMPTY_SETTINGS: PmeNetworkSettings = {
 
 const PmeNetwork: React.FC = ({ navigation }: any) => {
   const { t } = useTranslation();
+  const subscription = useSelector((state: any) => state.subscription.data);
+  const { openUpgradeWebView, upgradeWebViewElement } = useUpgradeWebView();
+  const canUseDirectory = canUseBusinessModule(subscription, 'pme_directory');
   const [companies, setCompanies] = useState<PmeCompany[]>([]);
+  const [filtersData, setFiltersData] = useState<PmeNetworkFilters>({ sectors: [], cities: [], categories: [] });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [type, setType] = useState<'all' | 'supplier' | 'client'>('all');
+  const [sector, setSector] = useState('');
+  const [category, setCategory] = useState('');
+  const [city, setCity] = useState('');
+  const [dropdown, setDropdown] = useState<'type' | 'sector' | 'category' | 'city' | null>(null);
   const [selected, setSelected] = useState<PmeCompany | null>(null);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [settings, setSettings] = useState<PmeNetworkSettings>(EMPTY_SETTINGS);
@@ -60,16 +74,22 @@ const PmeNetwork: React.FC = ({ navigation }: any) => {
   const filteredParams = useMemo(() => ({
     search: search || undefined,
     type: type === 'all' ? undefined : type,
+    sector: sector || undefined,
+    category: category || undefined,
+    city: city || undefined,
     per_page: 30,
-  }), [search, type]);
+  }), [category, city, search, sector, type]);
 
   const fetchNetwork = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
+    setError('');
     try {
       const res = await pmeNetworkService.list(filteredParams);
       setCompanies(res.data.companies ?? []);
+      setFiltersData(res.data.filters ?? { sectors: [], cities: [], categories: [] });
     } catch (e) {
       console.error('PME network error:', e);
+      setError(t('pme_load_error', { defaultValue: 'Unable to load the directory.' }));
       setCompanies([]);
     } finally {
       setLoading(false);
@@ -116,11 +136,48 @@ const PmeNetwork: React.FC = ({ navigation }: any) => {
       setSettings(res.data.settings);
       setSettingsVisible(false);
       fetchNetwork(true);
+      Alert.alert(t('success_title'), t('pme_settings_saved', { defaultValue: 'Your company visibility has been updated.' }));
     } catch {
       Alert.alert(t('error_title'), t('pme_settings_error'));
     } finally {
       setSavingSettings(false);
     }
+  };
+
+  const dropdownOptions = {
+    type: [
+      { value: 'all', label: t('pme_filter_all') },
+      { value: 'supplier', label: t('pme_filter_supplier') },
+      { value: 'client', label: t('pme_filter_client') },
+    ],
+    sector: [{ value: '', label: t('pme_filter_sector_all', { defaultValue: 'All sectors' }) }, ...filtersData.sectors.map(value => ({ value, label: value }))],
+    category: [{ value: '', label: t('pme_filter_category_all', { defaultValue: 'All categories' }) }, ...filtersData.categories.map(value => ({ value, label: value }))],
+    city: [{ value: '', label: t('pme_filter_city_all', { defaultValue: 'All cities' }) }, ...filtersData.cities.map(value => ({ value, label: value }))],
+  };
+
+  const setDropdownValue = (value: string) => {
+    if (dropdown === 'type') setType(value as 'all' | 'supplier' | 'client');
+    if (dropdown === 'sector') setSector(value);
+    if (dropdown === 'category') setCategory(value);
+    if (dropdown === 'city') setCity(value);
+    setDropdown(null);
+  };
+
+  const getDropdownLabel = (key: 'type' | 'sector' | 'category' | 'city') => {
+    if (key === 'type') return dropdownOptions.type.find(item => item.value === type)?.label ?? t('pme_filter_all');
+    if (key === 'sector') return sector || t('pme_filter_sector_all', { defaultValue: 'All sectors' });
+    if (key === 'category') return category || t('pme_filter_category_all', { defaultValue: 'All categories' });
+    return city || t('pme_filter_city_all', { defaultValue: 'All cities' });
+  };
+
+  const enableDirectory = () => {
+    setSettings(s => ({
+      ...s,
+      directory_visible: true,
+      directory_contact_allowed: s.directory_contact_allowed || true,
+      directory_is_supplier: s.directory_is_supplier ?? true,
+      directory_is_client: s.directory_is_client ?? true,
+    }));
   };
 
   const openContact = (company: PmeCompany) => {
@@ -133,8 +190,12 @@ const PmeNetwork: React.FC = ({ navigation }: any) => {
     }
   };
 
-  const CompanyCard = ({ company }: { company: PmeCompany }) => (
-    <TouchableOpacity style={styles.companyCard} activeOpacity={0.82} onPress={() => setSelected(company)}>
+  const CompanyCard = ({ company, locked = false }: { company: PmeCompany; locked?: boolean }) => (
+    <TouchableOpacity
+      style={[styles.companyCard, locked && styles.companyCardLocked]}
+      activeOpacity={0.82}
+      onPress={() => locked ? openUpgradeWebView(subscription?.upgrade_url) : setSelected(company)}
+    >
       <View style={styles.companyTop}>
         <View style={styles.logoBox}>
           {company.logo_url ? <Image source={{ uri: company.logo_url }} style={styles.logo} /> : <Building2 size={24} color="#1E5BAC" />}
@@ -156,10 +217,10 @@ const PmeNetwork: React.FC = ({ navigation }: any) => {
           {company.types.client && <Text style={styles.typePill}>{t('pme_type_client')}</Text>}
         </View>
         <View style={styles.actionRow}>
-          <TouchableOpacity style={styles.skipButton} onPress={() => saveAction(company, 'skipped')}>
+          <TouchableOpacity style={styles.skipButton} onPress={() => locked ? openUpgradeWebView(subscription?.upgrade_url) : saveAction(company, 'skipped')}>
             <X size={17} color="#64748B" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.heartButton} onPress={() => saveAction(company, 'interested')}>
+          <TouchableOpacity style={styles.heartButton} onPress={() => locked ? openUpgradeWebView(subscription?.upgrade_url) : saveAction(company, 'interested')}>
             <Heart size={17} color="#FFFFFF" fill="#FFFFFF" />
           </TouchableOpacity>
         </View>
@@ -187,6 +248,15 @@ const PmeNetwork: React.FC = ({ navigation }: any) => {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#1E5BAC" />}
       >
+        {!canUseDirectory && (
+          <FeatureLockCard
+            requiredPlan="Business"
+            title={t('pme_locked_title', { defaultValue: 'PME Network is a Business feature' })}
+            subtitle={t('pme_locked_subtitle', { defaultValue: 'Preview discovery, filters and contact actions, then unlock opt-in company networking.' })}
+            onUpgrade={() => openUpgradeWebView(subscription?.upgrade_url)}
+          />
+        )}
+
         <View style={styles.privacyCard}>
           <Shield size={18} color="#1E5BAC" />
           <Text style={styles.privacyText}>{t('pme_privacy_note')}</Text>
@@ -203,30 +273,33 @@ const PmeNetwork: React.FC = ({ navigation }: any) => {
           />
         </View>
 
-        <View style={styles.filters}>
-          {(['all', 'supplier', 'client'] as const).map(item => (
-            <TouchableOpacity
-              key={item}
-              style={[styles.filterChip, type === item && styles.filterChipActive]}
-              onPress={() => setType(item)}
-            >
-              <Text style={[styles.filterText, type === item && styles.filterTextActive]}>
-                {t(`pme_filter_${item}`)}
-              </Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
+          {(['type', 'sector', 'category', 'city'] as const).map(key => (
+            <TouchableOpacity key={key} style={styles.dropdownChip} onPress={() => setDropdown(key)} activeOpacity={0.82}>
+              <Text style={styles.dropdownLabel} numberOfLines={1}>{getDropdownLabel(key)}</Text>
+              <ChevronDownSmall />
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
 
         {loading ? (
           <View style={styles.loader}><ActivityIndicator color="#1E5BAC" /></View>
+        ) : error ? (
+          <View style={styles.emptyCard}>
+            <Sparkles size={28} color="#1E5BAC" />
+            <Text style={styles.emptyTitle}>{t('error_title')}</Text>
+            <Text style={styles.emptySubtitle}>{error}</Text>
+          </View>
         ) : companies.length === 0 ? (
           <View style={styles.emptyCard}>
             <Sparkles size={28} color="#1E5BAC" />
             <Text style={styles.emptyTitle}>{t('pme_empty_title')}</Text>
             <Text style={styles.emptySubtitle}>{t('pme_empty_subtitle')}</Text>
           </View>
-        ) : (
+        ) : canUseDirectory ? (
           companies.map(company => <CompanyCard key={company.id} company={company} />)
+        ) : (
+          companies.slice(0, 3).map(company => <CompanyCard key={company.id} company={company} locked />)
         )}
       </ScrollView>
 
@@ -281,6 +354,15 @@ const PmeNetwork: React.FC = ({ navigation }: any) => {
           </View>
           <ScrollView contentContainerStyle={styles.modalContent}>
             <SettingToggle label={t('pme_visible')} value={settings.directory_visible} onValueChange={value => setSettings(s => ({ ...s, directory_visible: value }))} />
+            {!settings.directory_visible && (
+              <TouchableOpacity style={styles.addCompanyCard} onPress={enableDirectory} activeOpacity={0.84}>
+                <Sparkles size={18} color="#1E5BAC" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.addCompanyTitle}>{t('pme_add_company_title', { defaultValue: 'Add my company to the directory' })}</Text>
+                  <Text style={styles.addCompanyText}>{t('pme_add_company_text', { defaultValue: 'Enable visibility, complete sector, city and contact preferences, then save.' })}</Text>
+                </View>
+              </TouchableOpacity>
+            )}
             <SettingToggle label={t('pme_allow_contact')} value={settings.directory_contact_allowed} onValueChange={value => setSettings(s => ({ ...s, directory_contact_allowed: value }))} />
             <SettingToggle label={t('pme_allow_whatsapp')} value={settings.directory_whatsapp_allowed} onValueChange={value => setSettings(s => ({ ...s, directory_whatsapp_allowed: value }))} />
             <SettingToggle label={t('pme_allow_email')} value={settings.directory_email_allowed} onValueChange={value => setSettings(s => ({ ...s, directory_email_allowed: value }))} />
@@ -294,6 +376,27 @@ const PmeNetwork: React.FC = ({ navigation }: any) => {
           </ScrollView>
         </SafeAreaView>
       </Modal>
+
+      <Modal visible={!!dropdown} transparent animationType="fade" onRequestClose={() => setDropdown(null)}>
+        <TouchableOpacity style={styles.dropdownBackdrop} activeOpacity={1} onPress={() => setDropdown(null)}>
+          <View style={styles.dropdownSheet}>
+            <Text style={styles.dropdownTitle}>{t('pme_filter_title', { defaultValue: 'Filter directory' })}</Text>
+            <ScrollView style={{ maxHeight: 360 }}>
+              {(dropdown ? dropdownOptions[dropdown] : []).map(option => (
+                <TouchableOpacity
+                  key={`${dropdown}-${option.value}`}
+                  style={styles.dropdownOption}
+                  onPress={() => setDropdownValue(option.value)}
+                  activeOpacity={0.78}
+                >
+                  <Text style={styles.dropdownOptionText}>{option.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+      {upgradeWebViewElement}
     </SafeAreaView>
   );
 };
@@ -312,6 +415,8 @@ const Input = ({ label, ...props }: any) => (
   </View>
 );
 
+const ChevronDownSmall = () => <ChevronDown size={15} color="#64748B" />;
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 18, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#EEF2F7' },
@@ -324,16 +429,19 @@ const styles = StyleSheet.create({
   privacyText: { flex: 1, fontSize: 12, fontWeight: '600', color: '#1E3A8A', lineHeight: 17 },
   searchBox: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FFFFFF', borderRadius: 14, borderWidth: 1, borderColor: '#E5E7EB', paddingHorizontal: 12, height: 46, marginBottom: 12 },
   searchInput: { flex: 1, fontSize: 14, color: '#111827' },
-  filters: { flexDirection: 'row', gap: 8, marginBottom: 14 },
+  filters: { flexDirection: 'row', gap: 8, marginBottom: 14, paddingRight: 8 },
   filterChip: { paddingHorizontal: 13, paddingVertical: 9, borderRadius: 999, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB' },
   filterChipActive: { backgroundColor: '#1E5BAC', borderColor: '#1E5BAC' },
   filterText: { fontSize: 12, fontWeight: '800', color: '#64748B' },
   filterTextActive: { color: '#FFFFFF' },
+  dropdownChip: { maxWidth: 180, minHeight: 38, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 12, borderRadius: 13, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB' },
+  dropdownLabel: { maxWidth: 138, fontSize: 12, fontWeight: '800', color: '#334155' },
   loader: { padding: 40 },
   emptyCard: { alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 18, borderWidth: 1, borderColor: '#EEF2F7', padding: 28, gap: 8 },
   emptyTitle: { fontSize: 16, fontWeight: '800', color: '#111827' },
   emptySubtitle: { fontSize: 13, color: '#64748B', textAlign: 'center', lineHeight: 18 },
-  companyCard: { backgroundColor: '#FFFFFF', borderRadius: 18, borderWidth: 1, borderColor: '#EEF2F7', padding: 14, marginBottom: 12, shadowColor: '#0F172A', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.04, shadowRadius: 10, elevation: 2 },
+  companyCard: { backgroundColor: '#FFFFFF', borderRadius: 22, borderWidth: 1, borderColor: '#EEF2F7', padding: 16, marginBottom: 14, shadowColor: '#0F172A', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.07, shadowRadius: 18, elevation: 3 },
+  companyCardLocked: { opacity: 0.72 },
   companyTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   logoBox: { width: 48, height: 48, borderRadius: 16, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   logo: { width: 48, height: 48 },
@@ -373,6 +481,14 @@ const styles = StyleSheet.create({
   textArea: { minHeight: 92, textAlignVertical: 'top', paddingTop: 12 },
   saveSettingsButton: { height: 50, borderRadius: 15, backgroundColor: '#1E5BAC', alignItems: 'center', justifyContent: 'center', marginTop: 8 },
   saveSettingsText: { fontSize: 15, fontWeight: '800', color: '#FFFFFF' },
+  addCompanyCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#EFF6FF', borderRadius: 16, borderWidth: 1, borderColor: '#BFDBFE', padding: 14, marginBottom: 12 },
+  addCompanyTitle: { fontSize: 14, fontWeight: '900', color: '#111827' },
+  addCompanyText: { fontSize: 12, color: '#475569', lineHeight: 17, marginTop: 3 },
+  dropdownBackdrop: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.32)', justifyContent: 'flex-end' },
+  dropdownSheet: { backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 18, paddingBottom: 28 },
+  dropdownTitle: { fontSize: 16, fontWeight: '900', color: '#111827', marginBottom: 12 },
+  dropdownOption: { minHeight: 48, borderRadius: 14, paddingHorizontal: 14, justifyContent: 'center', backgroundColor: '#F8FAFC', marginBottom: 8 },
+  dropdownOptionText: { fontSize: 14, fontWeight: '800', color: '#334155' },
 });
 
 export default PmeNetwork;

@@ -26,7 +26,7 @@ import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { pick, types, isErrorWithCode, errorCodes } from '@react-native-documents/picker';
-import { launchCamera } from 'react-native-image-picker';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import {
   X,
   ChevronDown,
@@ -166,6 +166,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
 
   const [saving, setSaving] = useState(false);
   const [ocrLoading, setOcrLoading] = useState(false);
+  const [localSuppliers, setLocalSuppliers] = useState<Supplier[]>(suppliers);
   const [showAccountPicker, setShowAccountPicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showSupplierPicker, setShowSupplierPicker] = useState(false);
@@ -233,7 +234,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   const pmLabel = (p: { key: string; fr: string; en: string; ar: string }) =>
     i18n.language.startsWith('ar') ? p.ar : i18n.language.startsWith('fr') ? p.fr : p.en;
   const selectedCategory = (categories as Category[]).find(c => c.id === watchedCategoryId) ?? null;
-  const selectedSupplier = suppliers.find(s => s.id === watchedSupplierId) ?? null;
+  const selectedSupplier = localSuppliers.find(s => s.id === watchedSupplierId) ?? null;
 
   const ttcDisplay = parseFloat(watchedAmountTTC) || 0;
   const tvaDisplay = parseFloat(watchedAmountTVA) || 0;
@@ -320,6 +321,16 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
     createdSupplier?.supplier?.id ??
     createdSupplier?.data?.id ??
     createdSupplier?.data?.supplier?.id;
+
+  const normalizeCreatedSupplier = (createdSupplier: any): Supplier | null => {
+    const source = createdSupplier?.supplier ?? createdSupplier?.data?.supplier ?? createdSupplier?.data ?? createdSupplier;
+    const id = getCreatedSupplierId(source);
+    if (!id) return null;
+    return {
+      id,
+      name: source?.name || source?.supplier_name || source?.company_name || pendingSupplierName || supplierPrefillValues?.supplierName || '',
+    };
+  };
 
   const isAcceptedOcrFile = (file: any) => {
     const fileName = String(file?.name || file?.fileName || '').toLowerCase();
@@ -453,10 +464,10 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   };
 
   const findSupplier = (supplierName?: string) => {
-    if (!supplierName || !suppliers?.length) return null;
+    if (!supplierName || !localSuppliers?.length) return null;
     const supplier = normalizeText(supplierName);
 
-    return suppliers.find((s: any) => {
+    return localSuppliers.find((s: any) => {
       const name = normalizeText(s.name || s.supplier_name || s.company_name);
       return name === supplier || name.includes(supplier) || supplier.includes(name);
     }) ?? null;
@@ -728,6 +739,10 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   };
 
   useEffect(() => {
+    setLocalSuppliers(suppliers);
+  }, [suppliers]);
+
+  useEffect(() => {
     if (!visible) return;
     setShowDatePicker(false);
     setSaving(false);
@@ -748,7 +763,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
       const [ey, em, ed] = datePart.split('-').map(Number);
       setTempDate(new Date(ey, em - 1, ed));
       const cat = (categories as Category[]).find(c => c.id === editItem.category_id) ?? null;
-      const sup = suppliers.find(s => s.id === editItem.supplier_id) ?? null;
+      const sup = localSuppliers.find(s => s.id === editItem.supplier_id) ?? null;
 
       if (editItem.file) {
         const fileName = editItem.file.split('/').pop() ?? 'document';
@@ -831,7 +846,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
       applySupplierFromOcr(prefill, prefill.supplierName);
       setApplyingOCRSupplier(false);
     });
-  }, [visible, ocrSupplierData, suppliers]);
+  }, [visible, ocrSupplierData, localSuppliers]);
 
 
   useEffect(() => {
@@ -913,7 +928,18 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
       return;
     }
     try {
-      const [file] = await pick({ type: [types.images] });
+      const response = await launchImageLibrary({ mediaType: 'photo', selectionLimit: 1, quality: 0.9 });
+      if (response.didCancel || response.errorCode) return;
+      const asset = response.assets?.[0];
+      if (!asset?.uri) return;
+      const file = {
+        uri: asset.uri,
+        fileCopyUri: asset.uri,
+        name: asset.fileName ?? `gallery_${Date.now()}.jpg`,
+        type: asset.type ?? 'image/jpeg',
+        size: asset.fileSize,
+        fileSize: asset.fileSize,
+      };
       if (!validateOcrFile(file)) return;
       const remainingBytes = (subscription?.usage?.storage?.remaining_mb ?? Infinity) * 1024 * 1024;
       if (file.size && file.size > remainingBytes) {
@@ -1022,6 +1048,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
   };
 
   const submitExpense = async (data: ExpenseFormValues & { expenseReference?: string; description?: string }) => {
+    if (saving || ocrLoading) return;
     if (fileSizeError) return;
 
     if (!editItem && !canUseFeature(subscription, 'expenses')) {
@@ -1079,6 +1106,13 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
           Alert.alert(t('error_title'), result.error ?? t('error_generic'));
         }
       }
+    } catch (e: any) {
+      const message =
+        e?.response?.data?.message ||
+        e?.response?.data?.error ||
+        e?.message ||
+        t('error_generic');
+      Alert.alert(t('error_title'), message);
     } finally {
       setSaving(false);
     }
@@ -1620,7 +1654,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
                       <ActivityIndicator size="small" color="#1E5BAC" />
                     </View>
                   ) : (
-                    (supplierSearchResults ?? suppliers).map(s => (
+                    (supplierSearchResults ?? localSuppliers).map(s => (
                       <TouchableOpacity
                         key={s.id}
                         style={styles.pickerOption}
@@ -1717,9 +1751,17 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
     onSuppliersRefresh?.();
 
     const createdId = getCreatedSupplierId(createdSupplier);
+    const normalizedSupplier = normalizeCreatedSupplier(createdSupplier);
+
+    if (normalizedSupplier) {
+      setLocalSuppliers(prev => {
+        const exists = prev.some(item => item.id === normalizedSupplier.id);
+        return exists ? prev.map(item => item.id === normalizedSupplier.id ? normalizedSupplier : item) : [normalizedSupplier, ...prev];
+      });
+    }
 
     if (createdId) {
-      setValue('supplierId', createdId, { shouldValidate: true });
+      setValue('supplierId', Number(createdId), { shouldValidate: true });
 
       Toast.show({
         type: 'success',

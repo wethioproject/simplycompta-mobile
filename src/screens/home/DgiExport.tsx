@@ -13,6 +13,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import RNShare from 'react-native-share';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { useSelector } from 'react-redux';
 import { ArrowLeft, Calendar, CheckCircle2, Download, FileSpreadsheet, ReceiptText } from 'lucide-react-native';
 import { useInvoice } from '../../hooks/useInvoice';
 import { useExpense } from '../../hooks/useExpense';
@@ -26,6 +27,9 @@ import {
   type DgiExportKind,
 } from '../../utils/dgiExport';
 import { useSecurity } from '../../contexts/SecurityContext';
+import FeatureLockCard from '../../components/common/FeatureLockCard';
+import { canUseBusinessModule } from '../../utils/subscriptionHelpers';
+import { useUpgradeWebView } from '../../utils/upgradeWebView';
 
 type ExportScope = DgiExportKind | 'both';
 
@@ -46,6 +50,9 @@ const DgiExport: React.FC = ({ navigation }: any) => {
   const { getInvoices, getInvoice } = useInvoice();
   const { getExpenses } = useExpense();
   const { requestSensitiveAuth, recordSecurityEvent } = useSecurity();
+  const subscription = useSelector((state: any) => state.subscription.data);
+  const { openUpgradeWebView, upgradeWebViewElement } = useUpgradeWebView();
+  const canExportDgi = canUseBusinessModule(subscription, 'dgi_export');
   const today = new Date();
   const [scope, setScope] = useState<ExportScope>('expenses');
   const [month, setMonth] = useState(today.getMonth() + 1);
@@ -168,6 +175,14 @@ const DgiExport: React.FC = ({ navigation }: any) => {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {!canExportDgi && (
+          <FeatureLockCard
+            requiredPlan="Business"
+            title={t('dgi_locked_title', { defaultValue: 'DGI export is a Business feature' })}
+            subtitle={t('dgi_locked_subtitle', { defaultValue: 'Preview the compliance fields, then unlock exports for accountants and company dashboards.' })}
+            onUpgrade={() => openUpgradeWebView(subscription?.upgrade_url)}
+          />
+        )}
         <View style={styles.hero}>
           <View style={styles.heroIcon}>
             <FileSpreadsheet size={30} color="#1E5BAC" />
@@ -233,7 +248,7 @@ const DgiExport: React.FC = ({ navigation }: any) => {
         <TouchableOpacity
           style={[styles.exportBtn, exporting && styles.exportBtnDisabled]}
           onPress={handleExport}
-          disabled={exporting}
+          disabled={exporting || !canExportDgi}
           activeOpacity={0.86}
         >
           {exporting ? (
@@ -246,6 +261,7 @@ const DgiExport: React.FC = ({ navigation }: any) => {
           )}
         </TouchableOpacity>
       </ScrollView>
+      {upgradeWebViewElement}
     </SafeAreaView>
   );
 };

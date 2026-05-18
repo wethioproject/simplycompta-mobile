@@ -47,6 +47,7 @@ import { LineChart, PieChart } from 'react-native-gifted-charts';
 import dashboardService from '../../services/dashboardService';
 import type { QuickAnalysisData } from '../../services/dashboardService';
 import activityService from '../../services/activityService';
+import { useSecurity } from '../../contexts/SecurityContext';
 import type {
   ActivityFilter,
   MobileActivityData,
@@ -155,7 +156,8 @@ const StatsCards: React.FC<{
   };
   loading: boolean;
   t: any;
-}> = ({ stats, loading, t }) => {
+  maskAmount: (value: number, suffix?: string) => string;
+}> = ({ stats, loading, t, maskAmount }) => {
   const [activeInfo, setActiveInfo] = useState<number | null>(null);
 
   const cards = [
@@ -229,8 +231,7 @@ const StatsCards: React.FC<{
           ) : (
             <>
               <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
-                {card.rawValue.toLocaleString('fr-FR')}{' '}
-                <Text style={styles.statCurrency}>{t('currency_mad')}</Text>
+                {maskAmount(card.rawValue, t('currency_mad'))}
               </Text>
             </>
           )}
@@ -268,7 +269,8 @@ const QuickAnalysis: React.FC<{
   t: any;
   loading: boolean;
   analysis: QuickAnalysisData | null;
-}> = ({ t, loading, analysis }) => {
+  maskAmount: (value: number, suffix?: string) => string;
+}> = ({ t, loading, analysis, maskAmount }) => {
   const expensePct = Math.abs(Number(analysis?.expenses_alert?.variation_percentage ?? 0));
   const pendingCount = Number(analysis?.pending_invoices?.count ?? 0);
   const pendingAmount = Number(analysis?.pending_invoices?.total_amount ?? 0);
@@ -311,7 +313,7 @@ const QuickAnalysis: React.FC<{
               <FileText size={16} color="#CA8A04" style={{ marginTop: 2 }} />
               <View style={styles.analysisAlertContent}>
                 <Text style={styles.analysisAlertBold}>{t('analysis_pending_invoices', { count: pendingCount })} </Text>
-                <Text style={styles.analysisAlertNormal}>{t('analysis_pending_invoices_amount', { amount: pendingAmount.toLocaleString('fr-FR') })}</Text>
+                <Text style={styles.analysisAlertNormal}>{t('analysis_pending_invoices_amount', { amount: maskAmount(pendingAmount, t('currency_mad')) })}</Text>
               </View>
             </View>
           )}
@@ -435,6 +437,7 @@ const SmartTimeline: React.FC<{
   onSuggestionPress: (suggestion: MobileActivitySuggestion) => void;
   t: any;
   locale: string;
+  maskAmount: (value: number, suffix?: string) => string;
 }> = ({
   data,
   loading,
@@ -446,6 +449,7 @@ const SmartTimeline: React.FC<{
   onSuggestionPress,
   t,
   locale,
+  maskAmount,
 }) => {
   const groups = data?.groups ?? [];
   const filters = data?.filters?.length
@@ -559,7 +563,7 @@ const SmartTimeline: React.FC<{
                         <Text style={styles.timelineEventDate}>{formatEventDate(event.occurred_at, locale)}</Text>
                         {event.amount !== null && event.amount !== undefined && (
                           <Text style={styles.timelineEventAmount}>
-                            {Number(event.amount).toLocaleString(locale)} {event.currency ?? t('currency_mad')}
+                            {maskAmount(Number(event.amount), event.currency ?? t('currency_mad'))}
                           </Text>
                         )}
                       </View>
@@ -580,7 +584,8 @@ const ChartSection: React.FC<{
   chartData: { ca: any[]; expenses: any[] };
   chartLoading: boolean;
   t: any;
-}> = ({ chartData, chartLoading, t }) => {
+  maskAmount: (value: number, suffix?: string) => string;
+}> = ({ chartData, chartLoading, t, maskAmount }) => {
   const [lineTooltip, setLineTooltip] = useState<{
     index: number;
     caVal: number;
@@ -711,7 +716,7 @@ const ChartSection: React.FC<{
                 centerLabelComponent={() => (
                   <View style={{ alignItems: 'center' }}>
                     <Text style={styles.donutCenterValue}>
-                      {grandTotal.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}
+                      {maskAmount(grandTotal, '')}
                     </Text>
                     <Text style={styles.donutCenterLabel}>{t('currency_mad')}</Text>
                   </View>
@@ -745,16 +750,14 @@ const ChartSection: React.FC<{
               <View style={[styles.chartPopupDot, { backgroundColor: '#3B82F6' }]} />
               <Text style={styles.chartPopupLabel}>{t('legend_ca')}</Text>
               <Text style={styles.chartPopupValue}>
-                {lineTooltip.caVal.toLocaleString('fr-FR')}{' '}
-                <Text style={styles.chartPopupCurrency}>{t('currency_mad')}</Text>
+                {maskAmount(lineTooltip.caVal, t('currency_mad'))}
               </Text>
             </View>
             <View style={styles.chartPopupRow}>
               <View style={[styles.chartPopupDot, { backgroundColor: '#F97316' }]} />
               <Text style={styles.chartPopupLabel}>{t('legend_expenses')}</Text>
               <Text style={styles.chartPopupValue}>
-                {lineTooltip.expVal.toLocaleString('fr-FR')}{' '}
-                <Text style={styles.chartPopupCurrency}>{t('currency_mad')}</Text>
+                {maskAmount(lineTooltip.expVal, t('currency_mad'))}
               </Text>
             </View>
           </View>
@@ -778,8 +781,7 @@ const ChartSection: React.FC<{
             <View style={styles.chartPopupRow}>
               <Text style={styles.chartPopupLabel}>{t('chart_popup_amount')}</Text>
               <Text style={[styles.chartPopupValue, { color: pieTooltip.color }]}>
-                {pieTooltip.value.toLocaleString('fr-FR')}{' '}
-                <Text style={styles.chartPopupCurrency}>{t('currency_mad')}</Text>
+                {maskAmount(pieTooltip.value, t('currency_mad'))}
               </Text>
             </View>
             <View style={styles.chartPopupRow}>
@@ -807,6 +809,7 @@ const Activity: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigation = useNavigation<any>();
   const customer = useSelector((state: RootState) => state.user.customer);
+  const { maskAmount } = useSecurity();
 
   const [isFabOpen, setIsFabOpen] = useState(false);
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>('all');
@@ -1066,7 +1069,7 @@ const Activity: React.FC = () => {
         />
 
         {/* KPI Stats */}
-        <StatsCards stats={stats} loading={statsLoading} t={t} />
+        <StatsCards stats={stats} loading={statsLoading} t={t} maskAmount={maskAmount} />
 
         {/* Note */}
         <Text style={styles.note}>{t('note_vat_calculation')}</Text>
@@ -1092,10 +1095,11 @@ const Activity: React.FC = () => {
           onSuggestionPress={handleSuggestionPress}
           t={t}
           locale={i18n.language}
+          maskAmount={maskAmount}
         />
 
         {/* Quick Analysis */}
-        <QuickAnalysis t={t} loading={quickAnalysisLoading} analysis={quickAnalysis} />
+        <QuickAnalysis t={t} loading={quickAnalysisLoading} analysis={quickAnalysis} maskAmount={maskAmount} />
 
         {/* Year Selector */}
         <TouchableOpacity style={styles.yearSelectorRow} activeOpacity={0.7} onPress={() => setShowYearPicker(true)}>
@@ -1110,7 +1114,7 @@ const Activity: React.FC = () => {
         </TouchableOpacity>
 
         {/* Chart Section */}
-        <ChartSection chartData={chartData} chartLoading={chartLoading} t={t} />
+        <ChartSection chartData={chartData} chartLoading={chartLoading} t={t} maskAmount={maskAmount} />
 
         <View style={styles.fabSpacer} />
       </ScrollView>

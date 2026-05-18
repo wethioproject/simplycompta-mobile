@@ -702,6 +702,10 @@ const Quote: React.FC = ({ navigation: navProp }: any) => {
           onDelete={handleDeleteQuote}
           onEdit={() => handleEditInvoice(selectedItem)}
           onUpdate={updateQuote}
+          onUpdated={() => {
+            fetchQuotes(getFilterParams());
+            fetchChartData();
+          }}
         />
       )}
 
