@@ -32,6 +32,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useUpgradeWebView } from '../../utils/upgradeWebView';
+import { showPremiumToast } from '../../utils/premiumToast';
 import ContactsSkeleton from '../../components/clients/ContactsSkeleton';
 import PremiumSuccessCelebration from '../../components/common/PremiumSuccessCelebration';
 import { SuccessMorphButton } from '../../components/common/PremiumMotion';
@@ -92,7 +93,8 @@ export const CreateSupplierModal: React.FC<{
   onClose: () => void;
   onCreated: (createdSupplier?: any) => void;
   initialValues?: Partial<SupplierFormValues>;
-}> = ({ visible, onClose, onCreated, initialValues }) => {
+  skipCelebration?: boolean;
+}> = ({ visible, onClose, onCreated, initialValues, skipCelebration = false }) => {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { createSupplier } = useSupplier();
@@ -243,7 +245,14 @@ export const CreateSupplierModal: React.FC<{
     }
       dispatch(loadSubscription() as any);
       Vibration.vibrate(12);
-      createdSupplierRef.current = result?.supplier ?? payload;
+      const createdSupplier = result?.supplier ?? payload;
+      if (skipCelebration) {
+        showPremiumToast('success', t('success_title'), t('success_supplier_created'));
+        onCreated(createdSupplier);
+        onClose();
+        return;
+      }
+      createdSupplierRef.current = createdSupplier;
       setShowSuccessCelebration(true);
     } catch (e: any) {
       const msg = e?.response?.data?.message ?? t('error_create_supplier');
@@ -862,3 +871,4 @@ const styles = StyleSheet.create({
 });
 
 export default Suppliers;
+

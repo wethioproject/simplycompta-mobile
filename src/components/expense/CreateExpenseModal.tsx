@@ -1733,6 +1733,7 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
     setSupplierPrefillValues(undefined);
     closeSupplierPicker();
   }}
+  skipCelebration
 />
         <PremiumSuccessCelebration
           visible={showSuccessCelebration}
