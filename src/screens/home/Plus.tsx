@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -38,9 +38,8 @@ import {
   Network,
 } from 'lucide-react-native';
 import { PUBLIC_BASE_URL } from '../../config';
-
-const TERMS_OF_USE_URL = `${PUBLIC_BASE_URL}/privacy-policy.pdf`;
-const GENERAL_TERMS_URL = `${PUBLIC_BASE_URL}/terms-and-conditions.pdf`;
+import api from '../../api';
+import { Api_Endpoints } from '../../services/endpoints';
 
 const MenuRow: React.FC<{
   Icon: React.ComponentType<any>;
@@ -68,6 +67,13 @@ const Plus: React.FC = ({ navigation }: any) => {
   const { logout } = useAuth();
   const { t } = useTranslation();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [legalLinks, setLegalLinks] = useState<{ terms_and_conditions?: string; privacy_policy?: string }>({});
+
+  useEffect(() => {
+    api.get(Api_Endpoints.legalLinks)
+      .then(res => { if (res.data?.data) setLegalLinks(res.data.data); })
+      .catch(() => {});
+  }, []);
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -95,8 +101,8 @@ const Plus: React.FC = ({ navigation }: any) => {
     else if (action === 'pme_network') navigation.navigate('PME Network');
     else if (action === 'support')     navigation.navigate('Contact');
     else if (action === 'plan')        navigation.navigate('My Plan');
-    else if (action === 'terms')        Linking.openURL(TERMS_OF_USE_URL).catch(() => Alert.alert(t('error_title'), t('error_opening_link')));
-    else if (action === 'general_terms') Linking.openURL(GENERAL_TERMS_URL).catch(() => Alert.alert(t('error_title'), t('error_opening_link')));
+    else if (action === 'terms')        Linking.openURL(legalLinks.privacy_policy ?? `${PUBLIC_BASE_URL}/privacy-policy.pdf`).catch(() => Alert.alert(t('error_title'), t('error_opening_link')));
+    else if (action === 'general_terms') Linking.openURL(legalLinks.terms_and_conditions ?? `${PUBLIC_BASE_URL}/terms-and-conditions.pdf`).catch(() => Alert.alert(t('error_title'), t('error_opening_link')));
     else if (action === 'logout')      handleLogout();
   };
 
