@@ -1062,17 +1062,17 @@ const Activity: React.FC = () => {
           />
         }
       >
-        {/* Month Selector */}
+        {/* KPI Stats */}
+        <StatsCards stats={stats} loading={statsLoading} t={t} maskAmount={maskAmount} />
+
+        {/* Expense vs revenue chart */}
+        <ChartSection chartData={chartData} chartLoading={chartLoading} t={t} maskAmount={maskAmount} />
+
+        {/* Compact period filter */}
         <MonthSelectorCard
           label={selectedPeriod.label}
           onPress={() => setShowPeriodPicker(true)}
         />
-
-        {/* KPI Stats */}
-        <StatsCards stats={stats} loading={statsLoading} t={t} maskAmount={maskAmount} />
-
-        {/* Note */}
-        <Text style={styles.note}>{t('note_vat_calculation')}</Text>
 
         {/* Action Buttons */}
         <ActionButtons
@@ -1112,9 +1112,6 @@ const Activity: React.FC = () => {
             <ChevronDown size={16} color="#9CA3AF" />
           </View>
         </TouchableOpacity>
-
-        {/* Chart Section */}
-        <ChartSection chartData={chartData} chartLoading={chartLoading} t={t} maskAmount={maskAmount} />
 
         <View style={styles.fabSpacer} />
       </ScrollView>
@@ -1241,10 +1238,10 @@ const styles = StyleSheet.create({
 
   /* Month Selector */
   monthSelectorGradient: {
-    borderRadius: 16,
-    padding: 16,
-    height: 110,
-    marginBottom: 16,
+    borderRadius: 14,
+    padding: 8,
+    minHeight: 54,
+    marginBottom: 12,
   },
   monthSelectorButton: {
     flexDirection: 'row',
@@ -1252,8 +1249,8 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     gap: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
@@ -1271,20 +1268,20 @@ const styles = StyleSheet.create({
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 8,
+    gap: 8,
+    marginBottom: 10,
   },
   statCard: {
-    width: '47.5%',
-    borderRadius: 16,
-    padding: 16,
+    width: '48.5%',
+    borderRadius: 15,
+    padding: 11,
     borderWidth: 1,
   },
   statCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 12,
+    marginBottom: 7,
   },
   statIconWrap: {
     width: 20,
@@ -1298,10 +1295,10 @@ const styles = StyleSheet.create({
     color: '#4B5563',
   },
   statValue: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 19,
+    fontWeight: '900',
     color: '#111827',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   statCurrency: {
     fontSize: 16,
@@ -1727,18 +1724,18 @@ const styles = StyleSheet.create({
 
   /* Chart Section */
   chartSection: {
-    marginBottom: 24,
+    marginBottom: 12,
   },
   chartSectionTitle: {
-    fontSize: 17,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '800',
     color: '#111827',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   chartSectionCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 16,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#F3F4F6',
   },

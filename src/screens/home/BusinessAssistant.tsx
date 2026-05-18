@@ -36,6 +36,7 @@ import { useSecurity } from '../../contexts/SecurityContext';
 import FeatureLockCard from '../../components/common/FeatureLockCard';
 import { canUseBusinessModule } from '../../utils/subscriptionHelpers';
 import { useUpgradeWebView } from '../../utils/upgradeWebView';
+import premiumInsightsService from '../../services/premiumInsightsService';
 
 const amount = (value: any) => Number(value?.total_ttc ?? value?.ttc ?? value?.total ?? value ?? 0) || 0;
 const vat = (value: any) => Number(value?.total_tva ?? value?.tva ?? value?.vat ?? 0) || 0;
@@ -70,6 +71,7 @@ const BusinessAssistant: React.FC = ({ navigation }: any) => {
   const [quotes, setQuotes] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
+  const [premiumHealthScore, setPremiumHealthScore] = useState<number | null>(null);
 
   const loadData = useCallback(async () => {
     const [expenseResult, invoiceResult, quoteResult, supplierResult, clientsResult] = await Promise.all([
@@ -89,28 +91,17 @@ const BusinessAssistant: React.FC = ({ navigation }: any) => {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  if (!canUseAssistant) {
-    return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-            <ArrowLeft size={22} color="#111827" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{t('assistant_title')}</Text>
-          <View style={{ width: 42 }} />
-        </View>
-        <View style={styles.lockContent}>
-          <FeatureLockCard
-            requiredPlan="Business"
-            title={t('assistant_locked_title', { defaultValue: 'Accounting Assistant is a Business feature' })}
-            subtitle={t('assistant_locked_subtitle', { defaultValue: 'Preview month-end checks, VAT assistant and accountant-ready insights, then unlock the full workspace.' })}
-            onUpgrade={() => openUpgradeWebView(subscription?.upgrade_url)}
-          />
-        </View>
-        {upgradeWebViewElement}
-      </SafeAreaView>
-    );
-  }
+  useEffect(() => {
+    let cancelled = false;
+    premiumInsightsService.getInsights()
+      .then(res => {
+        if (!cancelled) setPremiumHealthScore(res.data.financial_health_score);
+      })
+      .catch(() => {
+        if (!cancelled) setPremiumHealthScore(null);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   const currentExpenses = useMemo(() => expenses.filter(item => dateValue(item) >= startOfMonth()), [expenses]);
   const currentInvoices = useMemo(() => invoices.filter(item => dateValue(item) >= startOfMonth()), [invoices]);
@@ -124,13 +115,14 @@ const BusinessAssistant: React.FC = ({ navigation }: any) => {
     return sum + articleVat;
   }, 0);
 
-  const healthScore = useMemo(() => {
+  const localHealthScore = useMemo(() => {
     const paidRatio = invoices.length ? invoices.filter(item => String(item.status).toLowerCase() === 'paid').length / invoices.length : 0.7;
     const docRatio = currentExpenses.length ? documentedExpenses / currentExpenses.length : 0.8;
     const supplierRatio = suppliers.length ? (suppliers.length - missingIceSuppliers) / suppliers.length : 0.75;
     const overduePenalty = Math.min(0.25, unpaidInvoices.length * 0.03);
     return Math.max(0, Math.min(100, Math.round((paidRatio * 36 + docRatio * 34 + supplierRatio * 30 - overduePenalty * 100))));
   }, [currentExpenses.length, documentedExpenses, invoices, missingIceSuppliers, suppliers.length, unpaidInvoices.length]);
+  const healthScore = premiumHealthScore ?? localHealthScore;
 
   const checklist = [
     { key: 'receipts', label: t('assistant_check_receipts'), done: currentExpenses.length > 0 && documentedExpenses === currentExpenses.length, route: 'Expenses' },
@@ -183,6 +175,29 @@ const BusinessAssistant: React.FC = ({ navigation }: any) => {
     await loadData();
     setRefreshing(false);
   };
+
+  if (!canUseAssistant) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+            <ArrowLeft size={22} color="#111827" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{t('assistant_title')}</Text>
+          <View style={{ width: 42 }} />
+        </View>
+        <View style={styles.lockContent}>
+          <FeatureLockCard
+            requiredPlan="Business"
+            title={t('assistant_locked_title')}
+            subtitle={t('assistant_locked_subtitle')}
+            onUpgrade={() => openUpgradeWebView(subscription?.upgrade_url)}
+          />
+        </View>
+        {upgradeWebViewElement}
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

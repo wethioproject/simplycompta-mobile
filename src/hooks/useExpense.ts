@@ -76,7 +76,7 @@ export const useExpense = () => {
                 success: true
             };
         } catch (error: any) {
-            const errorMessage = error.response?.data?.message || 'Failed to upload expense.';
+            const errorMessage = error.response?.data?.message || error.message || 'Failed to upload expense.';
             return {
                 success: false,
                 error: errorMessage
@@ -93,7 +93,7 @@ export const useExpense = () => {
                 success: true
             };
         } catch (error: any) {
-            const errorMessage = error.response?.data?.message || 'Failed to update expense.';
+            const errorMessage = error.response?.data?.message || error.message || 'Failed to update expense.';
             return {
                 success: false,
                 error: errorMessage

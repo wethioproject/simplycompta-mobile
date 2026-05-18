@@ -24,6 +24,7 @@ import {
   ChevronRight,
   Building2,
   BookOpen,
+  Users,
 } from 'lucide-react-native';
 import i18next from 'i18next';
 import api from '../../api';
@@ -77,6 +78,11 @@ const CATEGORY_STYLE: Record<string, {
     iconBg: '#BBDEFB', iconColor: '#1E5BAC',
     Icon: Building2,
     screen: 'Bank Statements',
+  },
+  ressources_humaines: {
+    iconBg: '#FCE7F3', iconColor: '#BE185D',
+    Icon: Users,
+    screen: 'AllDocuments',
   },
 };
 
@@ -263,7 +269,16 @@ const DocumentsList: React.FC = () => {
                     key={cat.type}
                     style={styles.catCard}
                     activeOpacity={0.75}
-                    onPress={() => navigation.navigate(style.screen)}
+                    onPress={() => {
+                      if (style.screen === 'AllDocuments') {
+                        navigation.navigate('AllDocuments', {
+                          documentType: cat.type,
+                          screenTitle: displayName,
+                        });
+                        return;
+                      }
+                      navigation.navigate(style.screen);
+                    }}
                   >
                     {/* Icon */}
                     <View style={styles.catIconWrapper}>

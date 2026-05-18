@@ -1085,13 +1085,22 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
         document: document?.isExisting ? null : document,
         remove_document: !document && removedExistingDocument ? 1 : 0,
       };
+      console.log('[ExpenseModal] submit payload summary', {
+        edit: Boolean(editItem),
+        supplier_id: payload.supplier_id,
+        category_id: payload.category_id,
+        payment_method: payload.payment_method,
+        total_ttc: payload.total_ttc,
+        has_document: Boolean(payload.document),
+        is_ocr: payload.is_ocr,
+      });
 
       if (editItem && onUpdate) {
         const result = await onUpdate(editItem.id, payload);
         if (result.success) {
           dispatch(loadSubscription() as any);
           showPremiumToast('success', t('success_title'), t('success_expense_updated'));
-          onCreated();
+          Promise.resolve(onCreated()).catch(error => console.log('[ExpenseModal] post-update refresh failed', error));
           onClose();
         } else {
           Alert.alert(t('error_title'), result.error ?? t('error_generic'));
@@ -1100,8 +1109,8 @@ const CreateExpenseModal: React.FC<CreateExpenseModalProps> = ({
         const result = await onSave(payload);
         if (result.success) {
           dispatch(loadSubscription() as any);
-          onCreated();
           setShowSuccessCelebration(true);
+          Promise.resolve(onCreated()).catch(error => console.log('[ExpenseModal] post-create refresh failed', error));
         } else {
           Alert.alert(t('error_title'), result.error ?? t('error_generic'));
         }

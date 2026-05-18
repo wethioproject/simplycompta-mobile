@@ -1049,6 +1049,29 @@ const Home: React.FC = () => {
           <StatusBadges stats={stats} t={t} />
         </FadeInView>
 
+        {/* KPI Hero */}
+        {statsLoading && (
+          <FadeInView delay={30}>
+            <DashboardSkeleton />
+          </FadeInView>
+        )}
+        <FadeInView delay={40}>
+          <StatsCards stats={stats} loading={statsLoading} previousMonthName={previousMonthName} privateMode={privateModeEnabled} t={t} />
+        </FadeInView>
+
+        {/* OCR Scanner CTA Card */}
+        <FadeInView delay={60}>
+          <OCRScannerCard onScan={() => navigation.navigate('Expenses', { openCreateModal: true })} />
+        </FadeInView>
+
+        {/* WhatsApp Bot Card */}
+        <FadeInView delay={80}>
+          <WhatsAppBotCard
+            enabled={stats.whatsapp_bot_enabled}
+            onActivate={() => handleNavigate('whatsapp-bot')}
+          />
+        </FadeInView>
+
         <FadeInView delay={40}>
           <TodayAssistant
             stats={{
@@ -1088,31 +1111,8 @@ const Home: React.FC = () => {
         </FadeInView>
 
         {/* Connected Accountant Card */}
-        <FadeInView delay={80}>
+        <FadeInView delay={100}>
           <ConnectedAccountantCard onPress={() => handleNavigate('accounting')} companyName={stats.companyName} />
-        </FadeInView>
-
-        {/* OCR Scanner CTA Card */}
-        <FadeInView delay={120}>
-          <OCRScannerCard onScan={() => navigation.navigate('Expenses', { openCreateModal: true })} />
-        </FadeInView>
-
-        {/* WhatsApp Bot Card */}
-        <FadeInView delay={160}>
-          <WhatsAppBotCard
-            enabled={stats.whatsapp_bot_enabled}
-            onActivate={() => handleNavigate('whatsapp-bot')}
-          />
-        </FadeInView>
-
-        {/* Stats Cards */}
-        {statsLoading && (
-          <FadeInView delay={160}>
-            <DashboardSkeleton />
-          </FadeInView>
-        )}
-        <FadeInView delay={180}>
-          <StatsCards stats={stats} loading={statsLoading} previousMonthName={previousMonthName} privateMode={privateModeEnabled} t={t} />
         </FadeInView>
 
         {/* Tasks Section */}
@@ -1473,18 +1473,22 @@ const styles = StyleSheet.create({
   /* Stats Cards (3 cols) */
   statsRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 24,
+    gap: 8,
+    marginBottom: 12,
   },
   statsCard: {
     flex: 1,
-    borderRadius: 16,
-    padding: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 1,
+    minHeight: 112,
+    borderRadius: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.07,
+    shadowRadius: 14,
+    elevation: 3,
   },
   statsIconBox: {
     width: 32,
@@ -1492,18 +1496,21 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 7,
   },
   statsLabel: {
     fontSize: 11,
     color: '#4B5563',
-    marginBottom: 2,
+    marginBottom: 4,
+    textAlign: 'center',
+    fontWeight: '800',
   },
   statsValue: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '900',
     color: '#111827',
     marginBottom: 2,
+    textAlign: 'center',
   },
   statsUnit: {
     fontSize: 10,
@@ -1513,11 +1520,13 @@ const styles = StyleSheet.create({
   statsTrendRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 3,
   },
   statsTrendText: {
     fontSize: 9,
-    fontWeight: '600',
+    fontWeight: '700',
+    textAlign: 'center',
   },
   statsSkeletonStack: {
     marginTop: 4,

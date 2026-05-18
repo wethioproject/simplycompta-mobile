@@ -1,6 +1,24 @@
 import api from '../api';
 import { Api_Endpoints } from './endpoints';
 
+const EXPENSE_UPLOAD_TIMEOUT_MS = 45000;
+
+const extractApiError = (error: any, fallback: string) => {
+    const data = error?.response?.data;
+    const validationErrors = data?.errors && typeof data.errors === 'object'
+        ? Object.values(data.errors).flat().filter(Boolean).join('\n')
+        : '';
+    if (validationErrors) return validationErrors;
+    if (data?.message) return data.message;
+    if (error?.code === 'ECONNABORTED') return 'Request timed out. Please check your connection and try again.';
+    return error?.message || fallback;
+};
+
+const appendIfPresent = (formData: FormData, key: string, value: any) => {
+    if (value === undefined || value === null || value === '') return;
+    formData.append(key, String(value));
+};
+
 class ExpenseService {
 
     async getExpenses(params?: { month?: number; year?: number}) {
@@ -37,28 +55,32 @@ class ExpenseService {
     async createExpense(payload: any): Promise<any> {
         try {
             const formData = new FormData();
-            console.log('Creating expense with payload:', payload);
-            formData.append('customer_id', String(payload.customer_id));
-            formData.append('date', payload.date);
-            formData.append('ttc', payload.ttc);
-            formData.append('tva', payload.tva);
-            formData.append('payment_method', payload.payment_method);
-            formData.append('category_id', payload.category_id);
-            formData.append('total_ttc', payload.total_ttc);
-            formData.append('total_tva', payload.total_tva);
-
-            if (payload.supplier_id != null) {
-                formData.append('supplier_id', String(payload.supplier_id));
-            }
-
-            if (payload.reference != null) {
-                formData.append('reference', String(payload.reference));
-            }
-
-            if (payload.notes != null) {
-                formData.append('notes', String(payload.notes));
-            }
-            formData.append('is_ocr', String(payload.is_ocr ?? 0));
+            console.log('[Expense:create] payload summary', {
+                customer_id: payload.customer_id,
+                supplier_id: payload.supplier_id,
+                category_id: payload.category_id,
+                payment_method: payload.payment_method,
+                ttc: payload.ttc,
+                tva: payload.tva,
+                has_document: Boolean(payload.document),
+                is_ocr: payload.is_ocr,
+            });
+            appendIfPresent(formData, 'customer_id', payload.customer_id);
+            appendIfPresent(formData, 'date', payload.date);
+            appendIfPresent(formData, 'ttc', payload.ttc);
+            appendIfPresent(formData, 'tva', payload.tva ?? 0);
+            appendIfPresent(formData, 'payment_method', payload.payment_method);
+            appendIfPresent(formData, 'category_id', payload.category_id);
+            appendIfPresent(formData, 'total_ttc', payload.total_ttc ?? payload.ttc);
+            appendIfPresent(formData, 'total_tva', payload.total_tva ?? payload.tva ?? 0);
+            appendIfPresent(formData, 'supplier_id', payload.supplier_id);
+            appendIfPresent(formData, 'reference', payload.reference ?? payload.expense_reference);
+            appendIfPresent(formData, 'notes', payload.notes ?? payload.description);
+            appendIfPresent(formData, 'is_ocr', payload.is_ocr ?? 0);
+            appendIfPresent(formData, 'ocr_confidence_score', payload.ocr_confidence_score);
+            if (payload.ocr_raw) appendIfPresent(formData, 'ocr_raw', JSON.stringify(payload.ocr_raw));
+            if (payload.ocr_warnings) appendIfPresent(formData, 'ocr_warnings', JSON.stringify(payload.ocr_warnings));
+            if (payload.ocr_items) appendIfPresent(formData, 'ocr_items', JSON.stringify(payload.ocr_items));
             if (payload.document) {
                 const file = payload.document;
                 formData.append('file', {
@@ -70,11 +92,13 @@ class ExpenseService {
 
             const response = await api.post<any>(Api_Endpoints.customerExpense, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
+                timeout: EXPENSE_UPLOAD_TIMEOUT_MS,
             });
+            console.log('[Expense:create] response', response.status, response.data?.success);
             return response.data;
         } catch (error: any) {
             console.error('Create Expense error:', error.response?.data || error.message);
-            throw error;
+            throw new Error(extractApiError(error, 'Failed to upload expense.'));
         }
     }
 
@@ -82,30 +106,20 @@ class ExpenseService {
     async updateExpense(id: number,payload: any): Promise<any> {
         try {
             const formData = new FormData();
-            formData.append('customer_id', String(payload.customer_id));
-            formData.append('date', payload.date);
-            formData.append('ttc', payload.ttc);
-            formData.append('tva', payload.tva);
-            formData.append('payment_method', payload.payment_method);
-            formData.append('category_id', payload.category_id);
-            formData.append('total_ttc', payload.total_ttc);
-            formData.append('total_tva', payload.total_tva);
+            appendIfPresent(formData, 'customer_id', payload.customer_id);
+            appendIfPresent(formData, 'date', payload.date);
+            appendIfPresent(formData, 'ttc', payload.ttc);
+            appendIfPresent(formData, 'tva', payload.tva ?? 0);
+            appendIfPresent(formData, 'payment_method', payload.payment_method);
+            appendIfPresent(formData, 'category_id', payload.category_id);
+            appendIfPresent(formData, 'total_ttc', payload.total_ttc ?? payload.ttc);
+            appendIfPresent(formData, 'total_tva', payload.total_tva ?? payload.tva ?? 0);
             formData.append('_method', 'PUT');
             formData.append('remove_document', String(payload.remove_document ?? 0));
-
-            if (payload.supplier_id != null) {
-                formData.append('supplier_id', String(payload.supplier_id));
-            }
-
-            if (payload.reference != null) {
-                formData.append('reference', String(payload.reference));
-            }
-
-            if (payload.notes != null) {
-                formData.append('notes', String(payload.notes));
-            }
-
-            formData.append('is_ocr', String(payload.is_ocr ?? 0));
+            appendIfPresent(formData, 'supplier_id', payload.supplier_id);
+            appendIfPresent(formData, 'reference', payload.reference ?? payload.expense_reference);
+            appendIfPresent(formData, 'notes', payload.notes ?? payload.description);
+            appendIfPresent(formData, 'is_ocr', payload.is_ocr ?? 0);
 
             if (payload.document) {
                 const file = payload.document;
@@ -118,11 +132,12 @@ class ExpenseService {
 
             const response = await api.post<any>(`${Api_Endpoints.customerExpense}/${id}`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
+                timeout: EXPENSE_UPLOAD_TIMEOUT_MS,
             });
             return response.data;
         } catch (error: any) {
             console.error('Update Expense error:', error.response?.data || error.message);
-            throw error;
+            throw new Error(extractApiError(error, 'Failed to update expense.'));
         }
     }
 
