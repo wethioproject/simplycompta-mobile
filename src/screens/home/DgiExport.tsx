@@ -29,21 +29,6 @@ import { useSecurity } from '../../contexts/SecurityContext';
 
 type ExportScope = DgiExportKind | 'both';
 
-const MONTHS = [
-  'Janvier',
-  'Février',
-  'Mars',
-  'Avril',
-  'Mai',
-  'Juin',
-  'Juillet',
-  'Août',
-  'Septembre',
-  'Octobre',
-  'Novembre',
-  'Décembre',
-];
-
 const normalizeInvoiceList = (payload: any): InvoiceItem[] => {
   const source = payload?.data ?? payload;
   const candidates = [
@@ -67,6 +52,21 @@ const DgiExport: React.FC = ({ navigation }: any) => {
   const [year, setYear] = useState(today.getFullYear());
   const [exporting, setExporting] = useState(false);
   const [lastExport, setLastExport] = useState<string | null>(null);
+
+  const MONTHS = useMemo(() => [
+    t('month_january'),
+    t('month_february'),
+    t('month_march'),
+    t('month_april'),
+    t('month_may'),
+    t('month_june'),
+    t('month_july'),
+    t('month_august'),
+    t('month_september'),
+    t('month_october'),
+    t('month_november'),
+    t('month_december'),
+  ], [t]);
 
   const scopeOptions = useMemo(() => [
     { key: 'expenses' as ExportScope, label: t('dgi_scope_expenses', { defaultValue: 'Dépenses' }) },
