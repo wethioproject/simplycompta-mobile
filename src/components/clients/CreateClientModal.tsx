@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -26,6 +26,8 @@ import { canUseFeature } from '../../utils/subscriptionHelpers';
 import { loadSubscription } from '../../store/slices/subscriptionSlice';
 import type { AppDispatch } from '../../store';
 import { useUpgradeWebView } from '../../utils/upgradeWebView';
+import PremiumSuccessCelebration from '../common/PremiumSuccessCelebration';
+import { SuccessMorphButton } from '../common/PremiumMotion';
 
 interface CreateClientModalProps {
   visible: boolean;
@@ -45,6 +47,8 @@ export const CreateClientModal: React.FC<CreateClientModalProps> = ({
   const subscription = useSelector((state: any) => state.subscription.data);
   const upgradeUrl = subscription?.upgrade_url;
   const [saving, setSaving] = useState(false);
+  const [showSuccessCelebration, setShowSuccessCelebration] = useState(false);
+  const createdClientRef = useRef<any>(null);
   const [showTypePicker, setShowTypePicker] = useState(false);
 
   const today = new Date().toLocaleDateString('fr-FR');
@@ -76,7 +80,11 @@ export const CreateClientModal: React.FC<CreateClientModalProps> = ({
   const watchedType = watch('customerType') ?? 'Company';
 
   useEffect(() => {
-    if (!visible) reset();
+    if (!visible) {
+      setShowSuccessCelebration(false);
+      createdClientRef.current = null;
+      reset();
+    }
   }, [visible]);
 
   const onSubmit = async (data: ClientFormValues) => {
@@ -89,11 +97,10 @@ export const CreateClientModal: React.FC<CreateClientModalProps> = ({
     }
     setSaving(true);
     try {
-      await createClient(data);
+      const result = await createClient(data);
       dispatch(loadSubscription() as any);
-      showPremiumToast('success', t('success_title'), t('success_client_created'));
-      await onCreated();
-      onClose();
+      createdClientRef.current = result;
+      setShowSuccessCelebration(true);
     } catch (e: any) {
       const msg = e?.response?.data?.message ?? 'Erreur lors de la création du client.';
       Alert.alert(t('error_title'), msg);
@@ -112,16 +119,16 @@ export const CreateClientModal: React.FC<CreateClientModalProps> = ({
             <ArrowLeft size={22} color="#1E5BAC" />
           </TouchableOpacity>
           <Text style={styles.modalTitle}>{t('title_create_client')}</Text>
-          <TouchableOpacity
+          <SuccessMorphButton
             style={[styles.modalConfirmBtn, !isValid && styles.modalConfirmBtnDisabled]}
             onPress={handleSubmit(onSubmit as any)}
-            disabled={saving}
-            activeOpacity={0.85}
-          >
-            {saving
-              ? <ActivityIndicator size="small" color="#FFFFFF" />
-              : <Text style={styles.modalConfirmText}>{t('modal_confirm_text')}</Text>}
-          </TouchableOpacity>
+            disabled={!isValid || saving || showSuccessCelebration}
+            loading={saving}
+            success={showSuccessCelebration}
+            label={t('modal_confirm_text')}
+            successLabel={t('success_title')}
+            textStyle={styles.modalConfirmText}
+          />
         </View>
 
         <KeyboardAvoidingView
@@ -321,17 +328,16 @@ export const CreateClientModal: React.FC<CreateClientModalProps> = ({
               </View>
             </View>
 
-            {/* Bottom confirm button */}
-            <TouchableOpacity
+            <SuccessMorphButton
               style={[styles.confirmBtn, !isValid && styles.confirmBtnDisabled]}
               onPress={handleSubmit(onSubmit as any)}
-              disabled={saving}
-              activeOpacity={0.85}
-            >
-              {saving
-                ? <ActivityIndicator color="#FFFFFF" />
-                : <Text style={styles.confirmBtnText}>{t('modal_confirm_text')}</Text>}
-            </TouchableOpacity>
+              disabled={!isValid || saving || showSuccessCelebration}
+              loading={saving}
+              success={showSuccessCelebration}
+              label={t('modal_confirm_text')}
+              successLabel={t('success_title')}
+              textStyle={styles.confirmBtnText}
+            />
           </ScrollView>
         </KeyboardAvoidingView>
 
@@ -356,6 +362,19 @@ export const CreateClientModal: React.FC<CreateClientModalProps> = ({
             </View>
           </TouchableOpacity>
         </Modal>
+        <PremiumSuccessCelebration
+          visible={showSuccessCelebration}
+          title={t('success_client_created', { defaultValue: 'Client added successfully' })}
+          subtitle={t('success_ready_review', { defaultValue: 'Everything is saved and ready to review.' })}
+          continueLabel={t('button_continue', { defaultValue: 'Continue' })}
+          onDone={() => {
+            const createdClient = createdClientRef.current;
+            setShowSuccessCelebration(false);
+            createdClientRef.current = null;
+            onCreated();
+            onClose();
+          }}
+        />
       </View>
     </Modal>
   );
