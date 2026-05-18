@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { X, Edit2, Trash2 } from 'lucide-react-native';
 import type { ReceiptItem } from '../../types/receipt.types';
 import { getPaymentMethodLabel, PaymentMethodIcon } from './ReceiptCard';
+import { useSecurity } from '../../contexts/SecurityContext';
 
 interface DetailModalProps {
   item: ReceiptItem;
@@ -21,6 +22,7 @@ interface DetailModalProps {
 
 const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onEdit, onDelete }) => {
   const { t } = useTranslation();
+  const { maskAmount } = useSecurity();
 
   return (
     <Modal
@@ -47,7 +49,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onEdit, onDele
             <View style={styles.amountCard}>
               <Text style={styles.amountLabel}>{t('receipt_detail_amount_label')}</Text>
               <Text style={styles.amountValue}>
-                + {item.amount.toLocaleString('fr-FR')} MAD
+                + {maskAmount(item.amount, t('currency_mad'))}
               </Text>
             </View>
 

@@ -11,10 +11,12 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { downArrowIcon, fileIcon } from '../../assets/icons';
 import { useTransaction } from '../../hooks/useTransaction';
+import { useSecurity } from '../../contexts/SecurityContext';
 
 const InvoiceDetail: React.FC = ({ navigation, route }: any) => {
   const invoice = route?.params?.invoice;
   const { getTransaction } = useTransaction();
+  const { maskAmount } = useSecurity();
   const [status, setStatus] = useState(invoice?.status || 'Brouillon');
   const [transaction, setTransaction] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -51,9 +53,7 @@ const InvoiceDetail: React.FC = ({ navigation, route }: any) => {
     return `${day}/${month}/${year}`;
   };
 
-  const formatAmount = (amount: string) => {
-    return parseFloat(amount).toFixed(2).replace('.', ',');
-  };
+  const formatAmount = (amount: string) => maskAmount(Number(amount || 0), 'MAD');
 
   const getTransactionType = (type: string) => {
     return type === 'expense' ? 'Dépense' : 'Revenu';
@@ -140,7 +140,7 @@ const InvoiceDetail: React.FC = ({ navigation, route }: any) => {
             <View style={styles.totalSection}>
               <View style={styles.row}>
                 <Text style={styles.totalLabel}>Montant</Text>
-                <Text style={styles.totalValue}>{formatAmount(transaction.amount)} MAD</Text>
+                <Text style={styles.totalValue}>{formatAmount(transaction.amount)}</Text>
               </View>
             </View>
           </>

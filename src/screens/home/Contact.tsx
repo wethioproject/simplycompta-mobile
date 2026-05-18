@@ -11,6 +11,7 @@ import {
   Linking,
   ActivityIndicator,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
@@ -24,6 +25,7 @@ import {
   User,
   FileText,
   Clock,
+  MessageCircle,
 } from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { appLogoIcon } from '../../assets/icons';
@@ -42,6 +44,13 @@ interface AccountantInfo {
 }
 
 type StackNavigation = StackNavigationProp<any>;
+type LocalMessage = {
+  id: string;
+  subject: string;
+  body: string;
+  attachmentName?: string;
+  createdAt: string;
+};
 
 // ─── Contact Form View ────────────────────────────────────────────────────────
 const ContactForm: React.FC<{ onBack: () => void; accountant?: AccountantInfo | null }> = ({ onBack, accountant }) => {
@@ -51,6 +60,20 @@ const ContactForm: React.FC<{ onBack: () => void; accountant?: AccountantInfo | 
   const [message, setMessage] = useState('');
   const [attachment, setAttachment] = useState<{ uri: string; name: string; type: string } | null>(null);
   const [sending, setSending] = useState(false);
+  const [history, setHistory] = useState<LocalMessage[]>([]);
+  const historyKey = `@accountant_messages_${accountant?.id ?? 'default'}`;
+
+  useEffect(() => {
+    AsyncStorage.getItem(historyKey)
+      .then(value => setHistory(value ? JSON.parse(value) : []))
+      .catch(() => setHistory([]));
+  }, [historyKey]);
+
+  const addToHistory = async (entry: LocalMessage) => {
+    const next = [entry, ...history].slice(0, 30);
+    setHistory(next);
+    await AsyncStorage.setItem(historyKey, JSON.stringify(next));
+  };
 
   const handlePickAttachment = async () => {
     try {
@@ -92,6 +115,13 @@ const ContactForm: React.FC<{ onBack: () => void; accountant?: AccountantInfo | 
       console.log('testeee100', formData)
       await api.post(Api_Endpoints.sendAccountantEmail, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      await addToHistory({
+        id: `${Date.now()}`,
+        subject: sujet.trim(),
+        body: message.trim(),
+        attachmentName: attachment?.name,
+        createdAt: new Date().toISOString(),
       });
       Alert.alert(t('success_message_sent'), t('success_message_sent_text'), [
         { text: t('button_ok'), onPress: () => { setSujet(''); setMessage(''); setAttachment(null); onBack(); } },
@@ -158,6 +188,26 @@ const ContactForm: React.FC<{ onBack: () => void; accountant?: AccountantInfo | 
               <Text style={styles.accountantRole}>{t('role_your_accountant')}</Text>
             </View>
           </View>
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.threadHeader}>
+            <MessageCircle size={18} color="#1E5BAC" />
+            <Text style={styles.fieldLabel}>{t('message_history_title', { defaultValue: 'Historique des échanges' })}</Text>
+          </View>
+          {history.length === 0 ? (
+            <Text style={styles.historyEmpty}>{t('message_history_empty', { defaultValue: 'Aucun message envoyé pour le moment.' })}</Text>
+          ) : (
+            history.slice(0, 5).map(item => (
+              <View key={item.id} style={styles.historyItem}>
+                <Text style={styles.historySubject} numberOfLines={1}>{item.subject}</Text>
+                <Text style={styles.historyBody} numberOfLines={2}>{item.body}</Text>
+                <Text style={styles.historyDate}>
+                  {new Date(item.createdAt).toLocaleDateString()} {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              </View>
+            ))
+          )}
         </View>
 
         {/* Sujet */}
@@ -458,6 +508,42 @@ const styles = StyleSheet.create({
     padding: 12,
     paddingBottom: 32,
     rowGap: 12,
+  },
+  threadHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 10,
+  },
+  historyEmpty: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '600',
+  },
+  historyItem: {
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  historySubject: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  historyBody: {
+    fontSize: 12,
+    color: '#475569',
+    lineHeight: 17,
+    marginTop: 4,
+  },
+  historyDate: {
+    fontSize: 11,
+    color: '#94A3B8',
+    fontWeight: '700',
+    marginTop: 6,
   },
   // Title Banner
   titleBanner: {

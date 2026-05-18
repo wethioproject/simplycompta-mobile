@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import type { ExpenseCategoryItem } from '../../services/dashboardService';
 import { styles } from '../../styles/expenses.styles';
 import { resolveCategoryKey } from '../../utils/expense.helpers';
+import { useSecurity } from '../../contexts/SecurityContext';
 
 const PIE_COLORS = [
   '#3B82F6', '#FEE2E2', '#10B981', '#EF4444', '#8B5CF6',
@@ -18,6 +19,7 @@ interface ExpensePieChartProps {
 
 const ExpensePieChart: React.FC<ExpensePieChartProps> = ({ loading, pieCategories }) => {
   const { t } = useTranslation();
+  const { maskAmount } = useSecurity();
 
   const total = pieCategories.reduce((sum, c) => sum + parseFloat(c.value), 0);
   const pieData = pieCategories.map((c, i) => {
@@ -53,9 +55,9 @@ const ExpensePieChart: React.FC<ExpensePieChartProps> = ({ loading, pieCategorie
               centerLabelComponent={() => (
                 <View style={{ alignItems: 'center' }}>
                   <Text style={styles.pieCenterValue}>
-                    {total.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}
+                    {maskAmount(total, t('currency_mad'))}
                   </Text>
-                  <Text style={styles.pieCenterLabel}>{t('currency_mad')}</Text>
+                  <Text style={styles.pieCenterLabel}>{t('label_total', { defaultValue: 'Total' })}</Text>
                 </View>
               )}
               showText={false}

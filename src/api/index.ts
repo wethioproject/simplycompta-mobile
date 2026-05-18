@@ -1,11 +1,16 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../config';
+import { store } from '../store';
+import { logout } from '../store/slices/userSlice';
+import { navigationRef } from '../navigation/navigationRef';
 
 
 const BASE_URL = API_BASE_URL;
 const TIMEOUT = 30000; // 30 seconds
 const TOKEN_KEY = '@auth_token';
+const CUSTOMER_KEY = '@customer_data';
+let handlingUnauthorized = false;
 
 
 const api = axios.create({
@@ -54,8 +59,17 @@ api.interceptors.response.use(
         case 401:
           // Unauthorized - Token expired or invalid
           console.log('Unauthorized access - clearing auth data');
-          await AsyncStorage.removeItem(TOKEN_KEY);
-          // You can dispatch a logout action here if needed
+          if (!handlingUnauthorized) {
+            handlingUnauthorized = true;
+            await AsyncStorage.multiRemove([TOKEN_KEY, CUSTOMER_KEY]);
+            store.dispatch(logout());
+            if (navigationRef.isReady()) {
+              navigationRef.reset({ index: 0, routes: [{ name: 'Login' }] });
+            }
+            setTimeout(() => {
+              handlingUnauthorized = false;
+            }, 800);
+          }
           break;
         
         case 403:

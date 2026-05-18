@@ -51,6 +51,7 @@ import NotificationDetail from '../screens/notification/NotificationDetail';
 import QuoteDetail from '../screens/home/QuoteDetail';
 import HomeProfile from '../screens/home/Profile';
 import LegalDocuments from '../screens/home/Legal';
+import LegalText from '../screens/home/LegalText';
 import AllDocuments from '../screens/home/AllDocuments';
 import AccountingDocuments from '../screens/home/Accounting';
 import Activity from '../screens/home/Activity';
@@ -130,6 +131,7 @@ const AppNavigator = () => {
         <Stack.Screen name="Notification Detail" component={NotificationDetail} options={{ headerShown: false }} />
         <Stack.Screen name="Profile" component={HomeProfile} options={{ headerShown: false }} />
         <Stack.Screen name="Legal Documents" component={LegalDocuments} options={{ headerShown: false }} />
+        <Stack.Screen name="Legal Text" component={LegalText} options={{ headerShown: false }} />
         <Stack.Screen name="AllDocuments" component={AllDocuments} options={{ headerShown: false }}/>
         <Stack.Screen name="Accounting Documents" component={AccountingDocuments} options={{ headerShown: false }} />
         <Stack.Screen name="Activity" component={Activity} options={{ headerShown: false }} />

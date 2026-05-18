@@ -1265,5 +1265,9 @@
   "otp_resend": "Resend code",
   "otp_resend_in": "Resend in {{seconds}}s",
   "otp_error_invalid": "Invalid or expired code. Please try again.",
-  "otp_error_resend_failed": "Failed to resend code. Please try again."
+  "otp_error_resend_failed": "Failed to resend code. Please try again.",
+  "activity_month_filter": "Month",
+  "message_history_title": "Message history",
+  "message_history_empty": "No message sent yet.",
+  "label_total": "Total"
 }

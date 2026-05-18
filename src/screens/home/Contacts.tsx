@@ -39,6 +39,7 @@ import { CreateSupplierModal } from './Suppliers';
 import ContactsSkeleton from '../../components/clients/ContactsSkeleton';
 import { FontFamily, FontWeight } from '../../theme/typography';
 import { Users, UserCheck } from 'lucide-react-native';
+import { useSecurity } from '../../contexts/SecurityContext';
 
 
 type ContactTab = 'clients' | 'suppliers';
@@ -63,6 +64,7 @@ const Contacts: React.FC = ({ navigation: navProp }: any) => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const { getSuppliers } = useSupplier();
+  const { maskAmount } = useSecurity();
 
 
   const [activeTab, setActiveTab] = useState<ContactTab>('clients');
@@ -239,7 +241,7 @@ const Contacts: React.FC = ({ navigation: navProp }: any) => {
 
             {revenue > 0 && (
               <Text style={styles.amountGreen}>
-                +{revenue.toLocaleString('fr-FR')} MAD
+                +{maskAmount(revenue, t('currency_mad'))}
               </Text>
             )}
 
@@ -295,7 +297,7 @@ const Contacts: React.FC = ({ navigation: navProp }: any) => {
               <Text style={styles.badgePaidText}>{t('contacts_settle')}</Text>
             </View>
           )}
-          {total > 0 && <Text style={styles.amountRed}>-{total.toLocaleString('fr-FR')} MAD</Text>}
+          {total > 0 && <Text style={styles.amountRed}>-{maskAmount(total, t('currency_mad'))}</Text>}
         </View>
       </TouchableOpacity>
     );

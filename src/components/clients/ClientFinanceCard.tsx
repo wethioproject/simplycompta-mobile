@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { CreditCard, FileText } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
+import { useSecurity } from '../../contexts/SecurityContext';
 
 interface ClientFinanceCardProps {
   totalPriceHt: number;
@@ -15,6 +16,7 @@ export const ClientFinanceCard: React.FC<ClientFinanceCardProps> = ({
   onViewHistory,
 }) => {
   const { t } = useTranslation();
+  const { maskAmount } = useSecurity();
 
   return (
     <View style={styles.card}>
@@ -25,7 +27,7 @@ export const ClientFinanceCard: React.FC<ClientFinanceCardProps> = ({
       <View style={styles.financeStatsRow}>
         <View style={styles.statBoxBlue}>
           <Text style={styles.statLabel}>{t('label_revenue')}</Text>
-          <Text style={styles.statValueBlue}>{totalPriceHt.toLocaleString('fr-FR')} MAD</Text>
+          <Text style={styles.statValueBlue}>{maskAmount(totalPriceHt, t('currency_mad'))}</Text>
         </View>
         <View style={styles.statBoxOrange}>
           <Text style={styles.statLabelOrange}>{t('label_pending')}</Text>

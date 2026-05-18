@@ -3,9 +3,10 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { FileText, Minus, Sparkles } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
 import { ExpenseItem } from '../../types/expense.types';
-import { formatDate, formatCurrency, capitalise, resolveCategoryKey } from '../../utils/expense.helpers';
+import { formatDate, capitalise, resolveCategoryKey } from '../../utils/expense.helpers';
 import { resolvePaymentMethod } from '../../types/invoice.types';
 import { styles } from '../../styles/expenses.styles';
+import { useSecurity } from '../../contexts/SecurityContext';
 
 interface ExpenseItemCardProps {
   item: ExpenseItem;
@@ -14,6 +15,7 @@ interface ExpenseItemCardProps {
 
 const ExpenseItemCard: React.FC<ExpenseItemCardProps> = ({ item, onPress }) => {
   const { t, i18n } = useTranslation();
+  const { maskAmount } = useSecurity();
   const formattedDate = formatDate(item.date);
   const supplierName = item.supplier?.company_name || item.supplier?.supplier_name || item.supplier?.name;
   const categoryKey = resolveCategoryKey(item.category?.name);
@@ -58,8 +60,8 @@ const ExpenseItemCard: React.FC<ExpenseItemCardProps> = ({ item, onPress }) => {
         </View>
       </View>
       <View style={styles.expenseAmountBlock}>
-        <Text style={styles.expenseAmount}>-{formatCurrency(item.total_ttc)}</Text>
-        <Text style={styles.expenseVatText}>{t('expense_tva_short', { defaultValue: 'TVA' })} {formatCurrency(item.total_tva || item.tva || 0)}</Text>
+        <Text style={styles.expenseAmount}>-{maskAmount(Number(item.total_ttc || 0), t('currency_mad'))}</Text>
+        <Text style={styles.expenseVatText}>{t('expense_tva_short', { defaultValue: 'TVA' })} {maskAmount(Number(item.total_tva || item.tva || 0), t('currency_mad'))}</Text>
       </View>
     </TouchableOpacity>
   );

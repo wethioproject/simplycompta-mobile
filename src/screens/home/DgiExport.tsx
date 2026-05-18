@@ -142,6 +142,10 @@ const DgiExport: React.FC = ({ navigation }: any) => {
 
   const handleExport = async () => {
     if (exporting) return;
+    if (!canExportDgi) {
+      openUpgradeWebView(subscription?.upgrade_url);
+      return;
+    }
     setExporting(true);
     setLastExport(null);
     try {
@@ -248,7 +252,7 @@ const DgiExport: React.FC = ({ navigation }: any) => {
         <TouchableOpacity
           style={[styles.exportBtn, exporting && styles.exportBtnDisabled]}
           onPress={handleExport}
-          disabled={exporting || !canExportDgi}
+          disabled={exporting}
           activeOpacity={0.86}
         >
           {exporting ? (

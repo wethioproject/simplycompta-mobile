@@ -127,20 +127,19 @@ const HeaderSection: React.FC<{
 /** Month / period selector card with gradient background */
 const MonthSelectorCard: React.FC<{
   label: string;
+  caption: string;
   onPress: () => void;
-}> = ({ label, onPress }) => (
-  <LinearGradient
-    colors={['#DBEAFE', '#BFDBFE']}
-    start={{ x: 0, y: 0 }}
-    end={{ x: 1, y: 0 }}
-    style={styles.monthSelectorGradient}
-  >
-    <TouchableOpacity style={styles.monthSelectorButton} activeOpacity={0.7} onPress={onPress}>
-      <FileText size={16} color="#1E5BAC" />
-      <Text style={styles.monthSelectorText}>{label}</Text>
-      <ChevronDown size={16} color="#6B7280" />
-    </TouchableOpacity>
-  </LinearGradient>
+}> = ({ label, caption, onPress }) => (
+  <TouchableOpacity style={styles.monthSelectorButton} activeOpacity={0.78} onPress={onPress}>
+    <View style={styles.monthSelectorIcon}>
+      <FileText size={15} color="#1E5BAC" />
+    </View>
+    <View style={{ flex: 1 }}>
+      <Text style={styles.monthSelectorCaption}>{caption}</Text>
+      <Text style={styles.monthSelectorText} numberOfLines={1}>{label}</Text>
+    </View>
+    <ChevronDown size={16} color="#64748B" />
+  </TouchableOpacity>
 );
 
 /** 2×2 KPI stats cards */
@@ -809,6 +808,8 @@ const Activity: React.FC = () => {
   const { t, i18n } = useTranslation();
   const navigation = useNavigation<any>();
   const customer = useSelector((state: RootState) => state.user.customer);
+  const isAuthenticated = useSelector((state: RootState) => state.user.isAuthenticated);
+  const token = useSelector((state: RootState) => state.user.token);
   const { maskAmount } = useSecurity();
 
   const [isFabOpen, setIsFabOpen] = useState(false);
@@ -843,6 +844,7 @@ const Activity: React.FC = () => {
   }));
 
   const selectedPeriod = PERIODS[selectedPeriodIndex];
+  const hasSession = Boolean(isAuthenticated && token && customer);
 
   const [selectedChartYear, setSelectedChartYear] = useState(CURRENT_YEAR);
   const [showYearPicker, setShowYearPicker] = useState(false);
@@ -857,6 +859,11 @@ const Activity: React.FC = () => {
 
   /* ─── Data fetching ─── */
   const fetchChartData = async (year: number, silent = false) => {
+    if (!hasSession) {
+      setChartData({ ca: EMPTY_MONTHS, expenses: EMPTY_MONTHS });
+      setChartLoading(false);
+      return;
+    }
     if (!silent) setChartLoading(true);
     try {
       const res = await dashboardService.getGraphData(year);
@@ -870,9 +877,24 @@ const Activity: React.FC = () => {
     }
   };
 
-  useEffect(() => { fetchChartData(selectedChartYear); }, [selectedChartYear]);
+  useEffect(() => { fetchChartData(selectedChartYear); }, [selectedChartYear, hasSession]);
 
   const fetchStats = async (periodIndex: number, silent = false) => {
+    if (!hasSession) {
+      setStats({
+        total_issued_paid_sum: 0,
+        total_paid_sum: 0,
+        total_expenses_sum: 0,
+        total_vat_payable: 0,
+        total_paid_percentage_change: 0,
+        total_expenses_percentage_change: 0,
+        total_vat_payable_percentage_change: 0,
+        unpaidInvoiceSum: 0,
+        unpaidInvoicesCount: 0,
+      });
+      setStatsLoading(false);
+      return;
+    }
     const p = PERIODS[periodIndex];
     if (!silent) setStatsLoading(true);
     try {
@@ -887,9 +909,14 @@ const Activity: React.FC = () => {
     }
   };
 
-  useEffect(() => { fetchStats(selectedPeriodIndex); }, [selectedPeriodIndex]);
+  useEffect(() => { fetchStats(selectedPeriodIndex); }, [selectedPeriodIndex, hasSession]);
 
   const fetchQuickAnalysis = async (silent = false) => {
+    if (!hasSession) {
+      setQuickAnalysis(null);
+      setQuickAnalysisLoading(false);
+      return;
+    }
     if (!silent) setQuickAnalysisLoading(true);
     try {
       const res = await dashboardService.getQuickAnalysis();
@@ -906,9 +933,14 @@ const Activity: React.FC = () => {
     }
   };
 
-  useEffect(() => { fetchQuickAnalysis(); }, []);
+  useEffect(() => { fetchQuickAnalysis(); }, [hasSession]);
 
   const fetchMobileActivity = async (silent = false) => {
+    if (!hasSession) {
+      setActivityData(null);
+      setActivityLoading(false);
+      return;
+    }
     if (!silent) setActivityLoading(true);
     try {
       const res = await activityService.getMobileActivity({
@@ -933,7 +965,7 @@ const Activity: React.FC = () => {
     }, activitySearch ? 280 : 0);
 
     return () => clearTimeout(timer);
-  }, [activityFilter, activitySearch]);
+  }, [activityFilter, activitySearch, hasSession]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -945,7 +977,7 @@ const Activity: React.FC = () => {
       fetchQuickAnalysis(true),
     ]);
     setRefreshing(false);
-  }, [selectedPeriodIndex, selectedChartYear, activityFilter, activitySearch]);
+  }, [selectedPeriodIndex, selectedChartYear, activityFilter, activitySearch, hasSession]);
 
   const navigateFromActivityAction = (action?: MobileActivityEvent['action']) => {
     if (!action) {
@@ -1071,6 +1103,7 @@ const Activity: React.FC = () => {
         {/* Compact period filter */}
         <MonthSelectorCard
           label={selectedPeriod.label}
+          caption={t('activity_month_filter', { defaultValue: 'Mois' })}
           onPress={() => setShowPeriodPicker(true)}
         />
 
@@ -1237,30 +1270,40 @@ const styles = StyleSheet.create({
   },
 
   /* Month Selector */
-  monthSelectorGradient: {
-    borderRadius: 14,
-    padding: 8,
-    minHeight: 54,
-    marginBottom: 12,
-  },
   monthSelectorButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 9,
     gap: 8,
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.04,
     shadowRadius: 2,
     elevation: 1,
   },
+  monthSelectorIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  monthSelectorCaption: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#1E5BAC',
+    textTransform: 'uppercase',
+  },
   monthSelectorText: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '800',
     color: '#111827',
   },
 

@@ -130,6 +130,10 @@ const PmeNetwork: React.FC = ({ navigation }: any) => {
   };
 
   const saveSettings = async () => {
+    if (!canUseDirectory) {
+      openUpgradeWebView(subscription?.upgrade_url);
+      return;
+    }
     setSavingSettings(true);
     try {
       const res = await pmeNetworkService.updateSettings(settings);
@@ -190,6 +194,14 @@ const PmeNetwork: React.FC = ({ navigation }: any) => {
     }
   };
 
+  const openSettings = () => {
+    if (!canUseDirectory) {
+      openUpgradeWebView(subscription?.upgrade_url);
+      return;
+    }
+    setSettingsVisible(true);
+  };
+
   const CompanyCard = ({ company, locked = false }: { company: PmeCompany; locked?: boolean }) => (
     <TouchableOpacity
       style={[styles.companyCard, locked && styles.companyCardLocked]}
@@ -231,14 +243,14 @@ const PmeNetwork: React.FC = ({ navigation }: any) => {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.iconButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity style={styles.iconButton} onPress={() => navigation.goBack()} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <ArrowLeft size={20} color="#111827" />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>{t('pme_title')}</Text>
           <Text style={styles.subtitle}>{t('pme_subtitle')}</Text>
         </View>
-        <TouchableOpacity style={styles.iconButton} onPress={() => setSettingsVisible(true)}>
+        <TouchableOpacity style={styles.iconButton} onPress={openSettings} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Settings size={20} color="#1E5BAC" />
         </TouchableOpacity>
       </View>
@@ -308,7 +320,7 @@ const PmeNetwork: React.FC = ({ navigation }: any) => {
           {selected && (
             <>
               <View style={styles.modalHeader}>
-                <TouchableOpacity style={styles.iconButton} onPress={() => setSelected(null)}>
+                <TouchableOpacity style={styles.iconButton} onPress={() => setSelected(null)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
                   <ArrowLeft size={20} color="#111827" />
                 </TouchableOpacity>
                 <Text style={styles.modalTitle}>{selected.name}</Text>
@@ -347,7 +359,7 @@ const PmeNetwork: React.FC = ({ navigation }: any) => {
       <Modal visible={settingsVisible} animationType="slide" onRequestClose={() => setSettingsVisible(false)}>
         <SafeAreaView style={styles.modalContainer} edges={['top']}>
           <View style={styles.modalHeader}>
-            <TouchableOpacity style={styles.iconButton} onPress={() => setSettingsVisible(false)}>
+            <TouchableOpacity style={styles.iconButton} onPress={() => setSettingsVisible(false)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
               <ArrowLeft size={20} color="#111827" />
             </TouchableOpacity>
             <Text style={styles.modalTitle}>{t('pme_settings_title')}</Text>
@@ -419,7 +431,7 @@ const ChevronDownSmall = () => <ChevronDown size={15} color="#64748B" />;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 18, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#EEF2F7' },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#EEF2F7' },
   iconButton: { width: 38, height: 38, borderRadius: 14, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 20, fontWeight: '800', color: '#111827' },
   subtitle: { fontSize: 12, color: '#64748B', marginTop: 2 },
@@ -456,7 +468,7 @@ const styles = StyleSheet.create({
   skipButton: { width: 34, height: 34, borderRadius: 12, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
   heartButton: { width: 34, height: 34, borderRadius: 12, backgroundColor: '#1E5BAC', alignItems: 'center', justifyContent: 'center' },
   modalContainer: { flex: 1, backgroundColor: '#F8FAFC' },
-  modalHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 18, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#EEF2F7' },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#EEF2F7' },
   modalTitle: { flex: 1, fontSize: 17, fontWeight: '800', color: '#111827' },
   modalContent: { padding: 16, paddingBottom: 36 },
   profileHero: { alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 20, borderWidth: 1, borderColor: '#EEF2F7', padding: 20, marginBottom: 12 },

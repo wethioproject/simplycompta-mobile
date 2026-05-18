@@ -5,6 +5,7 @@ import { MoreVertical, Copy, CheckCircle, X } from 'lucide-react-native';
 import type { InvoiceItem } from '../../types/invoice.types';
 import { invoiceStyles as styles } from '../../styles/invoice.styles';
 import { calculateInvoiceTotals } from '../../utils/invoiceCalculations';
+import { useSecurity } from '../../contexts/SecurityContext';
 
 const AMOUNT_COLORS: Record<string, string> = {
   issued:    '#3B82F6',
@@ -32,6 +33,7 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
 }) => {
   console.log('Rendering InvoiceCard for invoice:', item);
   const { t } = useTranslation();
+  const { maskAmount } = useSecurity();
   const { totalTTC } = calculateInvoiceTotals(item.articles);
   const formattedDate = new Date(item.date).toLocaleDateString('fr-FR');
 
@@ -75,7 +77,7 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
             {t('label_invoice')} {item.invoice_number_formatted} • {formattedDate}
           </Text>
           <Text style={[styles.invoiceAmount, { fontSize: 17, color: amountColor }]}>
-            + {item.total_ttc.toLocaleString('fr-FR')} MAD
+            + {maskAmount(Number(item.total_ttc ?? totalTTC ?? 0), t('currency_mad'))}
           </Text>
         </View>
 
@@ -135,4 +137,3 @@ const InvoiceCard: React.FC<InvoiceCardProps> = ({
 };
 
 export default InvoiceCard;
-

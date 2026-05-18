@@ -25,6 +25,7 @@ import { useTranslation } from 'react-i18next';
 import { ClientInvoiceItem } from '../../types/client.types';
 import { resolvePaymentMethod } from '../../types/invoice.types';
 import { StatusBadge } from './StatusBadge';
+import { useSecurity } from '../../contexts/SecurityContext';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -75,6 +76,7 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
   onClose,
 }) => {
   const { t, i18n } = useTranslation();
+  const { maskAmount } = useSecurity();
   console.log('rendering daaag3333', invoice)
 
   return (
@@ -183,17 +185,17 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
                 <DetailRow
                   icon={<FileText size={16} color="#1E5BAC" />}
                   label={t('label_total_ht')}
-                  value={`${invoiceTotals.total_ht.toLocaleString('fr-FR')} MAD`}
+                  value={maskAmount(invoiceTotals.total_ht, t('currency_mad'))}
                 />
                 <DetailRow
                   icon={<TrendingDown size={16} color="#1E5BAC" />}
                   label={t('label_discount')}
-                  value={`${invoiceTotals.total_discount.toLocaleString('fr-FR')} MAD`}
+                  value={maskAmount(invoiceTotals.total_discount, t('currency_mad'))}
                 />
                 <DetailRow
                   icon={<Layers size={16} color="#1E5BAC" />}
                   label={t('label_total_tva')}
-                  value={`${invoiceTotals.total_tva.toLocaleString('fr-FR')} MAD`}
+                  value={maskAmount(invoiceTotals.total_tva, t('currency_mad'))}
                 />
                 <View style={styles.totalTtcRow}>
                   <View style={styles.detailIconWrap}>
@@ -202,7 +204,7 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
                   <View style={{ flex: 1 }}>
                     <Text style={styles.detailLabel}>{t('label_total_ttc')}</Text>
                     <Text style={[styles.detailValue, styles.totalTtcValue]}>
-                      {invoiceTotals.total_ttc.toLocaleString('fr-FR')} MAD
+                      {maskAmount(invoiceTotals.total_ttc, t('currency_mad'))}
                     </Text>
                   </View>
                 </View>

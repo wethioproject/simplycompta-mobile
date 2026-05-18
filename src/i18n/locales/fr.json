@@ -1265,5 +1265,9 @@
   "otp_resend": "Renvoyer le code",
   "otp_resend_in": "Renvoyer dans {{seconds}}s",
   "otp_error_invalid": "Code invalide ou expiré. Veuillez réessayer.",
-  "otp_error_resend_failed": "Impossible de renvoyer le code. Veuillez réessayer."
+  "otp_error_resend_failed": "Impossible de renvoyer le code. Veuillez réessayer.",
+  "activity_month_filter": "Mois",
+  "message_history_title": "Historique des échanges",
+  "message_history_empty": "Aucun message envoyé pour le moment.",
+  "label_total": "Total"
 }
