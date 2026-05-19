@@ -42,10 +42,7 @@ export const updateClient = async (
     ice: string;
   },
 ) => {
-  return api.post(`${Api_Endpoints.createCustomerClient}/${id}`, {
-    _method: 'PUT',
-    ...data,
-  });
+  return api.put(`${Api_Endpoints.createCustomerClient}/${id}`, data);
 };
 
 export const deleteClient = async (id: number) => {

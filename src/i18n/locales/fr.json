@@ -1269,5 +1269,19 @@
   "activity_month_filter": "Mois",
   "message_history_title": "Historique des échanges",
   "message_history_empty": "Aucun message envoyé pour le moment.",
-  "label_total": "Total"
+  "label_total": "Total",
+  "message_client_name_required": "Veuillez saisir le nom du contact.",
+  "support_tickets_title": "Tickets avec le comptable",
+  "support_new_ticket": "Nouveau",
+  "support_tickets_empty": "Aucun ticket ouvert pour le moment.",
+  "support_status_open": "Ouvert",
+  "support_status_waiting": "Envoyé",
+  "support_status_closed": "Clos",
+  "support_ticket_thread": "Fil du ticket",
+  "support_close_ticket": "Clore",
+  "support_reply_subject": "Ticket sélectionné",
+  "support_reply_button": "Répondre au ticket",
+  "support_ticket_closed_message": "Ce ticket est clos. Créez un nouveau ticket pour envoyer une demande.",
+  "pme_verified": "Vérifié",
+  "button_close": "Fermer"
 }

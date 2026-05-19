@@ -26,6 +26,8 @@ import {
   FileText,
   Clock,
   MessageCircle,
+  Plus,
+  CheckCircle2,
 } from 'lucide-react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { appLogoIcon } from '../../assets/icons';
@@ -44,12 +46,19 @@ interface AccountantInfo {
 }
 
 type StackNavigation = StackNavigationProp<any>;
-type LocalMessage = {
+type TicketMessage = {
   id: string;
-  subject: string;
   body: string;
   attachmentName?: string;
   createdAt: string;
+};
+type SupportTicket = {
+  id: string;
+  subject: string;
+  status: 'open' | 'waiting' | 'closed';
+  createdAt: string;
+  updatedAt: string;
+  messages: TicketMessage[];
 };
 
 // ─── Contact Form View ────────────────────────────────────────────────────────
@@ -60,19 +69,23 @@ const ContactForm: React.FC<{ onBack: () => void; accountant?: AccountantInfo | 
   const [message, setMessage] = useState('');
   const [attachment, setAttachment] = useState<{ uri: string; name: string; type: string } | null>(null);
   const [sending, setSending] = useState(false);
-  const [history, setHistory] = useState<LocalMessage[]>([]);
-  const historyKey = `@accountant_messages_${accountant?.id ?? 'default'}`;
+  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
+  const ticketsKey = `@accountant_tickets_${accountant?.id ?? 'default'}`;
+  const activeTicket = tickets.find(ticket => ticket.id === activeTicketId) ?? null;
 
   useEffect(() => {
-    AsyncStorage.getItem(historyKey)
-      .then(value => setHistory(value ? JSON.parse(value) : []))
-      .catch(() => setHistory([]));
-  }, [historyKey]);
+    AsyncStorage.getItem(ticketsKey)
+      .then(value => {
+        const parsed = value ? JSON.parse(value) : [];
+        setTickets(Array.isArray(parsed) ? parsed : []);
+      })
+      .catch(() => setTickets([]));
+  }, [ticketsKey]);
 
-  const addToHistory = async (entry: LocalMessage) => {
-    const next = [entry, ...history].slice(0, 30);
-    setHistory(next);
-    await AsyncStorage.setItem(historyKey, JSON.stringify(next));
+  const persistTickets = async (next: SupportTicket[]) => {
+    setTickets(next);
+    await AsyncStorage.setItem(ticketsKey, JSON.stringify(next));
   };
 
   const handlePickAttachment = async () => {
@@ -91,6 +104,10 @@ const ContactForm: React.FC<{ onBack: () => void; accountant?: AccountantInfo | 
   };
 
   const handleSubmit = async () => {
+    if (activeTicket?.status === 'closed') {
+      Alert.alert(t('error_title'), t('support_ticket_closed_message', { defaultValue: 'Ce ticket est clos. Créez un nouveau ticket pour envoyer une demande.' }));
+      return;
+    }
     if (!sujet.trim() || !message.trim()) {
       Alert.alert(t('alert_required_fields'), t('message_fill_fields'));
       return;
@@ -116,15 +133,33 @@ const ContactForm: React.FC<{ onBack: () => void; accountant?: AccountantInfo | 
       await api.post(Api_Endpoints.sendAccountantEmail, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      await addToHistory({
+      const now = new Date().toISOString();
+      const messageEntry: TicketMessage = {
         id: `${Date.now()}`,
-        subject: sujet.trim(),
         body: message.trim(),
         attachmentName: attachment?.name,
-        createdAt: new Date().toISOString(),
-      });
+        createdAt: now,
+      };
+      let nextTickets: SupportTicket[];
+      if (activeTicket) {
+        nextTickets = tickets.map(ticket => ticket.id === activeTicket.id
+          ? { ...ticket, status: 'waiting', updatedAt: now, messages: [...ticket.messages, messageEntry] }
+          : ticket);
+      } else {
+        const ticket: SupportTicket = {
+          id: `${Date.now()}`,
+          subject: sujet.trim(),
+          status: 'waiting',
+          createdAt: now,
+          updatedAt: now,
+          messages: [messageEntry],
+        };
+        nextTickets = [ticket, ...tickets].slice(0, 30);
+        setActiveTicketId(ticket.id);
+      }
+      await persistTickets(nextTickets);
       Alert.alert(t('success_message_sent'), t('success_message_sent_text'), [
-        { text: t('button_ok'), onPress: () => { setSujet(''); setMessage(''); setAttachment(null); onBack(); } },
+        { text: t('button_ok'), onPress: () => { setSujet(activeTicket?.subject ?? sujet.trim()); setMessage(''); setAttachment(null); } },
       ]);
     } catch (e: any) {
         
@@ -134,6 +169,25 @@ const ContactForm: React.FC<{ onBack: () => void; accountant?: AccountantInfo | 
     } finally {
       setSending(false);
     }
+  };
+
+  const startNewTicket = () => {
+    setActiveTicketId(null);
+    setSujet('');
+    setMessage('');
+    setAttachment(null);
+  };
+
+  const closeTicket = async (ticketId: string) => {
+    const now = new Date().toISOString();
+    await persistTickets(tickets.map(ticket => ticket.id === ticketId ? { ...ticket, status: 'closed', updatedAt: now } : ticket));
+  };
+
+  const openTicket = (ticket: SupportTicket) => {
+    setActiveTicketId(ticket.id);
+    setSujet(ticket.subject);
+    setMessage('');
+    setAttachment(null);
   };
 
   return (
@@ -193,32 +247,65 @@ const ContactForm: React.FC<{ onBack: () => void; accountant?: AccountantInfo | 
         <View style={styles.card}>
           <View style={styles.threadHeader}>
             <MessageCircle size={18} color="#1E5BAC" />
-            <Text style={styles.fieldLabel}>{t('message_history_title', { defaultValue: 'Historique des échanges' })}</Text>
+            <Text style={styles.fieldLabel}>{t('support_tickets_title', { defaultValue: 'Tickets avec le comptable' })}</Text>
+            <TouchableOpacity style={styles.newTicketBtn} onPress={startNewTicket} activeOpacity={0.78}>
+              <Plus size={14} color="#1E5BAC" />
+              <Text style={styles.newTicketText}>{t('support_new_ticket', { defaultValue: 'Nouveau' })}</Text>
+            </TouchableOpacity>
           </View>
-          {history.length === 0 ? (
-            <Text style={styles.historyEmpty}>{t('message_history_empty', { defaultValue: 'Aucun message envoyé pour le moment.' })}</Text>
+          {tickets.length === 0 ? (
+            <Text style={styles.historyEmpty}>{t('support_tickets_empty', { defaultValue: 'Aucun ticket ouvert pour le moment.' })}</Text>
           ) : (
-            history.slice(0, 5).map(item => (
-              <View key={item.id} style={styles.historyItem}>
-                <Text style={styles.historySubject} numberOfLines={1}>{item.subject}</Text>
-                <Text style={styles.historyBody} numberOfLines={2}>{item.body}</Text>
+            tickets.slice(0, 6).map(item => (
+              <TouchableOpacity key={item.id} style={[styles.historyItem, activeTicketId === item.id && styles.historyItemActive]} onPress={() => openTicket(item)} activeOpacity={0.78}>
+                <View style={styles.ticketTopRow}>
+                  <Text style={styles.historySubject} numberOfLines={1}>#{item.id.slice(-5)} · {item.subject}</Text>
+                  <View style={[styles.ticketStatus, item.status === 'closed' && styles.ticketClosed, item.status === 'waiting' && styles.ticketWaiting]}>
+                    <Text style={styles.ticketStatusText}>
+                      {item.status === 'closed' ? t('support_status_closed', { defaultValue: 'Clos' }) : item.status === 'waiting' ? t('support_status_waiting', { defaultValue: 'Envoyé' }) : t('support_status_open', { defaultValue: 'Ouvert' })}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.historyBody} numberOfLines={2}>{item.messages[item.messages.length - 1]?.body}</Text>
                 <Text style={styles.historyDate}>
-                  {new Date(item.createdAt).toLocaleDateString()} {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(item.updatedAt).toLocaleDateString()} {new Date(item.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </Text>
-              </View>
+              </TouchableOpacity>
             ))
           )}
         </View>
 
+        {activeTicket && (
+          <View style={styles.card}>
+            <View style={styles.threadHeader}>
+              <CheckCircle2 size={18} color="#16A34A" />
+              <Text style={styles.fieldLabel}>{t('support_ticket_thread', { defaultValue: 'Fil du ticket' })}</Text>
+              {activeTicket.status !== 'closed' && (
+                <TouchableOpacity style={styles.closeTicketBtn} onPress={() => closeTicket(activeTicket.id)} activeOpacity={0.78}>
+                  <Text style={styles.closeTicketText}>{t('support_close_ticket', { defaultValue: 'Clore' })}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            {activeTicket.messages.map(item => (
+              <View key={item.id} style={styles.ticketMessageBubble}>
+                <Text style={styles.historyBody}>{item.body}</Text>
+                {!!item.attachmentName && <Text style={styles.attachmentInline}>{t('label_attachment')}: {item.attachmentName}</Text>}
+                <Text style={styles.historyDate}>{new Date(item.createdAt).toLocaleString()}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
         {/* Sujet */}
         <View style={styles.card}>
-          <Text style={styles.fieldLabel}>{t('label_subject')}</Text>
+          <Text style={styles.fieldLabel}>{activeTicket ? t('support_reply_subject', { defaultValue: 'Ticket sélectionné' }) : t('label_subject')}</Text>
           <TextInput
             style={styles.textInput}
             placeholder={t('placeholder_subject')}
             placeholderTextColor="#9CA3AF"
             value={sujet}
             onChangeText={setSujet}
+            editable={!activeTicket}
           />
         </View>
 
@@ -274,7 +361,7 @@ const ContactForm: React.FC<{ onBack: () => void; accountant?: AccountantInfo | 
             ? <ActivityIndicator color="#FFFFFF" />
             : <>
                 <Send size={20} color="#FFFFFF" />
-                <Text style={styles.submitButtonText}>{t('button_send_message')}</Text>
+                <Text style={styles.submitButtonText}>{activeTicket ? t('support_reply_button', { defaultValue: 'Répondre au ticket' }) : t('button_send_message')}</Text>
               </>}
         </TouchableOpacity>
       </ScrollView>
@@ -515,6 +602,23 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 10,
   },
+  newTicketBtn: {
+    marginLeft: 'auto',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    minHeight: 30,
+    borderRadius: 999,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  newTicketText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#1E5BAC',
+  },
   historyEmpty: {
     fontSize: 13,
     color: '#6B7280',
@@ -528,7 +632,61 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
+  historyItemActive: {
+    borderColor: '#1E5BAC',
+    backgroundColor: '#EFF6FF',
+  },
+  ticketTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  ticketStatus: {
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: '#DCFCE7',
+  },
+  ticketWaiting: {
+    backgroundColor: '#FEF3C7',
+  },
+  ticketClosed: {
+    backgroundColor: '#E5E7EB',
+  },
+  ticketStatusText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#334155',
+  },
+  closeTicketBtn: {
+    marginLeft: 'auto',
+    borderRadius: 999,
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  closeTicketText: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#334155',
+  },
+  ticketMessageBubble: {
+    alignSelf: 'stretch',
+    borderRadius: 14,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    padding: 12,
+    marginBottom: 8,
+  },
+  attachmentInline: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#1E5BAC',
+    marginTop: 6,
+  },
   historySubject: {
+    flex: 1,
     fontSize: 13,
     fontWeight: '800',
     color: '#111827',

@@ -582,9 +582,11 @@ const SmartTimeline: React.FC<{
 const ChartSection: React.FC<{
   chartData: { ca: any[]; expenses: any[] };
   chartLoading: boolean;
+  selectedYear: number;
+  onYearPress: () => void;
   t: any;
   maskAmount: (value: number, suffix?: string) => string;
-}> = ({ chartData, chartLoading, t, maskAmount }) => {
+}> = ({ chartData, chartLoading, selectedYear, onYearPress, t, maskAmount }) => {
   const [lineTooltip, setLineTooltip] = useState<{
     index: number;
     caVal: number;
@@ -642,7 +644,14 @@ const ChartSection: React.FC<{
 
   return (
     <View style={styles.chartSection}>
-      <Text style={styles.chartSectionTitle}>{t('chart_title_expenses_vs_ca')}</Text>
+      <View style={styles.chartHeaderRow}>
+        <Text style={styles.chartSectionTitle}>{t('chart_title_expenses_vs_ca')}</Text>
+        <TouchableOpacity style={styles.chartYearChip} activeOpacity={0.78} onPress={onYearPress}>
+          <TrendingUp size={14} color="#1E5BAC" />
+          <Text style={styles.chartYearChipText}>{selectedYear}</Text>
+          <ChevronDown size={14} color="#64748B" />
+        </TouchableOpacity>
+      </View>
       <View style={styles.chartSectionCard}>
         {/* Legend */}
         <View style={styles.chartLegend}>
@@ -1098,7 +1107,14 @@ const Activity: React.FC = () => {
         <StatsCards stats={stats} loading={statsLoading} t={t} maskAmount={maskAmount} />
 
         {/* Expense vs revenue chart */}
-        <ChartSection chartData={chartData} chartLoading={chartLoading} t={t} maskAmount={maskAmount} />
+        <ChartSection
+          chartData={chartData}
+          chartLoading={chartLoading}
+          selectedYear={selectedChartYear}
+          onYearPress={() => setShowYearPicker(true)}
+          t={t}
+          maskAmount={maskAmount}
+        />
 
         {/* Compact period filter */}
         <MonthSelectorCard
@@ -1133,18 +1149,6 @@ const Activity: React.FC = () => {
 
         {/* Quick Analysis */}
         <QuickAnalysis t={t} loading={quickAnalysisLoading} analysis={quickAnalysis} maskAmount={maskAmount} />
-
-        {/* Year Selector */}
-        <TouchableOpacity style={styles.yearSelectorRow} activeOpacity={0.7} onPress={() => setShowYearPicker(true)}>
-          <View style={styles.yearSelectorLeft}>
-            <TrendingUp size={20} color="#6B7280" />
-            <Text style={styles.yearSelectorText}>{t('label_annual_chart')}</Text>
-          </View>
-          <View style={styles.yearSelectorRight}>
-            <Text style={styles.yearSelectorLabel}>{selectedChartYear}</Text>
-            <ChevronDown size={16} color="#9CA3AF" />
-          </View>
-        </TouchableOpacity>
 
         <View style={styles.fabSpacer} />
       </ScrollView>
@@ -1769,11 +1773,34 @@ const styles = StyleSheet.create({
   chartSection: {
     marginBottom: 12,
   },
+  chartHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 8,
+  },
   chartSectionTitle: {
+    flex: 1,
     fontSize: 15,
     fontWeight: '800',
     color: '#111827',
-    marginBottom: 8,
+  },
+  chartYearChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 10,
+    minHeight: 34,
+  },
+  chartYearChipText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#1E5BAC',
   },
   chartSectionCard: {
     backgroundColor: '#FFFFFF',

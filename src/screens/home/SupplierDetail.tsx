@@ -73,6 +73,9 @@ const EditSupplierModal: React.FC<{
   const [city, setCity] = useState('');
   const [commercialRegister, setCommercialRegister] = useState('');
   const [ice, setIce] = useState('');
+  const [ifNumber, setIfNumber] = useState('');
+  const [cnss, setCnss] = useState('');
+  const [address, setAddress] = useState('');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -85,26 +88,32 @@ const EditSupplierModal: React.FC<{
       setCity(supplierData.city ?? '');
       setCommercialRegister(supplierData.commercial_register ?? '');
       setIce(supplierData.ice ?? supplierData.ice_number ?? '');
+      setIfNumber(supplierData.if_number ?? '');
+      setCnss(supplierData.cnss_number ?? supplierData.cnss ?? '');
+      setAddress(supplierData.billing_address ?? supplierData.address ?? '');
     }
   }, [visible, supplierData]);
 
   const handleUpdate = async () => {
     if (!companyName.trim()) { Alert.alert(t('alert_field_required'), t('message_company_name_required')); return; }
-    if (!supplierName.trim()) { Alert.alert(t('alert_field_required'), t('message_supplier_name_required')); return; }
-    if (!email.trim()) { Alert.alert(t('alert_field_required'), t('message_email_required')); return; }
-    if (!postalCode.trim()) { Alert.alert(t('alert_field_required'), t('message_postal_code_required')); return; }
-    if (!city.trim()) { Alert.alert(t('alert_field_required'), t('message_city_required')); return; }
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      Alert.alert(t('alert_field_required'), t('signup_error_email_invalid', { defaultValue: 'Email invalide' }));
+      return;
+    }
     setSaving(true);
     const payload: SupplierPayload = {
       company_name: companyName.trim(),
-      supplier_name: supplierName.trim(),
-      email: email.trim(),
-      telephone: telephone.trim(),
-      postal_code: postalCode.trim(),
-      city: city.trim(),
-      commercial_register: commercialRegister.trim(),
-      ice_number: ice.trim(),
     };
+    if (supplierName.trim()) payload.supplier_name = supplierName.trim();
+    if (email.trim()) payload.email = email.trim();
+    if (telephone.trim()) payload.telephone = telephone.trim();
+    if (postalCode.trim()) payload.postal_code = postalCode.trim();
+    if (city.trim()) payload.city = city.trim();
+    if (commercialRegister.trim()) payload.commercial_register = commercialRegister.trim();
+    if (ice.trim()) payload.ice_number = ice.trim();
+    if (ifNumber.trim()) payload.if_number = ifNumber.trim();
+    if (cnss.trim()) payload.cnss_number = cnss.trim();
+    if (address.trim()) payload.billing_address = address.trim();
     const result = await updateSupplier(supplierData.id, payload);
     setSaving(false);
     if (result.success) {
@@ -145,11 +154,11 @@ const EditSupplierModal: React.FC<{
                 <TextInput style={styles.fieldInput} value={companyName} onChangeText={setCompanyName} />
               </View>
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>{t('label_supplier_name')} <Text style={styles.required}>*</Text></Text>
+                <Text style={styles.fieldLabel}>{t('label_supplier_name')}</Text>
                 <TextInput style={styles.fieldInput} value={supplierName} onChangeText={setSupplierName} />
               </View>
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>{t('label_email')} <Text style={styles.required}>*</Text></Text>
+                <Text style={styles.fieldLabel}>{t('label_email')}</Text>
                 <TextInput style={styles.fieldInput} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
               </View>
               <View style={styles.fieldBlock}>
@@ -157,11 +166,11 @@ const EditSupplierModal: React.FC<{
                 <TextInput style={styles.fieldInput} value={telephone} onChangeText={setTelephone} keyboardType="phone-pad" />
               </View>
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>{t('label_postal_code')} <Text style={styles.required}>*</Text></Text>
+                <Text style={styles.fieldLabel}>{t('label_postal_code')}</Text>
                 <TextInput style={styles.fieldInput} value={postalCode} onChangeText={setPostalCode} keyboardType="numeric" />
               </View>
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>{t('label_city')} <Text style={styles.required}>*</Text></Text>
+                <Text style={styles.fieldLabel}>{t('label_city')}</Text>
                 <TextInput style={styles.fieldInput} value={city} onChangeText={setCity} />
               </View>
               <View style={styles.fieldBlock}>
@@ -171,6 +180,18 @@ const EditSupplierModal: React.FC<{
               <View style={styles.fieldBlock}>
                 <Text style={styles.fieldLabel}>{t('label_ice')}</Text>
                 <TextInput style={styles.fieldInput} value={ice} onChangeText={setIce} keyboardType="numeric" />
+              </View>
+              <View style={styles.fieldBlock}>
+                <Text style={styles.fieldLabel}>{t('label_if')}</Text>
+                <TextInput style={styles.fieldInput} value={ifNumber} onChangeText={setIfNumber} />
+              </View>
+              <View style={styles.fieldBlock}>
+                <Text style={styles.fieldLabel}>{t('label_cnss')}</Text>
+                <TextInput style={styles.fieldInput} value={cnss} onChangeText={setCnss} />
+              </View>
+              <View style={styles.fieldBlock}>
+                <Text style={styles.fieldLabel}>{t('label_address')}</Text>
+                <TextInput style={[styles.fieldInput, { minHeight: 78 }]} value={address} onChangeText={setAddress} multiline textAlignVertical="top" />
               </View>
             </View>
 

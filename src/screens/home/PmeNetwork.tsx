@@ -50,6 +50,12 @@ const EMPTY_SETTINGS: PmeNetworkSettings = {
   directory_is_client: true,
 };
 
+const uniqueOptions = (values: string[], current?: string | null, fallback: string[] = []) => {
+  const cleaned = values.filter(Boolean);
+  if (current && !cleaned.includes(current)) cleaned.unshift(current);
+  return cleaned.length ? cleaned : fallback;
+};
+
 const PmeNetwork: React.FC = ({ navigation }: any) => {
   const { t } = useTranslation();
   const subscription = useSelector((state: any) => state.subscription.data);
@@ -66,6 +72,7 @@ const PmeNetwork: React.FC = ({ navigation }: any) => {
   const [category, setCategory] = useState('');
   const [city, setCity] = useState('');
   const [dropdown, setDropdown] = useState<'type' | 'sector' | 'category' | 'city' | null>(null);
+  const [settingsDropdown, setSettingsDropdown] = useState<'sector' | 'category' | 'city' | null>(null);
   const [selected, setSelected] = useState<PmeCompany | null>(null);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [settings, setSettings] = useState<PmeNetworkSettings>(EMPTY_SETTINGS);
@@ -167,6 +174,13 @@ const PmeNetwork: React.FC = ({ navigation }: any) => {
     setDropdown(null);
   };
 
+  const setSettingsDropdownValue = (value: string) => {
+    if (settingsDropdown === 'sector') setSettings(s => ({ ...s, directory_sector: value }));
+    if (settingsDropdown === 'category') setSettings(s => ({ ...s, directory_category: value }));
+    if (settingsDropdown === 'city') setSettings(s => ({ ...s, directory_city: value }));
+    setSettingsDropdown(null);
+  };
+
   const getDropdownLabel = (key: 'type' | 'sector' | 'category' | 'city') => {
     if (key === 'type') return dropdownOptions.type.find(item => item.value === type)?.label ?? t('pme_filter_all');
     if (key === 'sector') return sector || t('pme_filter_sector_all', { defaultValue: 'All sectors' });
@@ -200,6 +214,14 @@ const PmeNetwork: React.FC = ({ navigation }: any) => {
       return;
     }
     setSettingsVisible(true);
+  };
+
+  const closeDetail = () => setSelected(null);
+
+  const settingOptions = {
+    sector: uniqueOptions(filtersData.sectors, settings.directory_sector, ['Services', 'Commerce', 'Technologie', 'BTP', 'Santé']),
+    category: uniqueOptions(filtersData.categories, settings.directory_category, ['Fournisseur', 'Client', 'Partenaire', 'Prestataire']),
+    city: uniqueOptions(filtersData.cities, settings.directory_city, ['Casablanca', 'Rabat', 'Marrakech', 'Tanger', 'Fès']),
   };
 
   const CompanyCard = ({ company, locked = false }: { company: PmeCompany; locked?: boolean }) => (
@@ -315,15 +337,22 @@ const PmeNetwork: React.FC = ({ navigation }: any) => {
         )}
       </ScrollView>
 
-      <Modal visible={!!selected} animationType="slide" onRequestClose={() => setSelected(null)}>
-        <SafeAreaView style={styles.modalContainer} edges={['top']}>
+      <Modal visible={!!selected} animationType="slide" presentationStyle="fullScreen" onRequestClose={closeDetail}>
+        <SafeAreaView style={styles.modalContainer} edges={['top', 'bottom']}>
           {selected && (
             <>
               <View style={styles.modalHeader}>
-                <TouchableOpacity style={styles.iconButton} onPress={() => setSelected(null)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+                <TouchableOpacity
+                  style={[styles.iconButton, styles.modalBackButton]}
+                  onPress={closeDetail}
+                  onPressIn={closeDetail}
+                  hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+                  activeOpacity={0.65}
+                >
                   <ArrowLeft size={20} color="#111827" />
                 </TouchableOpacity>
                 <Text style={styles.modalTitle}>{selected.name}</Text>
+                <View style={{ width: 38 }} />
               </View>
               <ScrollView contentContainerStyle={styles.modalContent}>
                 <View style={styles.profileHero}>
@@ -332,6 +361,10 @@ const PmeNetwork: React.FC = ({ navigation }: any) => {
                   </View>
                   <Text style={styles.profileName}>{selected.name}</Text>
                   <Text style={styles.profileMeta}>{[selected.city, selected.sector].filter(Boolean).join(' • ')}</Text>
+                  <View style={styles.profilePillRow}>
+                    {!!selected.category && <Text style={styles.profilePill}>{selected.category}</Text>}
+                    {selected.verified && <Text style={[styles.profilePill, styles.profilePillVerified]}>{t('pme_verified', { defaultValue: 'Vérifié' })}</Text>}
+                  </View>
                 </View>
                 {!!selected.description && <Text style={styles.profileDescription}>{selected.description}</Text>}
                 {!!selected.ice && <Text style={styles.infoLine}>ICE: {selected.ice}</Text>}
@@ -350,6 +383,9 @@ const PmeNetwork: React.FC = ({ navigation }: any) => {
                     <Text style={styles.contactButtonText}>{t('pme_contact')}</Text>
                   </TouchableOpacity>
                 )}
+                <TouchableOpacity style={styles.closeDetailButton} onPress={closeDetail} activeOpacity={0.78}>
+                  <Text style={styles.closeDetailText}>{t('button_close', { defaultValue: 'Fermer' })}</Text>
+                </TouchableOpacity>
               </ScrollView>
             </>
           )}
@@ -378,9 +414,24 @@ const PmeNetwork: React.FC = ({ navigation }: any) => {
             <SettingToggle label={t('pme_allow_contact')} value={settings.directory_contact_allowed} onValueChange={value => setSettings(s => ({ ...s, directory_contact_allowed: value }))} />
             <SettingToggle label={t('pme_allow_whatsapp')} value={settings.directory_whatsapp_allowed} onValueChange={value => setSettings(s => ({ ...s, directory_whatsapp_allowed: value }))} />
             <SettingToggle label={t('pme_allow_email')} value={settings.directory_email_allowed} onValueChange={value => setSettings(s => ({ ...s, directory_email_allowed: value }))} />
-            <Input label={t('pme_sector')} value={settings.directory_sector ?? ''} onChangeText={(value: string) => setSettings(s => ({ ...s, directory_sector: value }))} />
-            <Input label={t('pme_category')} value={settings.directory_category ?? ''} onChangeText={(value: string) => setSettings(s => ({ ...s, directory_category: value }))} />
-            <Input label={t('pme_city')} value={settings.directory_city ?? ''} onChangeText={(value: string) => setSettings(s => ({ ...s, directory_city: value }))} />
+            <SettingDropdown
+              label={t('pme_sector')}
+              value={settings.directory_sector ?? ''}
+              placeholder={t('pme_filter_sector_all', { defaultValue: 'All sectors' })}
+              onPress={() => setSettingsDropdown('sector')}
+            />
+            <SettingDropdown
+              label={t('pme_category')}
+              value={settings.directory_category ?? ''}
+              placeholder={t('pme_filter_category_all', { defaultValue: 'All categories' })}
+              onPress={() => setSettingsDropdown('category')}
+            />
+            <SettingDropdown
+              label={t('pme_city')}
+              value={settings.directory_city ?? ''}
+              placeholder={t('pme_filter_city_all', { defaultValue: 'All cities' })}
+              onPress={() => setSettingsDropdown('city')}
+            />
             <Input label={t('pme_description')} value={settings.directory_description ?? ''} multiline onChangeText={(value: string) => setSettings(s => ({ ...s, directory_description: value }))} />
             <TouchableOpacity style={styles.saveSettingsButton} onPress={saveSettings} disabled={savingSettings}>
               {savingSettings ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.saveSettingsText}>{t('pme_save_settings')}</Text>}
@@ -408,6 +459,25 @@ const PmeNetwork: React.FC = ({ navigation }: any) => {
           </View>
         </TouchableOpacity>
       </Modal>
+      <Modal visible={!!settingsDropdown} transparent animationType="fade" onRequestClose={() => setSettingsDropdown(null)}>
+        <TouchableOpacity style={styles.dropdownBackdrop} activeOpacity={1} onPress={() => setSettingsDropdown(null)}>
+          <View style={styles.dropdownSheet}>
+            <Text style={styles.dropdownTitle}>{t('pme_settings_title')}</Text>
+            <ScrollView style={{ maxHeight: 360 }}>
+              {(settingsDropdown ? settingOptions[settingsDropdown] : []).map(option => (
+                <TouchableOpacity
+                  key={`${settingsDropdown}-${option}`}
+                  style={styles.dropdownOption}
+                  onPress={() => setSettingsDropdownValue(option)}
+                  activeOpacity={0.78}
+                >
+                  <Text style={styles.dropdownOptionText}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
       {upgradeWebViewElement}
     </SafeAreaView>
   );
@@ -427,12 +497,25 @@ const Input = ({ label, ...props }: any) => (
   </View>
 );
 
+const SettingDropdown = ({ label, value, placeholder, onPress }: { label: string; value?: string | null; placeholder: string; onPress: () => void }) => (
+  <View style={styles.inputGroup}>
+    <Text style={styles.inputLabel}>{label}</Text>
+    <TouchableOpacity style={styles.settingDropdownButton} activeOpacity={0.8} onPress={onPress}>
+      <Text style={[styles.settingDropdownText, !value && styles.settingDropdownPlaceholder]} numberOfLines={1}>
+        {value || placeholder}
+      </Text>
+      <ChevronDownSmall />
+    </TouchableOpacity>
+  </View>
+);
+
 const ChevronDownSmall = () => <ChevronDown size={15} color="#64748B" />;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#EEF2F7' },
   iconButton: { width: 38, height: 38, borderRadius: 14, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
+  modalBackButton: { zIndex: 20, elevation: 8 },
   title: { fontSize: 20, fontWeight: '800', color: '#111827' },
   subtitle: { fontSize: 12, color: '#64748B', marginTop: 2 },
   scroll: { flex: 1 },
@@ -476,6 +559,9 @@ const styles = StyleSheet.create({
   profileLogoImage: { width: 76, height: 76 },
   profileName: { fontSize: 20, fontWeight: '800', color: '#111827', textAlign: 'center' },
   profileMeta: { fontSize: 13, color: '#64748B', marginTop: 4, textAlign: 'center' },
+  profilePillRow: { flexDirection: 'row', gap: 8, marginTop: 12, flexWrap: 'wrap', justifyContent: 'center' },
+  profilePill: { fontSize: 11, fontWeight: '900', color: '#1E5BAC', backgroundColor: '#EFF6FF', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
+  profilePillVerified: { color: '#166534', backgroundColor: '#DCFCE7' },
   profileDescription: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 14, fontSize: 14, color: '#475569', lineHeight: 20, marginBottom: 12 },
   infoLine: { fontSize: 13, fontWeight: '700', color: '#334155', marginBottom: 12 },
   profileActions: { flexDirection: 'row', gap: 10, marginBottom: 12 },
@@ -485,11 +571,16 @@ const styles = StyleSheet.create({
   primaryActionText: { fontSize: 14, fontWeight: '800', color: '#FFFFFF' },
   contactButton: { height: 48, borderRadius: 14, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 8 },
   contactButtonText: { fontSize: 14, fontWeight: '800', color: '#1E5BAC' },
+  closeDetailButton: { height: 48, borderRadius: 14, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center', marginTop: 6 },
+  closeDetailText: { fontSize: 14, fontWeight: '900', color: '#334155' },
   settingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#EEF2F7' },
   settingLabel: { flex: 1, fontSize: 14, fontWeight: '700', color: '#111827' },
   inputGroup: { marginBottom: 12 },
   inputLabel: { fontSize: 12, fontWeight: '800', color: '#64748B', marginBottom: 6 },
   input: { minHeight: 46, borderRadius: 14, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#FFFFFF', paddingHorizontal: 12, color: '#111827', fontSize: 14 },
+  settingDropdownButton: { minHeight: 46, borderRadius: 14, borderWidth: 1, borderColor: '#E5E7EB', backgroundColor: '#FFFFFF', paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  settingDropdownText: { flex: 1, fontSize: 14, fontWeight: '800', color: '#111827' },
+  settingDropdownPlaceholder: { color: '#94A3B8' },
   textArea: { minHeight: 92, textAlignVertical: 'top', paddingTop: 12 },
   saveSettingsButton: { height: 50, borderRadius: 15, backgroundColor: '#1E5BAC', alignItems: 'center', justifyContent: 'center', marginTop: 8 },
   saveSettingsText: { fontSize: 15, fontWeight: '800', color: '#FFFFFF' },

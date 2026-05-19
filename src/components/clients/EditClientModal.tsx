@@ -57,33 +57,41 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
   }, [visible, clientData]);
 
   const handleUpdate = async () => {
-    if (!companyName) {
+    if (!companyName.trim()) {
       Alert.alert(t('alert_field_required'), t('message_company_name_required'));
+      return;
+    }
+    if (!clientName.trim()) {
+      Alert.alert(t('alert_field_required'), t('message_client_name_required', { defaultValue: 'Veuillez saisir le nom du contact.' }));
+      return;
+    }
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      Alert.alert(t('alert_field_required'), t('signup_error_email_invalid', { defaultValue: 'Email invalide' }));
       return;
     }
     setSaving(true);
     try {
       const res = await updateClient(clientData.id, {
-        company_name: companyName,
-        client_name: clientName,
-        email,
-        telephone,
-        postal_code: postalCode,
-        city,
-        commercial_register: commercialRegister,
-        ice,
+        company_name: companyName.trim(),
+        client_name: clientName.trim(),
+        email: email.trim(),
+        telephone: telephone.trim(),
+        postal_code: postalCode.trim(),
+        city: city.trim(),
+        commercial_register: commercialRegister.trim(),
+        ice: ice.trim(),
       });
       const updated =
         res.data?.data ?? {
           ...clientData,
-          company_name: companyName,
-          client_name: clientName,
-          email,
-          telephone,
-          postal_code: postalCode,
-          city,
-          commercial_register: commercialRegister,
-          ice,
+          company_name: companyName.trim(),
+          client_name: clientName.trim(),
+          email: email.trim(),
+          telephone: telephone.trim(),
+          postal_code: postalCode.trim(),
+          city: city.trim(),
+          commercial_register: commercialRegister.trim(),
+          ice: ice.trim(),
         };
       Alert.alert(t('success_title'), t('success_client_updated'));
       onUpdated(updated);
@@ -126,7 +134,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
           >
             <View style={styles.formCard}>
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>{t('label_company_name')}</Text>
+                <Text style={styles.fieldLabel}>{t('label_company_name')} <Text style={styles.required}>*</Text></Text>
                 <TextInput
                   style={styles.fieldInput}
                   value={companyName}
@@ -134,7 +142,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
                 />
               </View>
               <View style={styles.fieldBlock}>
-                <Text style={styles.fieldLabel}>{t('label_contact_name')}</Text>
+                <Text style={styles.fieldLabel}>{t('label_contact_name')} <Text style={styles.required}>*</Text></Text>
                 <TextInput
                   style={styles.fieldInput}
                   value={clientName}
@@ -195,7 +203,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
             >
               {saving
                 ? <ActivityIndicator color="#FFFFFF" />
-                : <Text style={styles.confirmBtnText}>Enregistrer les modifications</Text>}
+                : <Text style={styles.confirmBtnText}>{t('button_save_changes')}</Text>}
             </TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -244,6 +252,7 @@ const styles = StyleSheet.create({
   formCard: { borderRadius: 16, paddingVertical: 18, gap: 16, marginBottom: 16 },
   fieldBlock: { gap: 6 },
   fieldLabel: { fontSize: 13, fontWeight: '600', color: '#374151' },
+  required: { color: '#DC2626' },
   fieldInput: {
     backgroundColor: '#EEF2FF',
     borderRadius: 10,

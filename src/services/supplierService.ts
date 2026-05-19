@@ -3,11 +3,11 @@ import { Api_Endpoints } from './endpoints';
 
 export interface SupplierPayload {
   company_name: string;
-  supplier_name: string;
-  email: string;
+  supplier_name?: string;
+  email?: string;
   telephone?: string;
-  postal_code: string;
-  city: string;
+  postal_code?: string;
+  city?: string;
   commercial_register?: string;
   ice_number?: string;
   if_number?: string;
@@ -49,10 +49,7 @@ class SupplierService {
 
   async updateSupplier(id: number, payload: SupplierPayload) {
     try {
-      const response = await api.post(`${Api_Endpoints.customerSupplier}/${id}`, {
-        _method: 'PUT',
-        ...payload,
-      });
+      const response = await api.put(`${Api_Endpoints.customerSupplier}/${id}`, payload);
       return response.data;
     } catch (error: any) {
       console.error('Update supplier error:', error.response?.data || error.message);

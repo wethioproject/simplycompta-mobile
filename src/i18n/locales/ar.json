@@ -1269,5 +1269,19 @@
   "activity_month_filter": "الشهر",
   "message_history_title": "سجل الرسائل",
   "message_history_empty": "لم يتم إرسال أي رسالة بعد.",
-  "label_total": "المجموع"
+  "label_total": "المجموع",
+  "message_client_name_required": "يرجى إدخال اسم جهة الاتصال.",
+  "support_tickets_title": "التذاكر مع المحاسب",
+  "support_new_ticket": "جديد",
+  "support_tickets_empty": "لا توجد تذاكر مفتوحة حالياً.",
+  "support_status_open": "مفتوح",
+  "support_status_waiting": "مرسل",
+  "support_status_closed": "مغلق",
+  "support_ticket_thread": "محادثة التذكرة",
+  "support_close_ticket": "إغلاق",
+  "support_reply_subject": "التذكرة المحددة",
+  "support_reply_button": "الرد على التذكرة",
+  "support_ticket_closed_message": "هذه التذكرة مغلقة. أنشئ تذكرة جديدة لإرسال طلب.",
+  "pme_verified": "موثق",
+  "button_close": "إغلاق"
 }

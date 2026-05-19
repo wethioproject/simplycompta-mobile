@@ -1269,5 +1269,19 @@
   "activity_month_filter": "Month",
   "message_history_title": "Message history",
   "message_history_empty": "No message sent yet.",
-  "label_total": "Total"
+  "label_total": "Total",
+  "message_client_name_required": "Please enter the contact name.",
+  "support_tickets_title": "Tickets with accountant",
+  "support_new_ticket": "New",
+  "support_tickets_empty": "No open ticket yet.",
+  "support_status_open": "Open",
+  "support_status_waiting": "Sent",
+  "support_status_closed": "Closed",
+  "support_ticket_thread": "Ticket thread",
+  "support_close_ticket": "Close",
+  "support_reply_subject": "Selected ticket",
+  "support_reply_button": "Reply to ticket",
+  "support_ticket_closed_message": "This ticket is closed. Create a new ticket to send a request.",
+  "pme_verified": "Verified",
+  "button_close": "Close"
 }
