@@ -57,6 +57,7 @@ class InvoiceService {
             formData.append('status', payload.status ?? 'Brouillons');
             formData.append('notes', payload.notes);
             formData.append('due_date', payload.due_date);
+            if (payload.commercial_id != null) formData.append('commercial_id', String(payload.commercial_id));
 
             if (payload.document) {
                 const file = payload.document;
@@ -128,6 +129,7 @@ class InvoiceService {
             formData.append('invoice_number', payload.invoice_number);
             formData.append('payment_method', payload.payment_method);
             formData.append('status', payload.status ?? 'Brouillons');
+            if (payload.commercial_id != null) formData.append('commercial_id', String(payload.commercial_id));
             if (payload.due_date) formData.append('due_date', payload.due_date);
             formData.append('_method', 'PUT');
             formData.append('remove_document', String(payload.remove_document ?? 0));

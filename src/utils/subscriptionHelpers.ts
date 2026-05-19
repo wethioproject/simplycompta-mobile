@@ -5,7 +5,7 @@ export type UsageFeature = 'invoices' | 'quotes' | 'expenses' | 'receipts' | 'oc
 export type BooleanFeature = 'export_enabled' | 'whatsapp_bot_enabled';
 export type AnyFeature = UsageFeature | BooleanFeature;
 export type PlanTier = 'free' | 'pro' | 'business';
-export type BusinessModule = 'accounting_assistant' | 'pme_directory' | 'dgi_export';
+export type BusinessModule = 'accounting_assistant' | 'pme_directory' | 'dgi_export' | 'commercial_performance';
 
 const PLAN_RANK: Record<PlanTier, number> = {
   free: 0,

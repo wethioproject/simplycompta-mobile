@@ -31,7 +31,7 @@ import {
   Eye,
 } from 'lucide-react-native';
 import { useSelector } from 'react-redux';
-import { canUseFeature } from '../../utils/subscriptionHelpers';
+import { canUseBusinessModule, canUseFeature } from '../../utils/subscriptionHelpers';
 import { loadSubscription } from '../../store/slices/subscriptionSlice';
 import { useDispatch } from 'react-redux';
 import type { AppDispatch } from '../../store';
@@ -51,6 +51,8 @@ import { useUpgradeWebView } from '../../utils/upgradeWebView';
 import { showPremiumToast } from '../../utils/premiumToast';
 import PremiumSuccessCelebration from '../common/PremiumSuccessCelebration';
 import { SuccessMorphButton } from '../common/PremiumMotion';
+import commercialService from '../../services/commercialService';
+import type { Salesperson } from '../../types/commercial.types';
 
 const invoiceSchema = yup.object({
   invoiceNumber: yup.string().trim().required('Invoice number is required'),
@@ -121,6 +123,7 @@ const CreateInvoiceModal: React.FC<{
   const dispatch = useDispatch<AppDispatch>();
   const { openUpgradeWebView, upgradeWebViewElement } = useUpgradeWebView(onClose);
   const subscription = useSelector((state: any) => state.subscription.data);
+  const canAssignCommercial = canUseBusinessModule(subscription, 'commercial_performance');
 
   // Non-form UI states
   const [showArticleModal, setShowArticleModal] = useState(false);
@@ -133,6 +136,9 @@ const CreateInvoiceModal: React.FC<{
   const [showDueDatePicker, setShowDueDatePicker] = useState(false);
   const [tempDueDate, setTempDueDate] = useState<Date>(new Date());
   const [showStatusPicker, setShowStatusPicker] = useState(false);
+  const [showCommercialPicker, setShowCommercialPicker] = useState(false);
+  const [salespeople, setSalespeople] = useState<Salesperson[]>([]);
+  const [selectedCommercialId, setSelectedCommercialId] = useState<number | null>(null);
   const [showCreateClientModal, setShowCreateClientModal] = useState(false);
   const [showImagePreview, setShowImagePreview] = useState(false);
   const [removedExistingDocument, setRemovedExistingDocument] = useState(false);
@@ -185,6 +191,7 @@ const CreateInvoiceModal: React.FC<{
   // Derived display objects from IDs
   const selectedClient = localClients.find(c => c.id === watchedClientId) ?? null;
   const selectedPaymentMethod = PAYMENT_METHODS.find(p => p.key === watchedAccountId) ?? null;
+  const selectedCommercial = salespeople.find(s => s.id === selectedCommercialId) ?? null;
   const pmLabel = (pm: { key: string; fr: string; en: string; ar: string }) =>
     i18n.language.startsWith('ar') ? pm.ar : i18n.language.startsWith('fr') ? pm.fr : pm.en;
 
@@ -198,8 +205,14 @@ const CreateInvoiceModal: React.FC<{
     setRemovedExistingDocument(false);
     setFileSizeError(false);
     setShowSuccessCelebration(false);
+    setShowCommercialPicker(false);
+
+    commercialService.getSalespeople()
+      .then(response => setSalespeople((response.data ?? []).filter(item => item.active)))
+      .catch(() => setSalespeople([]));
 
     if (editItem) {
+      setSelectedCommercialId(editItem.commercial_id ?? editItem.commercial?.id ?? null);
       const datePart = editItem.date.split('T')[0];
       const [ey, em, ed] = datePart.split('-').map(Number);
       setTempDate(new Date(ey, em - 1, ed));
@@ -247,6 +260,7 @@ const CreateInvoiceModal: React.FC<{
       const tmo = String(tomorrow.getMonth() + 1).padStart(2, '0');
       const td = String(tomorrow.getDate()).padStart(2, '0');
       setDocument(null);
+      setSelectedCommercialId(null);
       setTempDate(today);
       setTempDueDate(tomorrow);
       (async () => {
@@ -439,6 +453,7 @@ const CreateInvoiceModal: React.FC<{
         notes: data.notes || null,
         document: document?.isExisting ? null : document ?? null,
         remove_document: !document && removedExistingDocument ? 1 : 0,
+        commercial_id: canAssignCommercial ? selectedCommercialId : null,
         articles: (data.articles ?? []).map(a => ({
           designation: a.designation,
           unit_price_ht: a.unitPriceHT,
@@ -657,6 +672,24 @@ const CreateInvoiceModal: React.FC<{
                 )}
               </View>
 
+              {/* Commercial */}
+              <View style={styles.fieldBlock}>
+                <Text style={styles.fieldLabel}>{t('label_commercial_optional')}</Text>
+                <TouchableOpacity
+                  style={[styles.pickerRow, !canAssignCommercial && { opacity: 0.75 }]}
+                  onPress={() => canAssignCommercial ? setShowCommercialPicker(true) : openUpgradeWebView(upgradeUrl)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={selectedCommercial ? styles.pickerValueText : styles.pickerPlaceholderText}>
+                    {selectedCommercial ? selectedCommercial.name : t('placeholder_commercial')}
+                  </Text>
+                  <ChevronDown size={18} color="#1E5BAC" />
+                </TouchableOpacity>
+                {!canAssignCommercial && (
+                  <Text style={styles.articleHint}>{t('commercial_business_only_hint')}</Text>
+                )}
+              </View>
+
               {/* Statut */}
               <View style={styles.fieldBlock}>
                 <Text style={styles.fieldLabel}>{t('label_status')} <Text style={styles.required}>*</Text></Text>
@@ -871,6 +904,43 @@ const CreateInvoiceModal: React.FC<{
                     {watchedAccountId === pm.key && <Text style={styles.pickerCheck}>✓</Text>}
                   </TouchableOpacity>
                 ))}
+              </ScrollView>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+
+        {/* Commercial Picker Modal */}
+        <Modal visible={showCommercialPicker} transparent animationType="fade" onRequestClose={() => setShowCommercialPicker(false)}>
+          <TouchableOpacity style={styles.pickerOverlay} activeOpacity={1} onPress={() => setShowCommercialPicker(false)}>
+            <View style={styles.pickerSheet}>
+              <Text style={styles.pickerSheetTitle}>{t('modal_title_commercial')}</Text>
+              <TouchableOpacity
+                style={styles.pickerOption}
+                onPress={() => { setSelectedCommercialId(null); setShowCommercialPicker(false); }}
+              >
+                <Text style={[styles.pickerOptionText, selectedCommercialId === null && styles.pickerOptionSelected]}>
+                  {t('commercial_none')}
+                </Text>
+                {selectedCommercialId === null && <Text style={styles.pickerCheck}>✓</Text>}
+              </TouchableOpacity>
+              <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 300 }} showsVerticalScrollIndicator={false}>
+                {salespeople.map(item => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={styles.pickerOption}
+                    onPress={() => { setSelectedCommercialId(item.id); setShowCommercialPicker(false); }}
+                  >
+                    <Text style={[styles.pickerOptionText, selectedCommercialId === item.id && styles.pickerOptionSelected]}>
+                      {item.name}
+                    </Text>
+                    {selectedCommercialId === item.id && <Text style={styles.pickerCheck}>✓</Text>}
+                  </TouchableOpacity>
+                ))}
+                {salespeople.length === 0 && (
+                  <View style={{ padding: 16, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 13, color: '#9CA3AF' }}>{t('commercial_empty_salespeople')}</Text>
+                  </View>
+                )}
               </ScrollView>
             </View>
           </TouchableOpacity>

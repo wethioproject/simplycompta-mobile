@@ -17,6 +17,13 @@ export interface Client {
   name: string;
 }
 
+export interface CommercialAssignee {
+  id: number;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+}
+
 export interface InvoiceArticle {
   id: number;
   invoice_id?: number;
@@ -33,6 +40,7 @@ export interface InvoiceItem {
   id: number;
   customer_id: number;
   client_id: number;
+  commercial_id?: number | null;
   date: string;
   invoice_number?: string;
   quote_number_formatted?: string;
@@ -45,6 +53,7 @@ export interface InvoiceItem {
   valid_until?: string | null;
   due_date?: string | null;
   client?: { id: number; client_name: string } | null;
+  commercial?: CommercialAssignee | null;
   articles: InvoiceArticle[];
   notes?: string | null;
   total_ttc: number;

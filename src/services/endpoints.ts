@@ -1,6 +1,8 @@
 export const Api_Endpoints = {
   dashboard: 'customer/dashboard-data',
   mobileActivity: 'mobile/activity',
+  salespeople: 'mobile/salespeople',
+  commercialStats: 'mobile/commercial-stats',
   pmeNetwork: 'mobile/pme-network',
   pmeNetworkSettings: 'mobile/pme-network/settings',
   premiumInsights: 'customer/premium-insights',

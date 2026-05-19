@@ -511,6 +511,14 @@ console.log('Initiating document download for quote:102', src);
               </View>
               <Text style={styles.detailRowValue}>{src.client?.client_name ?? '—'}</Text>
             </View>
+            {/* Commercial */}
+            <View style={styles.detailRow}>
+              <View style={styles.detailRowLeft}>
+                <User size={18} color="#9CA3AF" />
+                <Text style={styles.detailRowLabel}>{t('label_commercial')}</Text>
+              </View>
+              <Text style={styles.detailRowValue}>{src.commercial?.name ?? '—'}</Text>
+            </View>
             {/* Validity */}
             <View style={styles.detailRow}>
               <View style={styles.detailRowLeft}>

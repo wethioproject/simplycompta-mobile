@@ -95,3 +95,18 @@ To learn more about React Native, take a look at the following resources:
 - [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
 - [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
 - [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+
+## SimplyCompta Commercial Performance
+
+The mobile app includes a Business-plan mini ERP module named Commercial Performance.
+
+- Menu entry: Plus -> Commercial Performance.
+- API service: `src/services/commercialService.ts`.
+- Endpoints used:
+  - `GET /api/mobile/salespeople`
+  - `POST /api/mobile/salespeople`
+  - `PUT /api/mobile/salespeople/{id}`
+  - `DELETE /api/mobile/salespeople/{id}`
+  - `GET /api/mobile/commercial-stats`
+- Quote and invoice creation keep working without a salesperson; `commercial_id` is sent only when selected and allowed by the plan.
+- Amounts shown in the commercial screen use the global private-mode masking helper.

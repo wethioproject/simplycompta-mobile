@@ -33,6 +33,7 @@ import {
   FileText,
   ScrollText,
   FileSpreadsheet,
+  Briefcase,
   Sparkles,
   Network,
 } from 'lucide-react-native';
@@ -88,6 +89,7 @@ const Plus: React.FC = ({ navigation }: any) => {
     else if (action === 'documents')   navigation.navigate('Documents List');
     else if (action === 'dgi_export')  navigation.navigate('Export DGI Compatible');
     else if (action === 'business_assistant') navigation.navigate('Assistant Comptable');
+    else if (action === 'commercial_performance') navigation.navigate('Commercial Performance');
     else if (action === 'pme_network') navigation.navigate('PME Network');
     else if (action === 'support')     navigation.navigate('Contact');
     else if (action === 'plan')        navigation.navigate('My Plan');
@@ -182,6 +184,7 @@ const Plus: React.FC = ({ navigation }: any) => {
             <MenuRow Icon={FolderOpen}     iconColor="#1E5BAC" label={t('menu_documents')} onPress={() => handleMenuPress('documents')} />
             <MenuRow Icon={Package}         iconColor="#1E5BAC" label={t('menu_products')}  onPress={() => handleMenuPress('products')}  />
             <MenuRow Icon={Sparkles}        iconColor="#1E5BAC" label={t('menu_business_assistant', { defaultValue: 'Assistant comptable' })} onPress={() => handleMenuPress('business_assistant')} />
+            <MenuRow Icon={Briefcase}       iconColor="#0F766E" label={t('menu_commercial_performance')} onPress={() => handleMenuPress('commercial_performance')} />
             <MenuRow Icon={Network}         iconColor="#1E5BAC" label={t('menu_pme_network')} onPress={() => handleMenuPress('pme_network')} />
             <MenuRow Icon={FileSpreadsheet} iconColor="#1E5BAC" label={t('menu_dgi_export', { defaultValue: 'Export DGI Compatible' })} onPress={() => handleMenuPress('dgi_export')} />
             <MenuRow Icon={Languages}       iconColor="#1E5BAC" label={t('menu_language')}  onPress={() => handleMenuPress('language')}  />

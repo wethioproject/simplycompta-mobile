@@ -375,6 +375,7 @@ const DetailModal: React.FC<DetailModalProps> = ({
             {[
               { label: t('label_invoice_number'), value: src.invoice_number_formatted },
               { label: t('label_client'), value: src.client?.client_name ?? '—' },
+              { label: t('label_commercial'), value: src.commercial?.name ?? '—' },
               { label: t('label_payment_method'), value: resolvePaymentMethod(src.payment_method, i18n.language) },
               { label: t('label_due_date'), value: src.due_date ? new Date(src.due_date).toLocaleDateString('fr-FR') : '—' },
               { label: t('label_status'), value: currentStatus },
